@@ -32,17 +32,15 @@ jobs:
         with:
           version: "latest"
 
-      - name: Prepare output directory
-        run: mkdir -p /tmp/protondb-output
-
       - name: Process and Split Reports
         working-directory: scripts-repo
         run: |
+          mkdir -p /tmp/protondb-output
           uv run python scripts/split_reports.py \
             ../official-data/reports \
             /tmp/protondb-output
 
-      - name: Sync processed data to scripts-repo
+      - name: Sync processed data
         run: |
           mkdir -p scripts-repo/data
           cp -rv /tmp/protondb-output/data/. scripts-repo/data/
@@ -70,26 +68,26 @@ jobs:
           retention-days: 1
 
   report-build-status:
-    needs: build
+    needs: [build, commit, deploy-pages]
     runs-on: ubuntu-24.04
     if: always()
     steps:
-      - name: Build status
+      - name: Summary
         run: |
-          echo "### Build Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Update ProtonDB Data" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          if [ "${{ needs.build.result }}" = "success" ]; then
-            echo "✅ Build succeeded" >> "$GITHUB_STEP_SUMMARY"
-            echo "Changes detected: **${{ needs.build.outputs.has-changes }}**" >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "❌ Build failed" >> "$GITHUB_STEP_SUMMARY"
-          fi
+          echo "| Job | Status |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|-----|--------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Build | ${{ needs.build.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Commit | ${{ needs.commit.result || 'skipped' }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Deploy Pages | ${{ needs.deploy-pages.result || 'skipped' }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Changes detected | ${{ needs.build.outputs.has-changes }} |" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Fail if build failed
-        if: needs.build.result != 'success'
+      - name: Fail if any job failed
+        if: contains(needs.*.result, 'failure')
         run: exit 1
 
-  deploy:
+  commit:
     needs: build
     if: needs.build.outputs.has-changes == 'true'
     runs-on: ubuntu-24.04
@@ -105,7 +103,7 @@ jobs:
           name: site-content
           path: artifact
 
-      - name: Commit to main
+      - name: Commit and push to main
         run: |
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
@@ -116,8 +114,21 @@ jobs:
           git pull --rebase origin main
           git push
 
+  deploy-pages:
+    needs: commit
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
       - name: Deploy to gh-pages
         run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
           git checkout --orphan gh-pages-tmp
           git rm -rf .
           git checkout main -- data/ index.html
