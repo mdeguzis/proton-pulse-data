@@ -59,9 +59,9 @@ def fetch_app_names(app_ids: set[str], cache_path: str | None = None) -> dict[st
         try:
             with open(cache_path, "r") as f:
                 cache = json.load(f)
-            log(f"[names] Loaded {len(cache)} cached names from {cache_path}", debug=True)
+            log(f"[names] Loaded {len(cache)} cached names from {cache_path}")
         except FileNotFoundError:
-            pass
+            log(f"[names] No cache file found at {cache_path}, starting fresh")
         except Exception as e:
             log(f"!! WARNING: Could not read name cache: {e}")
 
@@ -94,7 +94,7 @@ def fetch_app_names(app_ids: set[str], cache_path: str | None = None) -> dict[st
             Path(cache_path).parent.mkdir(parents=True, exist_ok=True)
             with open(cache_path, "w") as f:
                 json.dump(cache, f, indent=2)
-            log(f"[names] Cache saved to {cache_path}", debug=True)
+            log(f"[names] Cache saved ({len(cache)} entries) to {cache_path}")
         except Exception as e:
             log(f"!! WARNING: Could not write name cache: {e}")
 
