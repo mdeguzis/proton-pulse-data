@@ -7,7 +7,7 @@ on:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-  PYTHONUNBUFFERED: "1" # This forces Python to print to the log immediately
+  PYTHONUNBUFFERED: "1"
 
 jobs:
   update:
@@ -36,10 +36,18 @@ jobs:
       - name: Install Dependencies
         run: pip install ijson
 
-      - name: Run Processing Script
+      # This step tries to find a previous run's output to avoid starting from zero
+      - name: Restore Data Cache
+        uses: actions/cache@v4
+        with:
+          path: /tmp/protondb-output
+          key: protondb-data-${{ github.run_id }}
+          restore-keys: |
+            protondb-data-
+
+      - name: Run Incremental Processing
         run: |
           mkdir -p /tmp/protondb-output
-          # Now running with unbuffered logs
           python3 scripts-repo/scripts/split_reports.py \
             official-data \
             /tmp/protondb-output
@@ -49,7 +57,7 @@ jobs:
           cd /tmp/protondb-output
           
           if [ ! -d "data" ] || [ -z "$(ls -A data)" ]; then
-            echo "Error: No data files generated."
+            echo "Error: No data files found to deploy."
             exit 1
           fi
 
@@ -58,12 +66,11 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout --orphan gh-pages
           
-          GAMES_COUNT=$(jq '.total_games' manifest.json)
-          
-          echo "<h1>Proton Pulse Sync</h1><p>Games: $GAMES_COUNT</p><p>Updated: $(date -u)</p>" > index.html
+          # Use fallback values if manifest isn't readable for the HTML
           touch .nojekyll
+          echo "<h1>Proton Pulse Sync</h1><p>Updated: $(date -u)</p>" > index.html
 
           git add -A
-          git commit -m "chore: auto-sync $(date -u +%Y-%m-%d)"
+          git commit -m "chore: incremental sync $(date -u +%Y-%m-%d)"
           git remote add origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
           git push --force origin gh-pages

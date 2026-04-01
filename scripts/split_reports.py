@@ -8,33 +8,45 @@ from collections import defaultdict
 
 def process_reports(input_path, output_dir):
     abs_input = os.path.abspath(input_path)
-    print(f"--> Starting scan: {abs_input}", flush=True)
-    
-    if not os.path.exists(abs_input):
-        print(f"!! ERROR: Path does not exist: {abs_input}", flush=True)
-        return
+    data_dir = os.path.join(output_dir, 'data')
+    manifest_path = os.path.join(output_dir, 'manifest.json')
+    os.makedirs(data_dir, exist_ok=True)
 
+    # 1. Load the manifest to see what we've already processed
+    processed_files = []
+    if os.path.exists(manifest_path):
+        try:
+            with open(manifest_path, 'r') as f:
+                m_data = json.load(f)
+                processed_files = m_data.get("processed_files", [])
+                print(f"--> Found manifest. {len(processed_files)} archives already handled.", flush=True)
+        except Exception as e:
+            print(f"--> Manifest corrupt or missing, starting fresh: {e}", flush=True)
+
+    # 2. Identify new archives
     search_path = os.path.join(abs_input, 'reports') if os.path.isdir(os.path.join(abs_input, 'reports')) else abs_input
-    
-    game_reports = defaultdict(list)
-    total_reports = 0
-    
     try:
-        # Sort them so they process in a predictable order (e.g., chronological-ish)
-        tarballs = sorted([f for f in os.listdir(search_path) if f.endswith('.tar.gz')])
+        all_tarballs = sorted([f for f in os.listdir(search_path) if f.endswith('.tar.gz')])
+        new_tarballs = [f for f in all_tarballs if f not in processed_files]
     except FileNotFoundError:
-        print(f"!! ERROR: Could not list directory: {search_path}", flush=True)
+        print(f"!! ERROR: Path not found: {search_path}", flush=True)
         return
 
-    num_files = len(tarballs)
-    print(f"--> Found {num_files} archives to process.", flush=True)
+    if not new_tarballs:
+        print("--> Everything is up to date. No new archives to process.", flush=True)
+        return
 
-    for index, file in enumerate(tarballs, 1):
+    print(f"--> {len(new_tarballs)} new archives found (Total archives in repo: {len(all_tarballs)})", flush=True)
+
+    # 3. Process only the NEW archives
+    game_updates = defaultdict(list)
+    new_report_count = 0
+
+    for index, file in enumerate(new_tarballs, 1):
         file_path = os.path.join(search_path, file)
-        # Added the 1/88 counter here
-        print(f"[{index}/{num_files}] Processing {file}...", flush=True)
+        print(f"[{index}/{len(new_tarballs)}] Processing: {file}...", flush=True)
         
-        file_count = 0
+        file_report_count = 0
         try:
             with tarfile.open(file_path, "r:gz") as tar:
                 for member in tar.getmembers():
@@ -50,38 +62,46 @@ def process_reports(input_path, output_dir):
                                         "p": report.get("protonVersion"),
                                         "t": report.get("timestamp")
                                     }
-                                    game_reports[app_id].append(simplified)
-                                    total_reports += 1
-                                    file_count += 1
+                                    game_updates[app_id].append(simplified)
+                                    new_report_count += 1
+                                    file_report_count += 1
                             except Exception:
                                 continue
-            print(f"    Done. ({file_count} reports found)", flush=True)
+            print(f"    Done. ({file_report_count} reports found)", flush=True)
         except Exception as e:
-            print(f"!! Failed to open {file}: {e}", flush=True)
+            print(f"!! Error opening {file}: {e}", flush=True)
 
-    print(f"--> Writing output files to {output_dir}...", flush=True)
-    data_dir = os.path.join(output_dir, 'data')
-    os.makedirs(data_dir, exist_ok=True)
-
-    for app_id, reports in game_reports.items():
-        # Defensive sorting for mixed types (str vs int)
-        reports.sort(key=lambda x: str(x.get('t', '')), reverse=True)
+    # 4. Merge and Write
+    print(f"--> Merging updates for {len(game_updates)} games...", flush=True)
+    for app_id, new_reports in game_updates.items():
+        target_file = os.path.join(data_dir, f"{app_id}.json")
         
-        with open(os.path.join(data_dir, f"{app_id}.json"), 'w') as f:
-            json.dump(reports, f)
+        existing_data = []
+        if os.path.exists(target_file):
+            with open(target_file, 'r') as f:
+                try:
+                    existing_data = json.load(f)
+                except:
+                    existing_data = []
 
-    manifest = {
+        # Combine, sort by date descending, and write
+        combined = existing_data + new_reports
+        combined.sort(key=lambda x: str(x.get('t', '')), reverse=True)
+        
+        with open(target_file, 'w') as f:
+            json.dump(combined, f)
+
+    # 5. Save updated manifest
+    final_manifest = {
         "last_updated": datetime.now().isoformat(),
-        "total_games": len(game_reports),
-        "total_reports": total_reports,
-        "total_archives_scanned": num_files
+        "processed_files": all_tarballs,
+        "total_new_reports_this_run": new_report_count
     }
-    
-    with open(os.path.join(output_dir, 'manifest.json'), 'w') as f:
-        json.dump(manifest, f, indent=2)
+    with open(manifest_path, 'w') as f:
+        json.dump(final_manifest, f, indent=2)
 
     print(f"--- FINISH ---", flush=True)
-    print(f"Total: {total_reports} reports for {len(game_reports)} games.", flush=True)
+    print(f"Added {new_report_count} reports to the database.", flush=True)
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
