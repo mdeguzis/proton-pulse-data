@@ -1,0 +1,24 @@
+[
+  {
+    "appId": "NULL",
+    "title": "Sam and Max Complete Pack",
+    "timestamp": 1535096397,
+    "rating": "Platinum",
+    "notes": "runs perfectly without meddling",
+    "os": "Ubuntu 18.04 (Kernel 4.18.1)",
+    "gpuDriver": "Mesa 18.1.6",
+    "specs": "FX-8350 / R9 280X",
+    "protonVersion": "Default"
+  },
+  {
+    "appId": "NULL",
+    "title": "Sam and Max Complete Pack",
+    "timestamp": 1535081997,
+    "rating": "Platinum",
+    "notes": "runs perfectly without meddling",
+    "os": "Ubuntu 18.04 (Kernel 4.18.1)",
+    "gpuDriver": "Mesa 18.1.6",
+    "specs": "FX-8350 / R9 280X",
+    "protonVersion": "Default"
+  }
+]

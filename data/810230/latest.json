@@ -1,0 +1,24 @@
+[
+  {
+    "appId": "810230",
+    "title": "Traum",
+    "timestamp": 1535329983,
+    "rating": "Borked",
+    "notes": "Does not start",
+    "os": "Linux Mint 19 64-Bit (Kernel 4.15)",
+    "gpuDriver": "Mesa 18.1.6",
+    "specs": "AMD E-450 API",
+    "protonVersion": "Default"
+  },
+  {
+    "appId": "810230",
+    "title": "Traum",
+    "timestamp": 1535315583,
+    "rating": "Borked",
+    "notes": "Does not start",
+    "os": "Linux Mint 19 64-Bit (Kernel 4.15)",
+    "gpuDriver": "Mesa 18.1.6",
+    "specs": "AMD E-450 API",
+    "protonVersion": "Default"
+  }
+]
