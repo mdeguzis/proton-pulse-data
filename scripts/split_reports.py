@@ -334,9 +334,8 @@ def main():
 
     output_dir = args.output_dir or args.output_dir_flag
     if not output_dir:
-        log("!! ERROR: output_dir is required (positional or --output)")
-        parser.print_help()
-        sys.exit(1)
+        output_dir = tempfile.mkdtemp(prefix="protondb-output-")
+        log(f"[init] No output_dir specified, using temp dir: {output_dir}")
 
     if args.url:
         tmp_dir = tempfile.mkdtemp(prefix="protondb-clone-")
