@@ -112,6 +112,7 @@ def process_data(input_dir, output_dir):
         sys.exit(1)
 
     log("Done!")
+    generate_latest_files(data_output_path)
     generate_index_html(index_keys, output_path)
 
 
@@ -193,6 +194,27 @@ def parse_and_split(file_handle, data_output_path, source_label="?"):
     return count, set(buffer.keys())
 
 
+def generate_latest_files(data_output_path: Path) -> None:
+    """
+    For each app directory, create latest.json containing the reports
+    from the most recent year file.
+    """
+    count = 0
+    for app_dir in data_output_path.iterdir():
+        if not app_dir.is_dir():
+            continue
+        year_files = sorted(app_dir.glob("*.json"), key=lambda p: p.stem)
+        # Exclude any existing latest.json from the sort
+        year_files = [f for f in year_files if f.stem != "latest"]
+        if not year_files:
+            continue
+        latest_src = year_files[-1]
+        latest_dst = app_dir / "latest.json"
+        latest_dst.write_bytes(latest_src.read_bytes())
+        count += 1
+    log(f"[latest] Generated {count} latest.json files", debug=True)
+
+
 def generate_index_html(index_keys: set, output_path: Path) -> None:
     """
     Write index.html to output_path listing all data/{appId}/{year}.json files
@@ -226,7 +248,7 @@ def generate_index_html(index_keys: set, output_path: Path) -> None:
     sample_entries = []
     for app_id, name in SAMPLE_APPS.items():
         if app_id in app_years:
-            sample_entries.append(f'<a href="data/{app_id}/">{name}</a> ({app_id})')
+            sample_entries.append(f'<a href="data/{app_id}/latest.json">{name}</a> ({app_id})')
 
     lines = [
         "<!DOCTYPE html>",
@@ -255,6 +277,8 @@ def generate_index_html(index_keys: set, output_path: Path) -> None:
         lines.append("    <details>")
         lines.append(f"      <summary>{app_id}/</summary>")
         lines.append("      <ul>")
+        latest_href = f"data/{app_id}/latest.json"
+        lines.append(f'        <li><a href="{latest_href}"><strong>latest.json</strong></a></li>')
         for year in app_years[app_id]:
             href = f"data/{app_id}/{year}.json"
             lines.append(f'        <li><a href="{href}">{year}.json</a></li>')
