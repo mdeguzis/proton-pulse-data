@@ -1,0 +1,24 @@
+[
+  {
+    "appId": "748490",
+    "title": "The Legend of Heroes: Trails of Cold Steel II",
+    "timestamp": 1534955039,
+    "rating": "Borked",
+    "notes": "Crashes on startup",
+    "os": "Antergos",
+    "gpuDriver": "NVIDIA 396.51",
+    "specs": "i7-7700HQ / NVIDIA GTX 1060",
+    "protonVersion": "Default"
+  },
+  {
+    "appId": "748490",
+    "title": "The Legend of Heroes: Trails of Cold Steel II",
+    "timestamp": 1534940639,
+    "rating": "Borked",
+    "notes": "Crashes on startup",
+    "os": "Antergos",
+    "gpuDriver": "NVIDIA 396.51",
+    "specs": "i7-7700HQ / NVIDIA GTX 1060",
+    "protonVersion": "Default"
+  }
+]

@@ -1,0 +1,24 @@
+[
+  {
+    "appId": "570580",
+    "title": "Zork Anthology",
+    "timestamp": 1535493493,
+    "rating": "Platinum",
+    "notes": "Very undemanding, but runs flawlessly",
+    "os": "Kubuntu 18.04",
+    "gpuDriver": "Mesa 18.3-devel",
+    "specs": "Pentium 3540 / Intel IGP",
+    "protonVersion": "Default"
+  },
+  {
+    "appId": "570580",
+    "title": "Zork Anthology",
+    "timestamp": 1535479093,
+    "rating": "Platinum",
+    "notes": "Very undemanding, but runs flawlessly",
+    "os": "Kubuntu 18.04",
+    "gpuDriver": "Mesa 18.3-devel",
+    "specs": "Pentium 3540 / Intel IGP",
+    "protonVersion": "Default"
+  }
+]

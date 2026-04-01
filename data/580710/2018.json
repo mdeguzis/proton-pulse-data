@@ -1,0 +1,24 @@
+[
+  {
+    "appId": "580710",
+    "title": "Afghanistan '11",
+    "timestamp": 1535991392,
+    "rating": "Bronze",
+    "notes": "Units are invisible",
+    "os": "Ubuntu 18.04",
+    "gpuDriver": "NVIDIA 390.48",
+    "specs": "Ryzen 7 1700X / GTX 970",
+    "protonVersion": "Default"
+  },
+  {
+    "appId": "580710",
+    "title": "Afghanistan '11",
+    "timestamp": 1535976992,
+    "rating": "Bronze",
+    "notes": "Units are invisible",
+    "os": "Ubuntu 18.04",
+    "gpuDriver": "NVIDIA 390.48",
+    "specs": "Ryzen 7 1700X / GTX 970",
+    "protonVersion": "Default"
+  }
+]

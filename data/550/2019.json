@@ -1,0 +1,48 @@
+[
+  {
+    "appId": "550",
+    "cpu": "AMD A10-7800 Radeon R7, 12 Compute Cores 4C+8G",
+    "duration": "moreThanTenHours",
+    "gpu": "NVIDIA GeForce GTX 1050 Ti",
+    "gpuDriver": "NVIDIA 410.78",
+    "kernel": "4.15.0-43-generic",
+    "notes": "Runs perfectly out the box",
+    "os": "Linux Mint 19.1 Tessa",
+    "protonVersion": "Default",
+    "ram": "8 GB",
+    "rating": "Platinum",
+    "timestamp": 1548013361,
+    "title": "Left 4 Dead 2"
+  },
+  {
+    "appId": "550",
+    "cpu": "AMD Ryzen 7 1700 Eight-Core",
+    "duration": "lessThanFifteenMinutes",
+    "gpu": "AMD Radeon VII",
+    "gpuDriver": "4.5 Mesa 19.2.0-devel (git-21dd881416)",
+    "kernel": "5.1.12-arch1-1-ARCH",
+    "notes": "The game works native on Linux fine. I tried to run it on Proton, but it didn't work, got only a black screen.",
+    "os": "Linux",
+    "protonVersion": "4.2-7",
+    "protonVersionManual": "4.2-7",
+    "ram": "32 GB",
+    "rating": "Borked",
+    "timestamp": 1561026899,
+    "title": "Left 4 Dead 2"
+  },
+  {
+    "appId": "550",
+    "cpu": "Intel Core i5-3450 @ 3.10GHz",
+    "duration": "lessThanAnHour",
+    "gpu": "AMD R9 280X",
+    "gpuDriver": "4.5 Mesa 19.0.8",
+    "kernel": "5.0.0-31-generic",
+    "notes": "Left 4 Dead 2 was automatically set to launch with Proton 4.11-7. It worked after a reboot, although the in-game overlay did not. I also experienced long load times and slight microstutters. The microstutters were improved on after I turned off multicore rendering and vsync. Besides that it ran just as well as on Windows.",
+    "os": "Ubuntu 18.04.3 LTS",
+    "protonVersion": "Default",
+    "ram": "8 GB",
+    "rating": "Silver",
+    "timestamp": 1571011198,
+    "title": "Left 4 Dead 2"
+  }
+]

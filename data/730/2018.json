@@ -1,0 +1,74 @@
+[
+  {
+    "appId": "730",
+    "title": "Counter Strike : Global Offensive Free Edition",
+    "timestamp": 1536270602,
+    "rating": "Platinum",
+    "notes": "Free Single mode version (no online), plays perfect.",
+    "os": "Ubuntu 18.04.1 LTS",
+    "gpuDriver": "Mesa 18.3.0-devel - padoka PPA",
+    "specs": "Intel Core i5-7200U / Intel HD Graphics 620 (Kaby Lake GT2)",
+    "protonVersion": "3.7-5"
+  },
+  {
+    "appId": "730",
+    "title": "Counter-Strike: Global Offensive",
+    "timestamp": 1534968330,
+    "rating": "Borked",
+    "notes": "Does not launch",
+    "os": "Kubuntu",
+    "gpuDriver": "Mesa 18.3.0-devel - padoka PPA",
+    "specs": "Ryzen 5 1600 / AMD RX560",
+    "protonVersion": "Default"
+  },
+  {
+    "appId": "730",
+    "cpu": "Intel Core i5-2500K @ 3.30GHz",
+    "gpu": "AMD Radeon HD 7700",
+    "gpuDriver": "4.4 Mesa 18.2.5",
+    "kernel": "4.19.4-1-MANJARO",
+    "os": "Manjaro Linux",
+    "protonVersion": "Beta (3.16-5)",
+    "ram": "8 GB",
+    "timestamp": 1544656097,
+    "title": "Counter-Strike: Global Offensive"
+  },
+  {
+    "appId": "730",
+    "cpu": "Intel Core i5-7200U @ 2.50GHz",
+    "duration": "aboutAnHour",
+    "gpu": "Intel HD 620 (Kaby Lake GT2)",
+    "gpuDriver": "3.0 Mesa 18.2.6",
+    "kernel": "4.19.12-2-MANJARO",
+    "notes": "Worked perfectly after a recent update. Before this it would crash upon starting a match.",
+    "os": "Manjaro Linux",
+    "protonVersion": "NATIVE",
+    "protonVersionManual": "NATIVE",
+    "ram": "8 GB",
+    "rating": "Platinum",
+    "timestamp": 1546107241,
+    "title": "Counter-Strike: Global Offensive"
+  },
+  {
+    "appId": "730",
+    "title": "Counter Strike : Global Offensive Free Edition",
+    "timestamp": 1536256202,
+    "rating": "Platinum",
+    "notes": "Free Single mode version (no online), plays perfect.",
+    "os": "Ubuntu 18.04.1 LTS",
+    "gpuDriver": "Mesa 18.3.0-devel - padoka PPA",
+    "specs": "Intel Core i5-7200U / Intel HD Graphics 620 (Kaby Lake GT2)",
+    "protonVersion": "3.7-5"
+  },
+  {
+    "appId": "730",
+    "title": "Counter-Strike: Global Offensive",
+    "timestamp": 1534953930,
+    "rating": "Borked",
+    "notes": "Does not launch",
+    "os": "Kubuntu",
+    "gpuDriver": "Mesa 18.3.0-devel - padoka PPA",
+    "specs": "Ryzen 5 1600 / AMD RX560",
+    "protonVersion": "Default"
+  }
+]

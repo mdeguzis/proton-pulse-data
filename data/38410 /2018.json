@@ -1,0 +1,16 @@
+[
+  {
+    "appId": "38410 ",
+    "cpu": "i7-2600 CPU @ 3.40GHz",
+    "gpu": "X.Org AMD TURKS (DRM 2.50.0 / 4.12.14-lp150.12.16-default, LLVM 5.0.1)",
+    "gpuDriver": "3.0 Mesa 18.0.2",
+    "kernel": "4.12.14-lp150.12.16-default",
+    "notes": "Doesn't start.",
+    "os": "\"openSUSE Leap 15.0\" (64 bit)",
+    "protonVersion": "3.7.6-beta && 3.7.3",
+    "ram": "7857 Mb",
+    "rating": "Borked",
+    "timestamp": 1536784163,
+    "title": "Fallout 2: A Post Nuclear Role Playing Game"
+  }
+]
