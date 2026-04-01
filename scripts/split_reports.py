@@ -60,24 +60,24 @@ def process_data(input_dir, output_dir):
 
     # 1. Handle Raw JSON files
     json_files = sorted(input_path.glob("*.json"))
-    log(f"\n[json] Found {len(json_files)} raw JSON file(s)", debug=True)
+    log(f"\n[json] Found {len(json_files)} raw JSON file(s)")
     for json_file in json_files:
         size = json_file.stat().st_size
-        log(f"[json] Parsing: {json_file.name} ({size:,} bytes)", debug=True)
+        log(f"[json] Parsing: {json_file.name} ({size:,} bytes)")
         t0 = time.time()
         with open(json_file, 'r') as f:
             count, src_keys = parse_and_split(f, data_output_path, source_label=json_file.name)
         elapsed = time.time() - t0
-        log(f"[json] Done: {count:,} reports in {elapsed:.1f}s", debug=True)
+        log(f"[json] Done: {count:,} reports in {elapsed:.1f}s")
         parsed_count += count
         index_keys.update(src_keys)
 
     # 2. Handle Tarballs (backwards compatibility)
     tar_files = sorted(input_path.glob("*.tar.gz"))
-    log(f"\n[tar] Found {len(tar_files)} tarball(s)", debug=True)
+    log(f"\n[tar] Found {len(tar_files)} tarball(s)")
     for tar_file in tar_files:
         size = tar_file.stat().st_size
-        log(f"[tar] Extracting: {tar_file.name} ({size:,} bytes)", debug=True)
+        log(f"[tar] Extracting: {tar_file.name} ({size:,} bytes)")
         t0 = time.time()
         try:
             with tarfile.open(tar_file, "r:gz") as tar:
@@ -88,13 +88,13 @@ def process_data(input_dir, output_dir):
                     f = tar.extractfile(member)
                     if f:
                         count, src_keys = parse_and_split(f, data_output_path, source_label=member.name)
-                        log(f"[tar]      {count:,} reports parsed", debug=True)
+                        log(f"[tar]      {count:,} reports parsed")
                         parsed_count += count
                         index_keys.update(src_keys)
         except Exception as e:
             log(f"!! Failed to process {tar_file.name}: {e}")
         elapsed = time.time() - t0
-        log(f"[tar] Done: {elapsed:.1f}s", debug=True)
+        log(f"[tar] Done: {elapsed:.1f}s")
 
     total_elapsed = time.time() - pipeline_start
     unique_apps = sum(1 for p in data_output_path.iterdir() if p.is_dir())
