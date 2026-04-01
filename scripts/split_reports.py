@@ -8,7 +8,7 @@ import argparse
 from collections import defaultdict
 
 def flush_buffer(buffer, data_dir):
-    """Writes buffered reports to individual appId.json files."""
+    """Writes active reports to individual appId.json files."""
     for app_id, reports in buffer.items():
         file_path = os.path.join(data_dir, f"{app_id}.json")
         
@@ -20,15 +20,26 @@ def flush_buffer(buffer, data_dir):
                 except json.JSONDecodeError:
                     existing_data = []
         
+        # Merge new reports into existing files
         existing_data.extend(reports)
         
+        # Keep only unique reports (by timestamp/content) to prevent bloat
+        # This is vital for "active" pulls to avoid duplicates
+        seen = set()
+        unique_reports = []
+        for r in existing_data:
+            # Create a unique fingerprint for the report
+            fingerprint = f"{r.get('timestamp')}-{r.get('verdict')}-{r.get('gpu')}"
+            if fingerprint not in seen:
+                unique_reports.append(r)
+                seen.add(fingerprint)
+        
         with open(file_path, "w") as f:
-            # Minify JSON for faster Steam Deck downloads
-            json.dump(existing_data, f, separators=(",", ":"))
+            json.dump(unique_reports, f, separators=(",", ":"))
 
 def process_dump(dump_path, output_dir):
-    """Streams the 2GB+ dump and splits it without crashing RAM."""
-    print(f"Opening dump: {dump_path}")
+    """Streams active data to keep RAM low."""
+    print(f"Opening active dump: {dump_path}")
     data_dir = os.path.join(output_dir, "data")
     os.makedirs(data_dir, exist_ok=True)
 
@@ -38,7 +49,6 @@ def process_dump(dump_path, output_dir):
 
     try:
         with gzip.open(dump_path, "rb") as f:
-            # Use ijson to stream the array items one-by-one
             parser = ijson.items(f, "item")
             
             for report in parser:
@@ -46,7 +56,6 @@ def process_dump(dump_path, output_dir):
                 if not app_id:
                     continue
 
-                # Strip unnecessary bloat to keep files tiny
                 simplified = {
                     "appId": app_id,
                     "verdict": report.get("responses", {}).get("verdict"),
@@ -59,25 +68,24 @@ def process_dump(dump_path, output_dir):
                 unique_apps.add(app_id)
                 report_count += 1
 
-                # Flush every 15k reports to keep memory usage low
                 if report_count % 15000 == 0:
-                    print(f"Processed {report_count} reports...")
+                    print(f"Processed {report_count} active reports...")
                     flush_buffer(buffer, data_dir)
                     buffer.clear()
 
         flush_buffer(buffer, data_dir)
         
-        # Final status index
         with open(os.path.join(output_dir, "index.json"), "w") as f:
             json.dump({
                 "total_reports": report_count,
-                "total_games": len(unique_apps)
+                "total_games": len(unique_apps),
+                "type": "active_sync"
             }, f, indent=2)
 
-        print(f"\nDone! Processed {report_count} reports for {len(unique_apps)} games.")
+        print(f"\nActive Sync Complete: {report_count} reports processed.")
 
     except Exception as e:
-        print(f"Error processing dump: {e}")
+        print(f"Error: {e}")
         sys.exit(1)
 
 def main():

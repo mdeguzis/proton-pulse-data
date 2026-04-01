@@ -2,12 +2,12 @@ name: Update ProtonDB Data
 
 on:
   schedule:
-    # Run on the 2nd of each month
-    - cron: '0 6 2 * *'
+    # Run daily at 6 AM to keep data fresh
+    - cron: '0 6 * * *'
   workflow_dispatch:
     inputs:
       dump_url:
-        description: 'Override dump URL (Leave blank for default)'
+        description: 'Override dump URL (Leave blank for latest)'
         required: false
         default: ''
 
@@ -37,17 +37,19 @@ jobs:
         id: detect
         run: |
           URL="${{ github.event.inputs.dump_url }}"
-          # Default to the bdefore historical dump if input is empty
           if [ -z "$URL" ]; then
-            URL="https://github.com/bdefore/protondb-data/raw/master/reports/reports_piiremoved.json.gz"
+            # This is the ACTIVE daily-updated source
+            URL="https://raw.githubusercontent.com/ProtonDB/static/master/reports.json.gz"
           fi
           echo "url=$URL" >> "$GITHUB_OUTPUT"
-          echo "Selected dump URL: $URL"
+          echo "Selected active dump URL: $URL"
 
-      - name: Download ProtonDB dump
+      - name: Download Active ProtonDB dump
         run: |
-          echo "Downloading: ${{ steps.detect.outputs.url }}"
-          curl -L --progress-bar \
+          echo "Downloading latest reports..."
+          # We use a custom User-Agent to avoid the b'40' / 403 Forbidden errors
+          curl -L -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" \
+            --progress-bar \
             "${{ steps.detect.outputs.url }}" \
             -o /tmp/protondb-dump.json.gz
 
@@ -67,6 +69,6 @@ jobs:
           git checkout --orphan gh-pages
           touch .nojekyll
           git add -A
-          git commit -m "chore: update ProtonDB data $(date -u +%Y-%m-%d)"
+          git commit -m "chore: active data update $(date -u +%Y-%m-%d)"
           git remote add origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
           git push --force origin gh-pages
