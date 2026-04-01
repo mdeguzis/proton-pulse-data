@@ -32,30 +32,26 @@ jobs:
           python -m pip install --upgrade pip
           pip install ijson
 
-      - name: Download and Verify Dump
+      - name: Download Active Dump
         id: download
         run: |
           URL="${{ github.event.inputs.dump_url }}"
           if [ -z "$URL" ]; then
-            # Using the official ProtonDB data release endpoint
-            URL="https://www.protondb.com/data/reports.json.gz"
+            # Using the raw GitHub content link from the official static repo
+            URL="https://github.com/ProtonDB/static/raw/master/reports.json.gz"
           fi
           
-          echo "Downloading from: $URL"
+          echo "Attempting download from: $URL"
           
-          # Use a standard browser User-Agent to prevent 403/404 errors
-          curl -L -A "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36" \
-            --progress-bar "$URL" -o /tmp/protondb-dump.json.gz
+          # Use -f to fail on HTTP errors and -L to follow redirects
+          curl -f -L -A "Mozilla/5.0" --progress-bar "$URL" -o /tmp/protondb-dump.json.gz
           
-          # CHECK: Is it actually a gzip file?
-          FILE_TYPE=$(file /tmp/protondb-dump.json.gz)
-          echo "File check: $FILE_TYPE"
-          
-          if [[ "$FILE_TYPE" == *"gzip compressed data"* ]]; then
-            echo "Success: File is valid Gzip."
+          # Final binary check
+          if file /tmp/protondb-dump.json.gz | grep -q "gzip compressed data"; then
+            echo "Success: Valid Gzip file received."
           else
-            echo "ERROR: Downloaded file is not Gzip. It might be an error page."
-            cat /tmp/protondb-dump.json.gz | head -n 5
+            echo "ERROR: Received non-gzip data."
+            file /tmp/protondb-dump.json.gz
             exit 1
           fi
 
@@ -75,6 +71,6 @@ jobs:
           git checkout --orphan gh-pages
           touch .nojekyll
           git add -A
-          git commit -m "chore: active data update $(date -u +%Y-%m-%d)"
+          git commit -m "chore: active data sync $(date -u +%Y-%m-%d)"
           git remote add origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
           git push --force origin gh-pages
