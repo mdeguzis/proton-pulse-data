@@ -1,0 +1,24 @@
+[
+  {
+    "appId": "383950",
+    "title": "League of Mermaids",
+    "timestamp": 1535668055,
+    "rating": "Platinum",
+    "notes": "Nope",
+    "os": "Linux Mint 18.3 Cinnamon 64-bit (kernel 4.4.0-98-generic)",
+    "gpuDriver": "AMD Curacao PRO [Radeon R7 370/ r9 270/370 OEM]",
+    "specs": "AMD Processor model unknown x 4",
+    "protonVersion": "Default"
+  },
+  {
+    "appId": "383950",
+    "title": "League of Mermaids",
+    "timestamp": 1535653655,
+    "rating": "Platinum",
+    "notes": "Nope",
+    "os": "Linux Mint 18.3 Cinnamon 64-bit (kernel 4.4.0-98-generic)",
+    "gpuDriver": "AMD Curacao PRO [Radeon R7 370/ r9 270/370 OEM]",
+    "specs": "AMD Processor model unknown x 4",
+    "protonVersion": "Default"
+  }
+]

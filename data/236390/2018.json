@@ -1,0 +1,32 @@
+[
+  {
+    "appId": "236390",
+    "cpu": "AMD Ryzen 7 1700X Eight-Core",
+    "duration": "aboutAnHour",
+    "gpu": "NVIDIA GeForce GTX 1080",
+    "gpuDriver": "NVIDIA 410.73",
+    "kernel": "4.19.0-4-MANJARO",
+    "notes": "Game starts at opengl engine with very low performance and without some textures. After forcing vulkan engine game runs smooth but crash when trying render warship.",
+    "os": "Manjaro Linux",
+    "protonVersion": "Default",
+    "ram": "32 GB",
+    "rating": "Bronze",
+    "timestamp": 1541612211,
+    "title": "War Thunder"
+  },
+  {
+    "appId": "236390",
+    "cpu": "Intel Core i7         860  @ 2.80GHz",
+    "duration": "lessThanFifteenMinutes",
+    "gpu": "NVIDIA GeForce GTX 1060 6GB",
+    "gpuDriver": "NVIDIA 415.22.01",
+    "kernel": "4.15.0-42-generic",
+    "notes": "Playing through Proton/Wine starting from version 1.83.1.x results in regular crashes, and some benchmarks, like Tank Battle, will always crash the game. Switching the renderer to Vulkan resolves some of the issues, but the Vulkan renderer also has serious instability on random matches, Native or Proton/Wine. No bugfixes are planned for these issues.",
+    "os": "Ubuntu 18.04.1 LTS",
+    "protonVersion": "Beta (3.16-5)",
+    "ram": "8 GB",
+    "rating": "Borked",
+    "timestamp": 1545162291,
+    "title": "War Thunder"
+  }
+]
