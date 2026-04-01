@@ -2,14 +2,14 @@ name: Update ProtonDB Data
 
 on:
   schedule:
-    # Running on the 1st of the month is usually sufficient for the official dump
-    - cron: '0 6 1 * *'
+    # Run on the 2nd of each month to ensure the previous month's dump is ready
+    - cron: '0 6 2 * *'
   workflow_dispatch:
     inputs:
       dump_url:
-        description: 'Override dump URL (default is official ProtonDB live dump)'
+        description: 'Override dump URL (default is official static reports)'
         required: false
-        default: 'https://www.protondb.com/admin/reports/reports.json.gz'
+        default: 'https://raw.githubusercontent.com/ProtonDB/static/master/reports.json.gz'
 
 jobs:
   update:
@@ -18,10 +18,9 @@ jobs:
       contents: write
 
     steps:
-      - name: Checkout scripts
+      - name: Checkout scripts-repo
         uses: actions/checkout@v4
         with:
-          # This keeps your Python scripts available
           path: scripts-repo
 
       - name: Set up Python
@@ -29,20 +28,25 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ijson
+
       - name: Prepare Download URL
         id: detect
         run: |
-          # Use input override or default to the official live dump
+          # Use manual input if provided, otherwise use the reliable static mirror
           URL="${{ github.event.inputs.dump_url }}"
           if [ -z "$URL" ]; then
-            URL="https://www.protondb.com/admin/reports/reports.json.gz"
+            URL="https://raw.githubusercontent.com/ProtonDB/static/master/reports.json.gz"
           fi
           echo "url=$URL" >> "$GITHUB_OUTPUT"
           echo "Selected dump URL: $URL"
 
-      - name: Download dump
+      - name: Download ProtonDB dump
         run: |
-          # Using .json.gz as the extension to reflect the official source
+          echo "Downloading: ${{ steps.detect.outputs.url }}"
           curl -L --progress-bar \
             "${{ steps.detect.outputs.url }}" \
             -o /tmp/protondb-dump.json.gz
@@ -50,8 +54,7 @@ jobs:
       - name: Split reports by game
         run: |
           mkdir -p /tmp/protondb-output
-          # Note: Ensure split_reports.py is updated to handle .json.gz (gzip) 
-          # instead of .tar.gz (tarfile) if it wasn't already polymorphic.
+          # The split_reports.py script handles the .json.gz streaming
           python3 scripts-repo/scripts/split_reports.py \
             /tmp/protondb-dump.json.gz \
             /tmp/protondb-output
@@ -59,26 +62,34 @@ jobs:
       - name: Show output stats
         run: |
           echo "=== index.json ==="
-          [ -f /tmp/protondb-output/index.json ] && cat /tmp/protondb-output/index.json || echo "index.json not found"
+          [ -f /tmp/protondb-output/index.json ] && cat /tmp/protondb-output/index.json || echo "index.json missing"
           echo -e "\n=== data/ file count ==="
           ls /tmp/protondb-output/data/ 2>/dev/null | wc -l || echo "0"
           echo -e "\n=== total data/ size ==="
           du -sh /tmp/protondb-output/data/ 2>/dev/null || echo "No data directory"
 
-      - name: Publish to gh-pages (orphan, no history)
+      - name: Publish to gh-pages (orphan branch)
         run: |
           cd /tmp/protondb-output
+
           git init
-          git config user.name "github-actions[bot]"
+          git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Use an orphan branch to keep the repo size from ballooning with history
           git checkout --orphan gh-pages
 
+          # Ensure GitHub Pages serves the raw JSON files without Jekyll processing
           touch .nojekyll
+
           git add -A
           git commit -m "chore: update ProtonDB data $(date -u +%Y-%m-%d)"
 
+          # Push to the current repository's gh-pages branch
           git remote add origin \
             "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
 
+          # Force-push is intentional here to keep the repo thin
           git push --force origin gh-pages
-          echo "Published to https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
+
+          echo "Successfully published to https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
