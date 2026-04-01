@@ -200,9 +200,9 @@ def generate_index_html(index_keys: set, output_path: Path) -> None:
     for (app_id, year) in index_keys:
         app_years.setdefault(app_id, []).append(year)
 
-    sorted_app_ids = sorted(app_years.keys(), key=lambda a: int(a) if a.isdigit() else a)
+    sorted_app_ids = sorted(app_years.keys(), key=lambda a: (0, int(a)) if a.isdigit() else (1, a))
     for app_id in sorted_app_ids:
-        app_years[app_id] = sorted(app_years[app_id], key=lambda y: int(y) if y.isdigit() else y)
+        app_years[app_id] = sorted(app_years[app_id], key=lambda y: (0, int(y)) if y.isdigit() else (1, y))
 
     lines = [
         "<!DOCTYPE html>",
