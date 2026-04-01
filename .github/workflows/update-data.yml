@@ -2,7 +2,6 @@ name: Update ProtonDB Data
 
 on:
   schedule:
-    # Run daily at 6 AM to keep data fresh
     - cron: '0 6 * * *'
   workflow_dispatch:
     inputs:
@@ -33,25 +32,32 @@ jobs:
           python -m pip install --upgrade pip
           pip install ijson
 
-      - name: Prepare Download URL
-        id: detect
+      - name: Download and Verify Dump
+        id: download
         run: |
           URL="${{ github.event.inputs.dump_url }}"
           if [ -z "$URL" ]; then
-            # This is the ACTIVE daily-updated source
-            URL="https://raw.githubusercontent.com/ProtonDB/static/master/reports.json.gz"
+            # Using the official ProtonDB data release endpoint
+            URL="https://www.protondb.com/data/reports.json.gz"
           fi
-          echo "url=$URL" >> "$GITHUB_OUTPUT"
-          echo "Selected active dump URL: $URL"
-
-      - name: Download Active ProtonDB dump
-        run: |
-          echo "Downloading latest reports..."
-          # We use a custom User-Agent to avoid the b'40' / 403 Forbidden errors
-          curl -L -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" \
-            --progress-bar \
-            "${{ steps.detect.outputs.url }}" \
-            -o /tmp/protondb-dump.json.gz
+          
+          echo "Downloading from: $URL"
+          
+          # Use a standard browser User-Agent to prevent 403/404 errors
+          curl -L -A "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36" \
+            --progress-bar "$URL" -o /tmp/protondb-dump.json.gz
+          
+          # CHECK: Is it actually a gzip file?
+          FILE_TYPE=$(file /tmp/protondb-dump.json.gz)
+          echo "File check: $FILE_TYPE"
+          
+          if [[ "$FILE_TYPE" == *"gzip compressed data"* ]]; then
+            echo "Success: File is valid Gzip."
+          else
+            echo "ERROR: Downloaded file is not Gzip. It might be an error page."
+            cat /tmp/protondb-dump.json.gz | head -n 5
+            exit 1
+          fi
 
       - name: Split reports by game
         run: |
