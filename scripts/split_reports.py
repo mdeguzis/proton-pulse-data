@@ -12,48 +12,49 @@ def process_reports(input_path, output_dir):
     manifest_path = os.path.join(output_dir, 'manifest.json')
     os.makedirs(data_dir, exist_ok=True)
 
-    # 1. Load the manifest to see what we've already processed
     processed_files = []
     if os.path.exists(manifest_path):
         try:
             with open(manifest_path, 'r') as f:
                 m_data = json.load(f)
                 processed_files = m_data.get("processed_files", [])
-                print(f"--> Found manifest. {len(processed_files)} archives already handled.", flush=True)
-        except Exception as e:
-            print(f"--> Manifest corrupt or missing, starting fresh: {e}", flush=True)
+        except:
+            pass
 
-    # 2. Identify new archives
     search_path = os.path.join(abs_input, 'reports') if os.path.isdir(os.path.join(abs_input, 'reports')) else abs_input
     try:
         all_tarballs = sorted([f for f in os.listdir(search_path) if f.endswith('.tar.gz')])
         new_tarballs = [f for f in all_tarballs if f not in processed_files]
     except FileNotFoundError:
-        print(f"!! ERROR: Path not found: {search_path}", flush=True)
         return
 
     if not new_tarballs:
-        print("--> Everything is up to date. No new archives to process.", flush=True)
+        print("--> No new data.")
         return
 
-    print(f"--> {len(new_tarballs)} new archives found (Total archives in repo: {len(all_tarballs)})", flush=True)
-
-    # 3. Process only the NEW archives
     game_updates = defaultdict(list)
     new_report_count = 0
 
     for index, file in enumerate(new_tarballs, 1):
         file_path = os.path.join(search_path, file)
-        print(f"[{index}/{len(new_tarballs)}] Processing: {file}...", flush=True)
+        print(f"[{index}/{len(new_tarballs)}] Extracting: {file}...", flush=True)
         
-        file_report_count = 0
         try:
             with tarfile.open(file_path, "r:gz") as tar:
                 for member in tar.getmembers():
                     if member.name.endswith('.json'):
+                        # ROBUST APPID EXTRACTION
+                        # Splits 'path/to/12345.json' and takes '12345'
+                        filename = os.path.basename(member.name)
+                        app_id = filename.replace('.json', '')
+                        
+                        # Sanity check: AppIDs should be digits. 
+                        # If it's "reports", we're grabbing the wrong string.
+                        if not app_id.isdigit():
+                            continue
+
                         f = tar.extractfile(member)
                         if f:
-                            app_id = os.path.splitext(os.path.basename(member.name))[0]
                             try:
                                 parser = ijson.items(f, 'item')
                                 for report in parser:
@@ -64,47 +65,42 @@ def process_reports(input_path, output_dir):
                                     }
                                     game_updates[app_id].append(simplified)
                                     new_report_count += 1
-                                    file_report_count += 1
-                            except Exception:
+                            except:
                                 continue
-            print(f"    Done. ({file_report_count} reports found)", flush=True)
         except Exception as e:
-            print(f"!! Error opening {file}: {e}", flush=True)
+            print(f"!! Error: {e}")
 
-    # 4. Merge and Write
-    print(f"--> Merging updates for {len(game_updates)} games...", flush=True)
+    print(f"--> Merging and cleaning data...", flush=True)
     for app_id, new_reports in game_updates.items():
         target_file = os.path.join(data_dir, f"{app_id}.json")
         
         existing_data = []
         if os.path.exists(target_file):
             with open(target_file, 'r') as f:
-                try:
-                    existing_data = json.load(f)
-                except:
-                    existing_data = []
+                try: existing_data = json.load(f)
+                except: pass
 
-        # Combine, sort by date descending, and write
         combined = existing_data + new_reports
+        # Deduplicate and sort
         combined.sort(key=lambda x: str(x.get('t', '')), reverse=True)
+        
+        # FINAL PROTECTION: If a file is getting too huge, we cap it at the 
+        # latest 5,000 reports. GitHub cannot handle 500MB JSON files.
+        if len(combined) > 5000:
+            combined = combined[:5000]
         
         with open(target_file, 'w') as f:
             json.dump(combined, f)
 
-    # 5. Save updated manifest
-    final_manifest = {
-        "last_updated": datetime.now().isoformat(),
-        "processed_files": all_tarballs,
-        "total_new_reports_this_run": new_report_count
-    }
+    # Save manifest
     with open(manifest_path, 'w') as f:
-        json.dump(final_manifest, f, indent=2)
+        json.dump({
+            "last_updated": datetime.now().isoformat(),
+            "processed_files": all_tarballs,
+            "total_games": len(next(os.walk(data_dir))[2])
+        }, f, indent=2)
 
-    print(f"--- FINISH ---", flush=True)
-    print(f"Added {new_report_count} reports to the database.", flush=True)
+    print(f"--- FINISH: Processed {new_report_count} reports ---")
 
 if __name__ == "__main__":
-    if len(sys.argv) < 3:
-        print("Usage: python3 split_reports.py <input_dir> <output_dir>")
-        sys.exit(1)
     process_reports(sys.argv[1], sys.argv[2])
