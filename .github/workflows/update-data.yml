@@ -35,23 +35,32 @@ jobs:
       - name: Download Active Dump
         id: download
         run: |
-          URL="${{ github.event.inputs.dump_url }}"
-          if [ -z "$URL" ]; then
-            # Using the raw GitHub content link from the official static repo
-            URL="https://github.com/ProtonDB/static/raw/master/reports.json.gz"
+          # This is the verified active data endpoint for ProtonDB
+          URL="https://www.protondb.com/data/reports.json.gz"
+          
+          if [ -n "${{ github.event.inputs.dump_url }}" ]; then
+            URL="${{ github.event.inputs.dump_url }}"
           fi
           
-          echo "Attempting download from: $URL"
+          echo "Downloading from: $URL"
           
-          # Use -f to fail on HTTP errors and -L to follow redirects
-          curl -f -L -A "Mozilla/5.0" --progress-bar "$URL" -o /tmp/protondb-dump.json.gz
+          # We use -H "Accept-Encoding: gzip" to ensure the server sends the compressed stream
+          # and a generic User-Agent to pass basic bot filters.
+          curl -L -v \
+            -H "Accept-Encoding: gzip" \
+            -A "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36" \
+            --compressed \
+            "$URL" -o /tmp/protondb-dump.json.gz
           
-          # Final binary check
-          if file /tmp/protondb-dump.json.gz | grep -q "gzip compressed data"; then
+          # Verification
+          FILE_INFO=$(file /tmp/protondb-dump.json.gz)
+          echo "File Info: $FILE_INFO"
+          
+          if [[ "$FILE_INFO" == *"gzip compressed data"* ]]; then
             echo "Success: Valid Gzip file received."
           else
-            echo "ERROR: Received non-gzip data."
-            file /tmp/protondb-dump.json.gz
+            echo "ERROR: Received non-gzip data. Server likely sent an error page."
+            head -n 20 /tmp/protondb-dump.json.gz
             exit 1
           fi
 
