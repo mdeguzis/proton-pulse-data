@@ -9,6 +9,7 @@ DEBUG = False
 LIVE_COUNTS_URL = "https://www.protondb.com/data/counts.json"
 LIVE_REPORTS_URL = "https://www.protondb.com/data/reports/{device}/app/{hash}.json"
 LIVE_REPORT_DEVICE = "all-devices"
+LIVE_REPORT_HASH_DEVICE = "any"
 BACKFILL_MANIFEST_PATH = Path(__file__).resolve().parents[2] / "config" / "live_backfill_app_ids.json"
 
 

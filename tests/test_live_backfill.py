@@ -3,8 +3,11 @@ import json
 import scripts.pipeline.backfill as backfill_module
 from scripts.pipeline.backfill import (
     backfill_missing_apps,
+    build_live_report_candidate_urls,
     compute_live_report_hash,
+    compute_live_report_hash_legacy,
     load_backfill_app_ids,
+    load_backfill_targets,
     run_backfill,
 )
 from scripts.pipeline.finalize import (
@@ -22,6 +25,42 @@ def test_load_backfill_app_ids_returns_sorted_unique_ids(tmp_path):
     assert load_backfill_app_ids(manifest) == ["730", "2561580"]
 
 
+def test_load_backfill_targets_supports_manifest_overrides(tmp_path):
+    manifest = tmp_path / "live_backfill_app_ids.json"
+    manifest.write_text(json.dumps([
+        {"appId": 2561580, "reportUrl": "https://example.com/primary.json"},
+        {"appId": "2561580", "reportUrls": ["https://example.com/secondary.json"]},
+        "730",
+    ]))
+
+    targets = load_backfill_targets(manifest)
+
+    assert [target.app_id for target in targets] == ["730", "2561580"]
+    assert targets[1].report_urls == (
+        "https://example.com/primary.json",
+        "https://example.com/secondary.json",
+    )
+
+
+def test_compute_live_report_hash_matches_current_protondb_bundle():
+    assert compute_live_report_hash(2561580, 415099, 1775051127, "any") == 2043109714
+
+
+def test_build_live_report_candidate_urls_prefers_overrides_and_includes_fallbacks():
+    urls = build_live_report_candidate_urls(
+        "2561580",
+        415099,
+        1775051127,
+        explicit_urls=("https://example.com/override.json",),
+    )
+
+    assert urls == [
+        "https://example.com/override.json",
+        f"https://www.protondb.com/data/reports/all-devices/app/{compute_live_report_hash(2561580, 415099, 1775051127, 'any')}.json",
+        f"https://www.protondb.com/data/reports/all-devices/app/{compute_live_report_hash_legacy(2561580, 415099, 1775051127, 'all')}.json",
+    ]
+
+
 def test_backfill_missing_apps_writes_year_files_for_manifest_app(tmp_path):
     data_dir = tmp_path / "data"
     data_dir.mkdir()
@@ -29,7 +68,7 @@ def test_backfill_missing_apps_writes_year_files_for_manifest_app(tmp_path):
     manifest.write_text(json.dumps(["2561580"]))
 
     counts_payload = {"reports": 415099, "timestamp": 1775051127}
-    expected_hash = compute_live_report_hash(2561580, counts_payload["reports"], counts_payload["timestamp"], "all")
+    expected_hash = compute_live_report_hash(2561580, counts_payload["reports"], counts_payload["timestamp"], "any")
     expected_url = f"https://www.protondb.com/data/reports/all-devices/app/{expected_hash}.json"
 
     live_payload = {
@@ -82,6 +121,94 @@ def test_backfill_missing_apps_writes_year_files_for_manifest_app(tmp_path):
     assert reports[0]["notes"] == "Runs great."
 
 
+def test_backfill_missing_apps_falls_back_to_legacy_candidate_url(tmp_path):
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    manifest = tmp_path / "live_backfill_app_ids.json"
+    manifest.write_text(json.dumps(["2561580"]))
+
+    counts_payload = {"reports": 415099, "timestamp": 1775051127}
+    current_url = (
+        "https://www.protondb.com/data/reports/all-devices/app/"
+        f"{compute_live_report_hash(2561580, counts_payload['reports'], counts_payload['timestamp'], 'any')}.json"
+    )
+    legacy_url = (
+        "https://www.protondb.com/data/reports/all-devices/app/"
+        f"{compute_live_report_hash_legacy(2561580, counts_payload['reports'], counts_payload['timestamp'], 'all')}.json"
+    )
+    live_payload = {
+        "reports": [
+            {
+                "timestamp": 1763251200,
+                "responses": {"verdict": "yes", "triedOob": "yes", "protonVersion": "10.0-3"},
+                "device": {"inferred": {"steam": {}}},
+                "contributor": {"steam": {"playtimeLinux": 1200}},
+            }
+        ]
+    }
+
+    fetched_urls = []
+
+    def fake_fetch(url: str):
+        fetched_urls.append(url)
+        if url == "https://www.protondb.com/data/counts.json":
+            return counts_payload
+        if url == current_url:
+            raise backfill_module.error.HTTPError(url, 404, "not found", hdrs=None, fp=None)
+        if url == legacy_url:
+            return live_payload
+        raise AssertionError(f"Unexpected URL fetched: {url}")
+
+    written_keys = backfill_missing_apps(data_dir, fetch_json_impl=fake_fetch, manifest_path=manifest)
+
+    assert written_keys == {("2561580", "2025")}
+    assert fetched_urls == [
+        "https://www.protondb.com/data/counts.json",
+        current_url,
+        legacy_url,
+    ]
+
+
+def test_backfill_missing_apps_uses_manifest_report_url_override_first(tmp_path):
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    manifest = tmp_path / "live_backfill_app_ids.json"
+    override_url = "https://example.com/protondb-override.json"
+    manifest.write_text(json.dumps([
+        {"appId": "2561580", "reportUrl": override_url},
+    ]))
+
+    counts_payload = {"reports": 415099, "timestamp": 1775051127}
+    live_payload = {
+        "reports": [
+            {
+                "timestamp": 1763251200,
+                "responses": {"verdict": "yes", "triedOob": "yes", "protonVersion": "10.0-3"},
+                "device": {"inferred": {"steam": {}}},
+                "contributor": {"steam": {"playtimeLinux": 1200}},
+            }
+        ]
+    }
+
+    fetched_urls = []
+
+    def fake_fetch(url: str):
+        fetched_urls.append(url)
+        if url == "https://www.protondb.com/data/counts.json":
+            return counts_payload
+        if url == override_url:
+            return live_payload
+        raise AssertionError(f"Unexpected URL fetched: {url}")
+
+    written_keys = backfill_missing_apps(data_dir, fetch_json_impl=fake_fetch, manifest_path=manifest)
+
+    assert written_keys == {("2561580", "2025")}
+    assert fetched_urls == [
+        "https://www.protondb.com/data/counts.json",
+        override_url,
+    ]
+
+
 def test_backfill_missing_apps_skips_existing_app_directory(tmp_path):
     data_dir = tmp_path / "data"
     existing_app_dir = data_dir / "2561580"
@@ -108,7 +235,7 @@ def test_backfilled_keys_flow_into_app_index_and_main_index(tmp_path):
     manifest.write_text(json.dumps(["2561580"]))
 
     counts_payload = {"reports": 415099, "timestamp": 1775051127}
-    expected_hash = compute_live_report_hash(2561580, counts_payload["reports"], counts_payload["timestamp"], "all")
+    expected_hash = compute_live_report_hash(2561580, counts_payload["reports"], counts_payload["timestamp"], "any")
     expected_url = f"https://www.protondb.com/data/reports/all-devices/app/{expected_hash}.json"
 
     live_payload = {
@@ -150,7 +277,7 @@ def test_run_backfill_and_finalize_include_backfilled_apps_in_indexes(tmp_path, 
     (data_dir / "730" / "2024.json").write_text(json.dumps([{"appId": "730", "timestamp": 1704067200}]))
 
     counts_payload = {"reports": 415099, "timestamp": 1775051127}
-    expected_hash = compute_live_report_hash(2561580, counts_payload["reports"], counts_payload["timestamp"], "all")
+    expected_hash = compute_live_report_hash(2561580, counts_payload["reports"], counts_payload["timestamp"], "any")
     expected_url = f"https://www.protondb.com/data/reports/all-devices/app/{expected_hash}.json"
 
     live_payload = {
