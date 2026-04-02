@@ -1,0 +1,102 @@
+name: Update ProtonDB Data
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  PYTHONUNBUFFERED: "1"
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout Scripts
+        uses: actions/checkout@v4
+
+      - name: Checkout Official ProtonDB Data
+        uses: actions/checkout@v4
+        with:
+          repository: bdefore/protondb-data
+          path: official-data
+          fetch-depth: 1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Process Official Reports
+        run: |
+          mkdir -p /tmp/protondb-output
+          uv run python scripts/split_reports.py process \
+            official-data/reports \
+            /tmp/protondb-output
+
+      - name: Backfill Missing Apps
+        run: |
+          uv run python scripts/split_reports.py backfill \
+            /tmp/protondb-output
+
+      - name: Finalize Indexes and Summary
+        run: |
+          uv run python scripts/split_reports.py finalize \
+            /tmp/protondb-output
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: site-content
+          path: |
+            /tmp/protondb-output/data
+            /tmp/protondb-output/index.html
+
+  deploy-pages:
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: site-content
+          path: /tmp/protondb-output
+
+      - name: Deploy to gh-pages (orphan — no history)
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git checkout --orphan gh-pages-new
+          git rm -rf .
+          cp -r /tmp/protondb-output/data .
+          cp /tmp/protondb-output/index.html .
+          git add data/ index.html
+          git commit -m "Deploy: $(date +%F)"
+          git push origin gh-pages-new:gh-pages --force
+
+  report-build-status:
+    needs: [build, deploy-pages]
+    runs-on: ubuntu-24.04
+    if: always()
+    steps:
+      - name: Summary
+        run: |
+          echo "### Update ProtonDB Data" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Job | Status |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|-----|--------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Build | ${{ needs.build.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Deploy Pages | ${{ needs.deploy-pages.result }} |" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Fail if any job failed
+        if: contains(needs.*.result, 'failure')
+        run: exit 1

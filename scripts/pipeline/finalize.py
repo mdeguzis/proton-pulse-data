@@ -7,24 +7,6 @@ from .common import count_year_bucket_files, log
 from .state import read_pipeline_state
 
 
-def collect_index_keys_from_disk(data_output_path: Path) -> set[tuple[str, str]]:
-    index_keys: set[tuple[str, str]] = set()
-
-    if not data_output_path.exists():
-        return index_keys
-
-    for app_dir in data_output_path.iterdir():
-        if not app_dir.is_dir():
-            continue
-        app_id = app_dir.name
-        for year_file in app_dir.glob("*.json"):
-            if year_file.stem in {"index", "latest", "votes"}:
-                continue
-            index_keys.add((app_id, year_file.stem))
-
-    return index_keys
-
-
 def log_summary(
     parsed_count: int,
     data_output_path: Path,
@@ -54,7 +36,7 @@ def generate_latest_files(data_output_path: Path) -> None:
         if not app_dir.is_dir():
             continue
         year_files = sorted(app_dir.glob("*.json"), key=lambda p: p.stem)
-        year_files = [f for f in year_files if f.stem not in {"index", "latest", "votes"}]
+        year_files = [f for f in year_files if f.stem != "latest"]
         if not year_files:
             continue
         latest_src = year_files[-1]
@@ -160,8 +142,7 @@ def finalize_output(output_dir):
     state = read_pipeline_state(output_path)
     pipeline_start = time.time()
     generate_latest_files(data_output_path)
-    index_keys = collect_index_keys_from_disk(data_output_path)
-    generate_app_indexes(index_keys, data_output_path)
-    generate_index_html(index_keys, output_path)
+    generate_app_indexes(state["index_keys"], data_output_path)
+    generate_index_html(state["index_keys"], output_path)
     log_summary(state["parsed_count"], data_output_path, output_path, pipeline_start, state["backfilled_keys"])
     log("Done finalizing output.")
