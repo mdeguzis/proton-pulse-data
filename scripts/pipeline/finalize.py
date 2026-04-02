@@ -57,6 +57,19 @@ def generate_app_indexes(index_keys: set, data_output_path: Path) -> None:
         app_dir.mkdir(parents=True, exist_ok=True)
         index_file = app_dir / "index.json"
         index_file.write_text(json.dumps(sorted_years))
+
+        links = [f'<li><a href="latest.json"><strong>latest.json</strong></a></li>']
+        for year in sorted_years:
+            links.append(f'<li><a href="{year}.json">{year}.json</a></li>')
+        html = (
+            f"<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\">"
+            f"<title>{app_id} - proton-pulse-data</title></head><body>"
+            f"<h1>{app_id}</h1><ul>{''.join(links)}</ul>"
+            f"<p><a href=\"../../coverage.html\">&larr; Coverage Report</a></p>"
+            f"</body></html>"
+        )
+        (app_dir / "index.html").write_text(html)
+
         log(f"[app-index] {app_id}/index.json -> {sorted_years}")
 
 
@@ -204,10 +217,10 @@ a {{ color: #06c; }}
 <table id="coverage">
 <thead><tr>
 <th onclick="sortTable(0)">App ID</th>
-<th onclick="sortTable(1)">Title</th>
+<th onclick="sortTable(1)">Title (ProtonDB)</th>
 <th onclick="sortTable(2)">Official</th>
 <th onclick="sortTable(3)">Backfill</th>
-<th>Latest</th>
+<th>Index</th>
 </tr></thead>
 <tbody>
 """
@@ -230,7 +243,7 @@ a {{ color: #06c; }}
         app_cell = f'<a href="{steam_url}">{app_id}</a>' if steam_url else app_id
         title_cell = f'<a href="{protondb_url}">{title}</a>' if protondb_url and title else (title or "")
         html += f'<td>{app_cell}</td><td>{title_cell}</td><td>{o}</td><td>{b}</td>'
-        html += f'<td><a href="{link}">latest.json</a></td></tr>\n'
+        html += f'<td><a href="data/{app_id}/">index</a></td></tr>\n'
 
     html += """</tbody></table>
 <script>
