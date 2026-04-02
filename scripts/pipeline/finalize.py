@@ -204,21 +204,23 @@ def generate_coverage_report(index_keys: set, backfilled_keys: set, data_output_
 <meta charset="utf-8">
 <title>proton-pulse-data coverage report</title>
 <style>
-body {{ font-family: system-ui, sans-serif; margin: 2em; }}
+body {{ font-family: system-ui, sans-serif; margin: 2em; background: #1a1a2e; color: #e0e0e0; }}
 table {{ border-collapse: collapse; width: 100%; }}
-th, td {{ border: 1px solid #ccc; padding: 6px 10px; text-align: left; }}
-th {{ background: #335; color: #fff; cursor: pointer; user-select: none; }}
-th:hover {{ background: #557; }}
-tr:nth-child(even) {{ background: #f4f4f4; }}
-.yes {{ color: green; font-weight: bold; }}
-.no {{ color: #999; }}
-a {{ color: #06c; }}
+th, td {{ border: 1px solid #333; padding: 6px 10px; text-align: left; }}
+th {{ background: #16213e; color: #e0e0e0; cursor: pointer; user-select: none; }}
+th:hover {{ background: #1a3a5c; }}
+tr:nth-child(even) {{ background: #16213e; }}
+tr:nth-child(odd) {{ background: #1a1a2e; }}
+.yes {{ color: #4caf50; font-weight: bold; }}
+.no {{ color: #666; }}
+a {{ color: #5dade2; }}
 .filters {{ margin-bottom: 1em; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }}
-#filter {{ padding: 6px; width: 300px; }}
-.toggle {{ padding: 6px 14px; border: 2px solid #335; border-radius: 4px; background: #fff; color: #335; cursor: pointer; font-weight: bold; }}
-.toggle.active {{ background: #335; color: #fff; }}
+#filter {{ padding: 6px; width: 300px; background: #16213e; color: #e0e0e0; border: 1px solid #333; border-radius: 4px; }}
+.toggle {{ padding: 6px 14px; border: 2px solid #5dade2; border-radius: 4px; background: transparent; color: #5dade2; cursor: pointer; font-weight: bold; }}
+.toggle.active {{ background: #5dade2; color: #1a1a2e; }}
 .pager {{ margin: 1em 0; display: flex; gap: 8px; align-items: center; }}
-.pager button {{ padding: 4px 12px; }}
+.pager button {{ padding: 4px 12px; background: #16213e; color: #e0e0e0; border: 1px solid #333; border-radius: 4px; cursor: pointer; }}
+.pager button:hover {{ background: #1a3a5c; }}
 </style>
 </head>
 <body>
