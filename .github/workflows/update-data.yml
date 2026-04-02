@@ -55,6 +55,7 @@ jobs:
           path: |
             /tmp/protondb-output/data
             /tmp/protondb-output/index.html
+            /tmp/protondb-output/coverage.html
 
   deploy-pages:
     needs: build
@@ -79,7 +80,8 @@ jobs:
           git rm -rf .
           cp -r /tmp/protondb-output/data .
           cp /tmp/protondb-output/index.html .
-          git add data/ index.html
+          cp /tmp/protondb-output/coverage.html .
+          git add data/ index.html coverage.html
           git commit -m "Deploy: $(date +%F)"
           git push origin gh-pages-new:gh-pages --force
 
