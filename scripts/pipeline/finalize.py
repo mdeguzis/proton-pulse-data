@@ -184,13 +184,22 @@ tr:nth-child(even) {{ background: #f4f4f4; }}
 .yes {{ color: green; font-weight: bold; }}
 .no {{ color: #999; }}
 a {{ color: #06c; }}
-#filter {{ margin-bottom: 1em; padding: 6px; width: 300px; }}
+.filters {{ margin-bottom: 1em; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }}
+#filter {{ padding: 6px; width: 300px; }}
+.toggle {{ padding: 6px 14px; border: 2px solid #335; border-radius: 4px; background: #fff; color: #335; cursor: pointer; font-weight: bold; }}
+.toggle.active {{ background: #335; color: #fff; }}
 </style>
 </head>
 <body>
 <h1>Coverage Report</h1>
 <p>{len(rows)} apps &middot; {official_count} official &middot; {backfill_count} backfill &middot; Generated: {now}</p>
-<input id="filter" placeholder="Filter by App ID or title\u2026" oninput="filterTable()">
+<div class="filters">
+<input id="filter" placeholder="Filter by App ID or title\u2026" oninput="applyFilters()">
+<button class="toggle active" data-src="all" onclick="setSource('all')">All</button>
+<button class="toggle" data-src="official" onclick="setSource('official')">Official only</button>
+<button class="toggle" data-src="backfill" onclick="setSource('backfill')">Backfill only</button>
+<button class="toggle" data-src="missing-title" onclick="setSource('missing-title')">Missing title</button>
+</div>
 <table id="coverage">
 <thead><tr>
 <th onclick="sortTable(0)">App ID</th>
@@ -205,12 +214,37 @@ a {{ color: #06c; }}
         o = '<span class="yes">yes</span>' if official else '<span class="no">no</span>'
         b = '<span class="yes">yes</span>' if backfill else '<span class="no">no</span>'
         link = f'data/{app_id}/latest.json'
-        html += f"<tr><td>{app_id}</td><td>{title}</td><td>{o}</td><td>{b}</td>"
+        flags = []
+        if official:
+            flags.append("official")
+        if backfill:
+            flags.append("backfill")
+        if not title:
+            flags.append("missing-title")
+        html += f'<tr data-src="{" ".join(flags)}"><td>{app_id}</td><td>{title}</td><td>{o}</td><td>{b}</td>'
         html += f'<td><a href="{link}">latest.json</a></td></tr>\n'
 
     html += """</tbody></table>
 <script>
+let currentSource = "all";
 let sortDir = [1,1,1,1];
+
+function setSource(src) {
+  currentSource = src;
+  document.querySelectorAll(".toggle").forEach(b => b.classList.toggle("active", b.dataset.src === src));
+  applyFilters();
+}
+
+function applyFilters() {
+  const q = document.getElementById("filter").value.toLowerCase();
+  document.querySelectorAll("#coverage tbody tr").forEach(r => {
+    const src = r.dataset.src;
+    const srcOk = currentSource === "all" || src.includes(currentSource);
+    const textOk = !q || (r.cells[0].textContent + " " + r.cells[1].textContent).toLowerCase().includes(q);
+    r.style.display = srcOk && textOk ? "" : "none";
+  });
+}
+
 function sortTable(col) {
   const tb = document.querySelector("#coverage tbody");
   const rows = Array.from(tb.rows);
@@ -221,12 +255,6 @@ function sortTable(col) {
     return sortDir[col] * av.localeCompare(bv);
   });
   rows.forEach(r => tb.appendChild(r));
-}
-function filterTable() {
-  const q = document.getElementById("filter").value.toLowerCase();
-  document.querySelectorAll("#coverage tbody tr").forEach(r => {
-    r.style.display = (r.cells[0].textContent + " " + r.cells[1].textContent).toLowerCase().includes(q) ? "" : "none";
-  });
 }
 </script>
 </body></html>
