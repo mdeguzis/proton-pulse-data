@@ -136,6 +136,105 @@ def generate_index_html(index_keys: set, output_path: Path) -> None:
     log(f"[index] Written: {index_file}", debug=True)
 
 
+def _extract_title(app_dir: Path) -> str:
+    latest = app_dir / "latest.json"
+    if not latest.exists():
+        return ""
+    try:
+        reports = json.loads(latest.read_text())
+        if reports and isinstance(reports, list):
+            return reports[0].get("title", "") or ""
+    except Exception:
+        pass
+    return ""
+
+
+def generate_coverage_report(index_keys: set, backfilled_keys: set, data_output_path: Path, output_path: Path) -> None:
+    all_app_ids = {app_id for app_id, _ in index_keys}
+    backfill_app_ids = {app_id for app_id, _ in backfilled_keys}
+    official_app_ids = all_app_ids - backfill_app_ids
+
+    rows = []
+    for app_id in sorted(all_app_ids, key=lambda a: (0, int(a)) if a.isdigit() else (1, a)):
+        title = _extract_title(data_output_path / app_id)
+        rows.append((
+            app_id,
+            title,
+            app_id in official_app_ids,
+            app_id in backfill_app_ids,
+        ))
+
+    now = datetime.now(tz=timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    official_count = sum(1 for _, _, o, _ in rows if o)
+    backfill_count = sum(1 for _, _, _, b in rows if b)
+
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>proton-pulse-data coverage report</title>
+<style>
+body {{ font-family: system-ui, sans-serif; margin: 2em; }}
+table {{ border-collapse: collapse; width: 100%; }}
+th, td {{ border: 1px solid #ccc; padding: 6px 10px; text-align: left; }}
+th {{ background: #335; color: #fff; cursor: pointer; user-select: none; }}
+th:hover {{ background: #557; }}
+tr:nth-child(even) {{ background: #f4f4f4; }}
+.yes {{ color: green; font-weight: bold; }}
+.no {{ color: #999; }}
+a {{ color: #06c; }}
+#filter {{ margin-bottom: 1em; padding: 6px; width: 300px; }}
+</style>
+</head>
+<body>
+<h1>Coverage Report</h1>
+<p>{len(rows)} apps &middot; {official_count} official &middot; {backfill_count} backfill &middot; Generated: {now}</p>
+<input id="filter" placeholder="Filter by App ID or title\u2026" oninput="filterTable()">
+<table id="coverage">
+<thead><tr>
+<th onclick="sortTable(0)">App ID</th>
+<th onclick="sortTable(1)">Title</th>
+<th onclick="sortTable(2)">Official</th>
+<th onclick="sortTable(3)">Backfill</th>
+<th>Latest</th>
+</tr></thead>
+<tbody>
+"""
+    for app_id, title, official, backfill in rows:
+        o = '<span class="yes">yes</span>' if official else '<span class="no">no</span>'
+        b = '<span class="yes">yes</span>' if backfill else '<span class="no">no</span>'
+        link = f'data/{app_id}/latest.json'
+        html += f"<tr><td>{app_id}</td><td>{title}</td><td>{o}</td><td>{b}</td>"
+        html += f'<td><a href="{link}">latest.json</a></td></tr>\n'
+
+    html += """</tbody></table>
+<script>
+let sortDir = [1,1,1,1];
+function sortTable(col) {
+  const tb = document.querySelector("#coverage tbody");
+  const rows = Array.from(tb.rows);
+  sortDir[col] *= -1;
+  rows.sort((a, b) => {
+    let av = a.cells[col].textContent, bv = b.cells[col].textContent;
+    if (col === 0) return sortDir[col] * (parseInt(av) - parseInt(bv));
+    return sortDir[col] * av.localeCompare(bv);
+  });
+  rows.forEach(r => tb.appendChild(r));
+}
+function filterTable() {
+  const q = document.getElementById("filter").value.toLowerCase();
+  document.querySelectorAll("#coverage tbody tr").forEach(r => {
+    r.style.display = (r.cells[0].textContent + " " + r.cells[1].textContent).toLowerCase().includes(q) ? "" : "none";
+  });
+}
+</script>
+</body></html>
+"""
+    report_file = output_path / "coverage.html"
+    report_file.write_text(html)
+    log(f"[coverage] Written: {report_file}")
+
+
 def finalize_output(output_dir):
     output_path = Path(output_dir)
     data_output_path = output_path / "data"
@@ -144,5 +243,6 @@ def finalize_output(output_dir):
     generate_latest_files(data_output_path)
     generate_app_indexes(state["index_keys"], data_output_path)
     generate_index_html(state["index_keys"], output_path)
+    generate_coverage_report(state["index_keys"], state["backfilled_keys"], data_output_path, output_path)
     log_summary(state["parsed_count"], data_output_path, output_path, pipeline_start, state["backfilled_keys"])
     log("Done finalizing output.")
