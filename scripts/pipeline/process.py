@@ -27,7 +27,7 @@ def parse_and_split(file_handle, data_output_path, source_label="?"):
 
     for report in parser:
         app_id = report.get("appId")
-        if not app_id:
+        if not app_id or not str(app_id).strip().isdigit():
             skipped += 1
             continue
 

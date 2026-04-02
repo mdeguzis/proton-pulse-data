@@ -199,6 +199,7 @@ a {{ color: #06c; }}
 <button class="toggle" data-src="official" onclick="setSource('official')">Official only</button>
 <button class="toggle" data-src="backfill" onclick="setSource('backfill')">Backfill only</button>
 <button class="toggle" data-src="missing-title" onclick="setSource('missing-title')">Missing title</button>
+<button class="toggle" data-src="bad-appid" onclick="setSource('bad-appid')">Bad App ID</button>
 </div>
 <table id="coverage">
 <thead><tr>
@@ -221,6 +222,8 @@ a {{ color: #06c; }}
             flags.append("backfill")
         if not title:
             flags.append("missing-title")
+        if not app_id.isdigit():
+            flags.append("bad-appid")
         html += f'<tr data-src="{" ".join(flags)}"><td>{app_id}</td><td>{title}</td><td>{o}</td><td>{b}</td>'
         html += f'<td><a href="{link}">latest.json</a></td></tr>\n'
 
