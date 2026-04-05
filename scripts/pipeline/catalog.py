@@ -127,6 +127,7 @@ def load_vendor_scraper_module(module_path: Path = VENDOR_SCRAPER_PATH):
 
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
+    log(f"[steam-catalog] Using vendored Steam-Games-Scraper module at {module_path}", debug=True)
     return module
 
 
@@ -139,6 +140,7 @@ def fetch_steam_game_catalog(
     catalog: dict[str, str] = {}
     last_appid: int | None = None
     page = 0
+    log(f"[steam-catalog] Fetching Steam app IDs via Steam-Games-Scraper backend (page size {max_results:,})")
 
     while True:
         page += 1
@@ -172,7 +174,7 @@ def fetch_steam_game_catalog(
             catalog[app_id] = _coerce_app_name(raw_app)
             added += 1
 
-        log(f"[steam-catalog] page {page}: {added:,} app IDs", debug=True)
+        log(f"[steam-catalog] page {page}: {added:,} app IDs (running total {len(catalog):,})")
 
         have_more = bool(response.get("have_more_results"))
         next_last_appid = response.get("last_appid")
@@ -207,8 +209,10 @@ def load_steam_game_catalog(
     if cached is not None:
         return cached
 
+    log("[steam-catalog] Cache miss; refreshing Steam app catalog from network")
     catalog = fetch_steam_game_catalog(api_key, max_results=max_results, scraper_module=scraper_module)
     write_cached_steam_game_catalog(catalog, cache_path=cache_path)
+    log(f"[steam-catalog] Cached {len(catalog):,} app IDs at {cache_path}")
     return catalog
 
 

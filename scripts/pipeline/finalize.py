@@ -178,14 +178,24 @@ def generate_coverage_report(
     backfill_app_ids = {app_id for app_id, _ in backfilled_keys}
     official_app_ids = indexed_app_ids - backfill_app_ids
     protondb_signal_app_ids = set((protondb_signal_catalog or {}).keys())
+    steam_catalog_app_ids = set((steam_catalog or {}).keys())
+    steam_protondb_overlap = steam_catalog_app_ids & protondb_signal_app_ids
 
     if steam_catalog:
         if protondb_signal_catalog:
-            all_app_ids.update(app_id for app_id in steam_catalog.keys() if app_id in protondb_signal_app_ids)
+            all_app_ids.update(steam_protondb_overlap)
         else:
             all_app_ids.update(steam_catalog.keys())
     all_app_ids.update(protondb_signal_app_ids)
     all_app_ids.update(backfill_app_ids)
+
+    log(f"[coverage] Indexed app IDs           : {len(indexed_app_ids):,}")
+    log(f"[coverage] Backfill app IDs          : {len(backfill_app_ids):,}")
+    log(f"[coverage] ProtonDB signal app IDs   : {len(protondb_signal_app_ids):,}")
+    if steam_catalog:
+        log(f"[coverage] Steam catalog app IDs     : {len(steam_catalog_app_ids):,}")
+        log(f"[coverage] Steam ∩ ProtonDB signals  : {len(steam_protondb_overlap):,}")
+    log(f"[coverage] Final coverage universe   : {len(all_app_ids):,}")
 
     rows = []
     for app_id in sorted(all_app_ids, key=lambda a: (0, int(a)) if a.isdigit() else (1, a)):
@@ -358,6 +368,10 @@ def finalize_output(output_dir):
     steam_catalog = None
     protondb_signal_catalog = None
     steam_api_key = get_steam_api_key(os.environ)
+    if steam_api_key:
+        log("[steam-catalog] STEAM_API_KEY detected; Steam catalog expansion enabled")
+    else:
+        log("[steam-catalog] STEAM_API_KEY not found; Steam catalog expansion disabled")
     try:
         protondb_signal_catalog = load_protondb_signal_catalog()
     except Exception as exc:

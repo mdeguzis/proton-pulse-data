@@ -2,7 +2,7 @@ name: Update ProtonDB Data
 
 on:
   schedule:
-    - cron: '0 0 * * *'
+    - cron: "0 0 * * *"
   workflow_dispatch:
 
 env:
@@ -12,6 +12,7 @@ env:
 jobs:
   build:
     runs-on: ubuntu-24.04
+    environment: github-pages
     steps:
       - name: Checkout Scripts
         uses: actions/checkout@v4
@@ -45,6 +46,9 @@ jobs:
         run: |
           if [ -n "${{ secrets.STEAM_API_KEY }}" ]; then
             printf 'STEAM_API_KEY=%s\n' "${{ secrets.STEAM_API_KEY }}" > .env
+            echo "[steam-catalog] .env written from GitHub secret"
+          else
+            echo "[steam-catalog] STEAM_API_KEY secret not available to build job"
           fi
 
       - name: Process Official Reports
