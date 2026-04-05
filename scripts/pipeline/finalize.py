@@ -1,4 +1,5 @@
 import json
+import math
 import os
 import time
 from datetime import datetime, timezone
@@ -425,9 +426,57 @@ def probe_cache_to_catalog(probe_cache: dict[str, dict]) -> dict[str, str]:
     }
 
 
-def update_protondb_probe_cache(output_dir: str) -> dict[str, str]:
+def compute_probe_candidates(output_dir: str) -> tuple[list[str], int]:
     output_path = Path(output_dir)
     state = read_pipeline_state(output_path)
+    steam_api_key = get_steam_api_key(os.environ)
+    if not steam_api_key:
+        return [], 0
+
+    probe_cache_max_age = get_protondb_probe_cache_max_age_seconds(os.environ)
+    probe_cache = read_protondb_probe_cache(max_age_seconds=probe_cache_max_age)
+
+    protondb_signal_catalog = None
+    try:
+        protondb_signal_catalog = load_protondb_signal_catalog()
+    except Exception as exc:
+        log(f"[protondb-signal] Failed to load ProtonDB signal catalog: {exc}")
+
+    steam_catalog = load_steam_game_catalog(steam_api_key)
+    indexed_app_ids = {app_id for app_id, _ in state["index_keys"]}
+    backfill_app_ids = {app_id for app_id, _ in state["backfilled_keys"]}
+    protondb_known_ids = set((protondb_signal_catalog or {}).keys())
+    probe_candidates = sorted(
+        (set(steam_catalog.keys()) - protondb_known_ids - indexed_app_ids - backfill_app_ids),
+        key=lambda app_id: int(app_id),
+    )
+    cached_candidate_count = len(set(probe_candidates) & set(probe_cache.keys()))
+    return probe_candidates, cached_candidate_count
+
+
+def build_probe_chunk_plan(output_dir: str) -> dict[str, object]:
+    probe_candidates, cached_count = compute_probe_candidates(output_dir)
+    probe_limit = get_protondb_probe_limit(os.environ)
+    uncached_count = max(0, len(probe_candidates) - cached_count)
+
+    if probe_limit <= 0:
+        chunk_count = 1 if uncached_count > 0 else 0
+    else:
+        chunk_count = math.ceil(uncached_count / probe_limit)
+
+    chunks = [f"{index:02d}" for index in range(1, chunk_count + 1)]
+    plan = {
+        "candidate_count": len(probe_candidates),
+        "cached_count": cached_count,
+        "uncached_count": uncached_count,
+        "probe_limit": probe_limit,
+        "chunk_count": chunk_count,
+        "chunks": chunks,
+    }
+    return plan
+
+
+def update_protondb_probe_cache(output_dir: str) -> dict[str, str]:
     protondb_signal_catalog = None
     steam_api_key = get_steam_api_key(os.environ)
     protondb_probe_limit = get_protondb_probe_limit(os.environ)
@@ -446,26 +495,14 @@ def update_protondb_probe_cache(output_dir: str) -> dict[str, str]:
         protondb_signal_catalog = load_protondb_signal_catalog()
     except Exception as exc:
         log(f"[protondb-signal] Failed to load ProtonDB signal catalog: {exc}")
-    try:
-        steam_catalog = load_steam_game_catalog(steam_api_key)
-    except Exception as exc:
-        log(f"[steam-catalog] Failed to load Steam app catalog: {exc}")
-        return protondb_probe_catalog
 
     try:
-        existing_probe_ids = set(probe_cache.keys())
-        indexed_app_ids = {app_id for app_id, _ in state["index_keys"]}
-        backfill_app_ids = {app_id for app_id, _ in state["backfilled_keys"]}
-        protondb_known_ids = set((protondb_signal_catalog or {}).keys())
-        probe_candidates = sorted(
-            (set(steam_catalog.keys()) - protondb_known_ids - indexed_app_ids - backfill_app_ids),
-            key=lambda app_id: int(app_id),
-        )
+        probe_candidates, cached_count = compute_probe_candidates(output_dir)
         log(
             f"[protondb-probe] Candidate Steam app IDs before cache/filter: {len(probe_candidates):,}"
         )
         log(
-            f"[protondb-probe] Cached app IDs already checked         : {len(existing_probe_ids):,}"
+            f"[protondb-probe] Cached app IDs already checked         : {cached_count:,}"
         )
         log(
             f"[protondb-probe] Per-run uncached probe limit           : {protondb_probe_limit:,}"

@@ -1,4 +1,5 @@
 import argparse
+import json
 import os
 import sys
 import tempfile
@@ -7,7 +8,7 @@ from urllib.error import URLError
 from .backfill import run_backfill, run_probe_backfill
 from .catalog import get_steam_api_key, load_steam_game_catalog
 from .common import clone_repo, log, set_debug
-from .finalize import finalize_output, update_protondb_probe_cache
+from .finalize import build_probe_chunk_plan, finalize_output, update_protondb_probe_cache
 from .process import process_reports
 
 
@@ -49,6 +50,9 @@ def build_parser():
 
     probe_parser = subparsers.add_parser("probe", help="Probe ProtonDB summaries and update the probe cache")
     add_shared_output_arg(probe_parser)
+
+    probe_plan_parser = subparsers.add_parser("probe-plan", help="Calculate the dynamic probe chunk plan")
+    add_shared_output_arg(probe_plan_parser)
 
     probe_backfill_parser = subparsers.add_parser("probe-backfill", help="Backfill data for apps discovered by the ProtonDB probe")
     add_shared_output_arg(probe_backfill_parser)
@@ -101,6 +105,10 @@ def main():
 
     if command == "probe":
         update_protondb_probe_cache(args.output_dir)
+        return
+
+    if command == "probe-plan":
+        print(json.dumps(build_probe_chunk_plan(args.output_dir)))
         return
 
     if command == "probe-backfill":

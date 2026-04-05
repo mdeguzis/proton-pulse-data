@@ -81,54 +81,75 @@ jobs:
             /tmp/protondb-output/data
             /tmp/protondb-output/pipeline-state.json
 
-  probe-chunks:
+  probe-plan:
     needs: build-base
+    runs-on: ubuntu-24.04
+    outputs:
+      chunk_count: ${{ steps.plan.outputs.chunk_count }}
+      chunk_matrix: ${{ steps.plan.outputs.chunk_matrix }}
+    steps:
+      - name: Checkout Scripts
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Download probe input artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: probe-input
+          path: /tmp/protondb-output
+
+      - name: Restore pipeline cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .cache
+          key: pipeline-cache-${{ runner.os }}-${{ github.workflow }}-${{ github.ref_name }}-${{ github.run_id }}-${{ github.run_attempt }}-plan
+          restore-keys: |
+            pipeline-cache-${{ runner.os }}-${{ github.workflow }}-${{ github.ref_name }}-
+
+      - name: Write local .env from secret
+        run: |
+          if [ -n "${{ secrets.STEAM_API_KEY }}" ]; then
+            printf 'STEAM_API_KEY=%s\n' "${{ secrets.STEAM_API_KEY }}" > .env
+            echo "[steam-catalog] .env written from GitHub secret"
+          else
+            echo "[steam-catalog] STEAM_API_KEY secret not available to plan job"
+          fi
+
+      - name: Build probe chunk plan
+        id: plan
+        run: |
+          uv run python scripts/split_reports.py probe-plan /tmp/protondb-output > /tmp/probe-plan.json
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          plan = json.loads(Path("/tmp/probe-plan.json").read_text())
+          github_output = Path(os.environ["GITHUB_OUTPUT"])
+          with github_output.open("a", encoding="utf-8") as fh:
+              fh.write(f"chunk_count={plan['chunk_count']}\n")
+              fh.write(f"chunk_matrix={json.dumps(plan['chunks'])}\n")
+          print(f"[protondb-probe] chunk_count={plan['chunk_count']}, uncached={plan['uncached_count']}")
+          PY
+
+  probe-chunks:
+    needs: [build-base, probe-plan]
+    if: needs.probe-plan.outputs.chunk_count != '0'
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       max-parallel: 1
       matrix:
-        chunk:
-          - "01"
-          - "02"
-          - "03"
-          - "04"
-          - "05"
-          - "06"
-          - "07"
-          - "08"
-          - "09"
-          - "10"
-          - "11"
-          - "12"
-          - "13"
-          - "14"
-          - "15"
-          - "16"
-          - "17"
-          - "18"
-          - "19"
-          - "20"
-          - "21"
-          - "22"
-          - "23"
-          - "24"
-          - "25"
-          - "26"
-          - "27"
-          - "28"
-          - "29"
-          - "30"
-          - "31"
-          - "32"
-          - "33"
-          - "34"
-          - "35"
-          - "36"
-          - "37"
-          - "38"
-          - "39"
-          - "40"
+        chunk: ${{ fromJson(needs.probe-plan.outputs.chunk_matrix) }}
     steps:
       - name: Checkout Scripts
         uses: actions/checkout@v4
@@ -178,7 +199,12 @@ jobs:
           key: pipeline-cache-${{ runner.os }}-${{ github.workflow }}-${{ github.ref_name }}-${{ github.run_id }}-${{ github.run_attempt }}-chunk-${{ matrix.chunk }}
 
   build-site:
-    needs: probe-chunks
+    needs: [build-base, probe-plan, probe-chunks]
+    if: |
+      always() &&
+      needs.build-base.result == 'success' &&
+      needs.probe-plan.result == 'success' &&
+      (needs.probe-chunks.result == 'success' || needs.probe-chunks.result == 'skipped')
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout repo
@@ -272,7 +298,7 @@ jobs:
           git push origin gh-pages-new:gh-pages --force
 
   report-build-status:
-    needs: [build-base, probe-chunks, build-site, deploy-pages]
+    needs: [build-base, probe-plan, probe-chunks, build-site, deploy-pages]
     runs-on: ubuntu-24.04
     if: always()
     steps:
@@ -283,6 +309,7 @@ jobs:
           echo "| Job | Status |" >> "$GITHUB_STEP_SUMMARY"
           echo "|-----|--------|" >> "$GITHUB_STEP_SUMMARY"
           echo "| Build base | ${{ needs.build-base.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Probe plan | ${{ needs.probe-plan.result }} |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Probe chunks | ${{ needs.probe-chunks.result }} |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Build site | ${{ needs.build-site.result }} |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Deploy Pages | ${{ needs.deploy-pages.result }} |" >> "$GITHUB_STEP_SUMMARY"

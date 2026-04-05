@@ -4,7 +4,7 @@ from http.client import HTTPResponse
 from io import BytesIO
 from urllib.error import HTTPError
 
-from scripts.pipeline.finalize import generate_coverage_report, generate_index_html, generate_app_indexes
+from scripts.pipeline.finalize import build_probe_chunk_plan, generate_coverage_report, generate_index_html, generate_app_indexes
 from scripts.pipeline.catalog import (
     PROTONDB_PROBE_LOG_EVERY,
     build_steam_app_list_url,
@@ -390,6 +390,19 @@ def test_protondb_probe_cache_round_trip(tmp_path):
     write_protondb_probe_cache(payload, cache_path=cache_path)
     loaded = read_protondb_probe_cache(cache_path=cache_path, max_age_seconds=10_000_000_000)
     assert loaded["10"]["tracked"] is True
+
+
+def test_build_probe_chunk_plan_uses_remaining_uncached_count(monkeypatch):
+    monkeypatch.setattr("scripts.pipeline.finalize.compute_probe_candidates", lambda _output_dir: (["10", "20", "30", "40", "50"], 1))
+    monkeypatch.setattr("scripts.pipeline.finalize.get_protondb_probe_limit", lambda _env=None: 2)
+
+    plan = build_probe_chunk_plan("/tmp/protondb-output")
+
+    assert plan["candidate_count"] == 5
+    assert plan["cached_count"] == 1
+    assert plan["uncached_count"] == 4
+    assert plan["chunk_count"] == 2
+    assert plan["chunks"] == ["01", "02"]
 
 
 def test_generate_coverage_report_includes_all_steam_game_app_ids(tmp_path):
