@@ -2,7 +2,9 @@ import importlib.util
 import os
 import time
 import json
+from functools import wraps
 from pathlib import Path
+from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 
 from .common import fetch_json, log
@@ -13,10 +15,16 @@ STEAM_APP_LIST_URL = "https://api.steampowered.com/IStoreService/GetAppList/v1/"
 STEAM_APP_LIST_PAGE_SIZE = 50_000
 STEAM_CATALOG_CACHE_MAX_AGE_SECONDS = 24 * 60 * 60
 PROTONDB_SIGNAL_CACHE_MAX_AGE_SECONDS = 24 * 60 * 60
+PROTONDB_PROBE_CACHE_MAX_AGE_SECONDS = 7 * 24 * 60 * 60
 PROTONDB_COMPATIBILITY_REPORT_URL = "https://www.protondb.com/data/compatibility_report_with_games.json"
+PROTONDB_SUMMARY_URL = "https://www.protondb.com/api/v1/reports/summaries/{app_id}.json"
+PROTONDB_PROBE_LIMIT_ENV = "PROTONDB_PROBE_LIMIT"
+PROTONDB_PROBE_LOG_EVERY = 250
+PROTONDB_PROBE_LOG_EVERY_ENV = "PROTONDB_PROBE_LOG_EVERY"
 DEFAULT_ENV_PATH = Path(__file__).resolve().parents[2] / ".env"
 DEFAULT_CACHE_PATH = Path(__file__).resolve().parents[2] / ".cache" / "steam-game-catalog.json"
 DEFAULT_PROTONDB_SIGNAL_CACHE_PATH = Path(__file__).resolve().parents[2] / ".cache" / "protondb-signal-catalog.json"
+DEFAULT_PROTONDB_PROBE_CACHE_PATH = Path(__file__).resolve().parents[2] / ".cache" / "protondb-summary-probe-cache.json"
 VENDOR_SCRAPER_PATH = (
     Path(__file__).resolve().parents[2] / "vendor" / "Steam-Games-Scraper" / "SteamGamesScraper.py"
 )
@@ -52,6 +60,62 @@ def get_steam_api_key(env: dict[str, str] | None = None) -> str | None:
     merged_env.update(env if env is not None else os.environ)
     value = (merged_env.get(STEAM_API_KEY_ENV) or "").strip()
     return value or None
+
+
+def get_protondb_probe_limit(env: dict[str, str] | None = None, default: int = 5_000) -> int:
+    merged_env = {}
+    merged_env.update(load_dotenv())
+    merged_env.update(env if env is not None else os.environ)
+    raw = str(merged_env.get(PROTONDB_PROBE_LIMIT_ENV, default)).strip()
+    try:
+        value = int(raw)
+    except ValueError:
+        return default
+    return max(0, value)
+
+
+def get_protondb_probe_log_every(env: dict[str, str] | None = None, default: int = PROTONDB_PROBE_LOG_EVERY) -> int:
+    merged_env = {}
+    merged_env.update(load_dotenv())
+    merged_env.update(env if env is not None else os.environ)
+    raw = str(merged_env.get(PROTONDB_PROBE_LOG_EVERY_ENV, default)).strip()
+    try:
+        value = int(raw)
+    except ValueError:
+        return default
+    return max(1, value)
+
+
+def retry_http(attempts: int = 3, base_delay_seconds: float = 1.0):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            last_exc = None
+            for attempt in range(1, attempts + 1):
+                try:
+                    return func(*args, **kwargs)
+                except HTTPError as exc:
+                    if exc.code in {404}:
+                        raise
+                    last_exc = exc
+                except URLError as exc:
+                    last_exc = exc
+
+                if attempt < attempts:
+                    delay = base_delay_seconds * (2 ** (attempt - 1))
+                    log(
+                        f"[protondb-probe] transient error on attempt {attempt}/{attempts}; "
+                        f"retrying in {delay:.1f}s: {last_exc}"
+                    )
+                    time.sleep(delay)
+
+            if last_exc is not None:
+                raise last_exc
+            raise RuntimeError("retry_http exhausted without exception")
+
+        return wrapper
+
+    return decorator
 
 
 def build_steam_app_list_url(api_key: str, last_appid: int | None = None, max_results: int = STEAM_APP_LIST_PAGE_SIZE) -> str:
@@ -265,3 +329,139 @@ def load_protondb_signal_catalog(
     catalog = fetch_protondb_signal_catalog(fetch_json_impl=fetch_json_impl)
     write_cached_protondb_signal_catalog(catalog, cache_path=cache_path)
     return catalog
+
+
+def read_protondb_probe_cache(
+    cache_path: Path = DEFAULT_PROTONDB_PROBE_CACHE_PATH,
+    max_age_seconds: int = PROTONDB_PROBE_CACHE_MAX_AGE_SECONDS,
+) -> dict[str, dict]:
+    if not cache_path.exists():
+        return {}
+
+    try:
+        payload = json.loads(cache_path.read_text())
+    except Exception:
+        return {}
+
+    apps = payload.get("apps", {})
+    if not isinstance(apps, dict):
+        return {}
+
+    now = int(time.time())
+    filtered: dict[str, dict] = {}
+    for app_id, entry in apps.items():
+        if not str(app_id).isdigit() or not isinstance(entry, dict):
+            continue
+        checked_at = int(entry.get("checked_at", 0))
+        if checked_at <= 0 or (now - checked_at) > max_age_seconds:
+            continue
+        filtered[str(app_id)] = {
+            "tracked": bool(entry.get("tracked")),
+            "title": str(entry.get("title", "")).strip(),
+            "checked_at": checked_at,
+        }
+
+    if filtered:
+        tracked_count = sum(1 for entry in filtered.values() if entry.get("tracked"))
+        log(
+            f"[protondb-probe] Using cached probe results for {len(filtered):,} app IDs "
+            f"({tracked_count:,} tracked)"
+        )
+    return filtered
+
+
+def write_protondb_probe_cache(cache: dict[str, dict], cache_path: Path = DEFAULT_PROTONDB_PROBE_CACHE_PATH) -> None:
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "fetched_at": int(time.time()),
+        "apps": cache,
+    }
+    cache_path.write_text(json.dumps(payload, indent=2) + "\n")
+
+
+@retry_http(attempts=3, base_delay_seconds=1.0)
+def fetch_protondb_summary(app_id: str, fetch_json_impl=fetch_json) -> dict:
+    return fetch_json_impl(PROTONDB_SUMMARY_URL.format(app_id=app_id))
+
+
+def _is_tracked_protondb_summary(payload: dict) -> bool:
+    if not isinstance(payload, dict):
+        return False
+    total = payload.get("total")
+    if isinstance(total, int):
+        return total > 0
+    confidence = payload.get("confidence")
+    tier = payload.get("tier")
+    return bool(confidence or tier)
+
+
+def probe_protondb_app_ids(
+    candidate_app_ids: list[str],
+    existing_cache: dict[str, dict] | None = None,
+    fetch_json_impl=fetch_json,
+    limit: int = 5_000,
+    log_every: int = PROTONDB_PROBE_LOG_EVERY,
+) -> tuple[dict[str, dict], dict[str, str]]:
+    cache = dict(existing_cache or {})
+    tracked_catalog: dict[str, str] = {
+        app_id: str(entry.get("title", "")).strip()
+        for app_id, entry in cache.items()
+        if entry.get("tracked")
+    }
+
+    uncached = [app_id for app_id in candidate_app_ids if app_id not in cache]
+    if limit > 0:
+        uncached = uncached[:limit]
+
+    total = len(uncached)
+    if total == 0:
+        log("[protondb-probe] No uncached ProtonDB summary probes required")
+        return cache, tracked_catalog
+
+    log(f"[protondb-probe] Probing {total:,} uncached app IDs against ProtonDB summaries")
+    started = time.time()
+    new_hits = 0
+    failed = 0
+
+    for index, app_id in enumerate(uncached, start=1):
+        tracked = False
+        title = ""
+        try:
+            payload = fetch_protondb_summary(app_id, fetch_json_impl=fetch_json_impl)
+            tracked = _is_tracked_protondb_summary(payload)
+            title = str(payload.get("title", "")).strip() if isinstance(payload, dict) else ""
+        except HTTPError as exc:
+            if exc.code != 404:
+                failed += 1
+                raise
+        except Exception as exc:
+            failed += 1
+            log(f"[protondb-probe] Failed for app {app_id}: {exc}")
+            continue
+
+        entry = {
+            "tracked": tracked,
+            "title": title,
+            "checked_at": int(time.time()),
+        }
+        cache[app_id] = entry
+        if tracked:
+            tracked_catalog[app_id] = title
+            new_hits += 1
+
+        if index % log_every == 0 or index == total:
+            elapsed = time.time() - started
+            rate = index / elapsed if elapsed > 0 else 0.0
+            remaining = total - index
+            eta_seconds = remaining / rate if rate > 0 else 0.0
+            log(
+                f"[protondb-probe] {index:,}/{total:,} checked "
+                f"({new_hits:,} tracked hits, {failed:,} hard failures, "
+                f"{elapsed:.1f}s elapsed, {rate:.1f} apps/s, eta {eta_seconds:.1f}s)"
+            )
+
+    log(
+        f"[protondb-probe] Probe pass complete: {total:,} checked, "
+        f"{new_hits:,} tracked hits, {failed:,} hard failures"
+    )
+    return cache, tracked_catalog

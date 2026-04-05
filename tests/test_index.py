@@ -1,18 +1,26 @@
 from pathlib import Path
 import json
+from urllib.error import HTTPError
 
 from scripts.pipeline.finalize import generate_coverage_report, generate_index_html, generate_app_indexes
 from scripts.pipeline.catalog import (
+    PROTONDB_PROBE_LOG_EVERY,
     build_steam_app_list_url,
     fetch_steam_game_catalog,
     fetch_protondb_signal_catalog,
+    fetch_protondb_summary,
     get_steam_api_key,
+    get_protondb_probe_limit,
+    get_protondb_probe_log_every,
     load_dotenv,
     load_protondb_signal_catalog,
     load_vendor_scraper_module,
     load_steam_game_catalog,
+    probe_protondb_app_ids,
+    read_protondb_probe_cache,
     read_cached_protondb_signal_catalog,
     read_cached_steam_game_catalog,
+    write_protondb_probe_cache,
     write_cached_protondb_signal_catalog,
     write_cached_steam_game_catalog,
 )
@@ -104,6 +112,11 @@ def test_app_index_unknown_year_included(tmp_path):
 
 def test_get_steam_api_key_reads_env_value():
     assert get_steam_api_key({"STEAM_API_KEY": " test-key "}) == "test-key"
+
+
+def test_get_protondb_probe_limit_reads_env_value():
+    assert get_protondb_probe_limit({"PROTONDB_PROBE_LIMIT": "250"}) == 250
+    assert get_protondb_probe_limit({"PROTONDB_PROBE_LIMIT": "bad"}) == 5000
 
 
 def test_get_steam_api_key_returns_none_when_no_env_or_dotenv(tmp_path, monkeypatch):
@@ -238,6 +251,107 @@ def test_load_protondb_signal_catalog_uses_cache_before_fetch(tmp_path):
     catalog = load_protondb_signal_catalog(fetch_json_impl=fake_fetch, cache_path=cache_path)
     assert catalog == {"10": "Counter-Strike"}
     assert read_cached_protondb_signal_catalog(cache_path=cache_path) == {"10": "Counter-Strike"}
+
+
+def test_fetch_protondb_summary_retries_transient_errors():
+    attempts = {"count": 0}
+
+    def fake_fetch(_url: str):
+        attempts["count"] += 1
+        if attempts["count"] < 3:
+            raise HTTPError(_url, 500, "server error", hdrs=None, fp=None)
+        return {"tier": "gold", "total": 10, "title": "Counter-Strike"}
+
+    payload = fetch_protondb_summary("10", fetch_json_impl=fake_fetch)
+    assert payload["title"] == "Counter-Strike"
+    assert attempts["count"] == 3
+
+
+def test_get_protondb_probe_log_every_defaults_and_bounds():
+    assert get_protondb_probe_log_every({}) == PROTONDB_PROBE_LOG_EVERY
+    assert get_protondb_probe_log_every({"PROTONDB_PROBE_LOG_EVERY": "25"}) == 25
+    assert get_protondb_probe_log_every({"PROTONDB_PROBE_LOG_EVERY": "0"}) == 1
+    assert get_protondb_probe_log_every({"PROTONDB_PROBE_LOG_EVERY": "bad"}) == PROTONDB_PROBE_LOG_EVERY
+
+
+def test_probe_protondb_app_ids_updates_cache_and_tracked_catalog():
+    existing_cache = {
+        "10": {"tracked": True, "title": "Counter-Strike", "checked_at": 123},
+    }
+
+    def fake_fetch(url: str):
+        if url.endswith("/20.json"):
+            return {"tier": "gold", "total": 1, "title": "Team Fortress Classic"}
+        if url.endswith("/30.json"):
+            return {"tier": "pending", "total": 0, "title": ""}
+        raise AssertionError(f"Unexpected URL: {url}")
+
+    cache, tracked = probe_protondb_app_ids(
+        ["10", "20", "30"],
+        existing_cache=existing_cache,
+        fetch_json_impl=fake_fetch,
+        limit=10,
+        log_every=1,
+    )
+
+    assert tracked == {
+        "10": "Counter-Strike",
+        "20": "Team Fortress Classic",
+    }
+    assert cache["20"]["tracked"] is True
+    assert cache["30"]["tracked"] is False
+
+
+def test_probe_protondb_app_ids_uses_limit():
+    calls = []
+
+    def fake_fetch(url: str):
+        calls.append(url)
+        return {"tier": "gold", "total": 1, "title": "Tracked"}
+
+    cache, tracked = probe_protondb_app_ids(
+        ["10", "20", "30"],
+        existing_cache={},
+        fetch_json_impl=fake_fetch,
+        limit=2,
+        log_every=10,
+    )
+
+    assert len(calls) == 2
+    assert set(cache.keys()) == {"10", "20"}
+    assert set(tracked.keys()) == {"10", "20"}
+
+
+def test_probe_protondb_app_ids_keeps_going_after_generic_failure():
+    calls = []
+
+    def fake_fetch(url: str):
+        calls.append(url)
+        if url.endswith("/10.json"):
+            raise RuntimeError("temporary parse issue")
+        return {"tier": "gold", "total": 1, "title": "Tracked"}
+
+    cache, tracked = probe_protondb_app_ids(
+        ["10", "20"],
+        existing_cache={},
+        fetch_json_impl=fake_fetch,
+        limit=10,
+        log_every=1,
+    )
+
+    assert len(calls) == 2
+    assert "10" not in cache
+    assert tracked == {"20": "Tracked"}
+
+
+def test_protondb_probe_cache_round_trip(tmp_path):
+    cache_path = tmp_path / "protondb-summary-probe-cache.json"
+    payload = {
+        "10": {"tracked": True, "title": "Counter-Strike", "checked_at": 2_000_000_000},
+    }
+    write_protondb_probe_cache(payload, cache_path=cache_path)
+    loaded = read_protondb_probe_cache(cache_path=cache_path, max_age_seconds=10_000_000_000)
+    assert loaded["10"]["tracked"] is True
 
 
 def test_generate_coverage_report_filters_steam_catalog_with_protondb_signals(tmp_path):

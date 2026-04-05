@@ -4,7 +4,17 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-from .catalog import get_steam_api_key, load_protondb_signal_catalog, load_steam_game_catalog
+from .catalog import (
+    DEFAULT_PROTONDB_PROBE_CACHE_PATH,
+    get_protondb_probe_limit,
+    get_protondb_probe_log_every,
+    get_steam_api_key,
+    load_protondb_signal_catalog,
+    load_steam_game_catalog,
+    probe_protondb_app_ids,
+    read_protondb_probe_cache,
+    write_protondb_probe_cache,
+)
 from .common import count_year_bucket_files, log
 from .state import read_pipeline_state
 
@@ -367,7 +377,10 @@ def finalize_output(output_dir):
     pipeline_start = time.time()
     steam_catalog = None
     protondb_signal_catalog = None
+    protondb_probe_catalog = None
     steam_api_key = get_steam_api_key(os.environ)
+    protondb_probe_limit = get_protondb_probe_limit(os.environ)
+    protondb_probe_log_every = get_protondb_probe_log_every(os.environ)
     if steam_api_key:
         log("[steam-catalog] STEAM_API_KEY detected; Steam catalog expansion enabled")
     else:
@@ -381,6 +394,41 @@ def finalize_output(output_dir):
             steam_catalog = load_steam_game_catalog(steam_api_key)
         except Exception as exc:
             log(f"[steam-catalog] Failed to load Steam app catalog: {exc}")
+    if steam_catalog:
+        try:
+            probe_cache = read_protondb_probe_cache()
+            existing_probe_ids = set(probe_cache.keys())
+            indexed_app_ids = {app_id for app_id, _ in state["index_keys"]}
+            backfill_app_ids = {app_id for app_id, _ in state["backfilled_keys"]}
+            protondb_known_ids = set((protondb_signal_catalog or {}).keys())
+            probe_candidates = sorted(
+                (set(steam_catalog.keys()) - protondb_known_ids - indexed_app_ids - backfill_app_ids),
+                key=lambda app_id: int(app_id),
+            )
+            log(
+                f"[protondb-probe] Candidate Steam app IDs before cache/filter: {len(probe_candidates):,}"
+            )
+            log(
+                f"[protondb-probe] Cached app IDs already checked         : {len(existing_probe_ids):,}"
+            )
+            log(
+                f"[protondb-probe] Per-run uncached probe limit           : {protondb_probe_limit:,}"
+            )
+            log(
+                f"[protondb-probe] Progress log cadence                : every {protondb_probe_log_every:,} apps"
+            )
+            probe_cache, protondb_probe_catalog = probe_protondb_app_ids(
+                probe_candidates,
+                existing_cache=probe_cache,
+                limit=protondb_probe_limit,
+                log_every=protondb_probe_log_every,
+            )
+            write_protondb_probe_cache(probe_cache)
+            log(
+                f"[protondb-probe] Cached probe results updated at {DEFAULT_PROTONDB_PROBE_CACHE_PATH}",
+            )
+        except Exception as exc:
+            log(f"[protondb-probe] Failed to probe ProtonDB summaries: {exc}")
     else:
         log("[steam-catalog] STEAM_API_KEY not set; coverage report will use local output only", debug=True)
     generate_latest_files(data_output_path)
@@ -392,7 +440,10 @@ def finalize_output(output_dir):
         data_output_path,
         output_path,
         steam_catalog=steam_catalog,
-        protondb_signal_catalog=protondb_signal_catalog,
+        protondb_signal_catalog={
+            **(protondb_signal_catalog or {}),
+            **(protondb_probe_catalog or {}),
+        },
     )
     log_summary(state["parsed_count"], data_output_path, output_path, pipeline_start, state["backfilled_keys"])
     log("Done finalizing output.")
