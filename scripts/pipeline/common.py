@@ -20,10 +20,11 @@ def set_debug(enabled: bool) -> None:
 
 
 def log(msg, debug=False):
-    """Flush-safe print for CI environments. Skipped if debug=True and DEBUG is off."""
+    """Flush-safe log to stderr for CI environments. Skipped if debug=True and DEBUG is off."""
     if debug and not DEBUG:
         return
-    print(msg, flush=True)
+    # stderr so we dont corrupt stdout when its redirected to capture JSON
+    print(msg, file=sys.stderr, flush=True)
 
 
 def clone_repo(url, target_dir):
