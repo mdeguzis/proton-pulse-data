@@ -28,11 +28,18 @@ def deserialize_index_keys(raw_keys) -> set[tuple]:
     }
 
 
-def write_pipeline_state(output_path: Path, parsed_count: int, index_keys: set[tuple], backfilled_keys: set[tuple] | None = None) -> None:
+def write_pipeline_state(
+    output_path: Path,
+    parsed_count: int,
+    index_keys: set[tuple],
+    backfilled_keys: set[tuple] | None = None,
+    no_data_app_ids: set[str] | None = None,
+) -> None:
     state = {
         "parsed_count": parsed_count,
         "index_keys": serialize_index_keys(index_keys),
         "backfilled_keys": serialize_index_keys(backfilled_keys or set()),
+        "no_data_app_ids": sorted(no_data_app_ids or set()),
     }
     pipeline_state_path(output_path).write_text(json.dumps(state, indent=2) + "\n")
 
@@ -46,4 +53,5 @@ def read_pipeline_state(output_path: Path) -> dict:
         "parsed_count": int(raw.get("parsed_count", 0)),
         "index_keys": deserialize_index_keys(raw.get("index_keys", [])),
         "backfilled_keys": deserialize_index_keys(raw.get("backfilled_keys", [])),
+        "no_data_app_ids": set(raw.get("no_data_app_ids", [])),
     }

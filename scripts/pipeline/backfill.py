@@ -277,6 +277,7 @@ def backfill_missing_apps(
         raise ValueError("Live ProtonDB counts payload did not contain usable report/timestamp seeds")
 
     written_keys: set[tuple] = set()
+    no_data_app_ids: set[str] = set()
     for target in missing_targets:
         candidate_urls = build_live_report_candidate_urls(
             target.app_id,
@@ -287,12 +288,14 @@ def backfill_missing_apps(
         payload, resolved_url = fetch_live_reports_payload(target.app_id, candidate_urls, fetch_json_impl=fetch_json_impl)
         if payload is None:
             log(f"[backfill] Skipping {target.app_id}: no live detailed report candidate succeeded")
+            no_data_app_ids.add(target.app_id)
             continue
 
         title = fetch_steam_title(target.app_id)
         reports = normalize_live_detailed_reports(target.app_id, payload.get("reports") or [], title=title)
         if not reports:
             log(f"[backfill] Skipping {target.app_id}: live detailed payload had no usable reports")
+            no_data_app_ids.add(target.app_id)
             continue
 
         year_buckets = bucket_reports_by_year(reports)
@@ -302,7 +305,10 @@ def backfill_missing_apps(
             f"{len(year_buckets)} year file(s) for {target.app_id} using {resolved_url}"
         )
 
-    return written_keys
+    if no_data_app_ids:
+        log(f"[backfill] {len(no_data_app_ids)} app(s) had no ProtonDB data: {sorted(no_data_app_ids)}")
+
+    return written_keys, no_data_app_ids
 
 
 def backfill_probe_discoveries(
@@ -413,13 +419,19 @@ def run_backfill(output_dir, target_app_ids: list[str] | None = None):
     output_path = Path(output_dir)
     data_output_path = output_path / "data"
     state = read_pipeline_state(output_path)
-    backfilled_keys = backfill_missing_apps(
+    backfilled_keys, no_data_ids = backfill_missing_apps(
         data_output_path, target_app_ids=target_app_ids,
     )
     merged_index_keys = set(state["index_keys"])
     merged_index_keys.update(backfilled_keys)
     merged_backfilled_keys = set(state["backfilled_keys"])
     merged_backfilled_keys.update(backfilled_keys)
-    write_pipeline_state(output_path, state["parsed_count"], merged_index_keys, merged_backfilled_keys)
+    merged_no_data = set(state.get("no_data_app_ids", set()))
+    merged_no_data.update(no_data_ids)
+    write_pipeline_state(
+        output_path, state["parsed_count"],
+        merged_index_keys, merged_backfilled_keys,
+        no_data_app_ids=merged_no_data,
+    )
     log(f"[state] Updated pipeline state after backfill: {pipeline_state_path(output_path)}")
     log("Done backfilling missing apps.")

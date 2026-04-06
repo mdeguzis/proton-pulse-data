@@ -1,3 +1,5 @@
+"""Parse ProtonDB report archives and split into per-app year files"""
+
 import json
 import tarfile
 import time
@@ -5,7 +7,7 @@ from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 
-import ijson
+import ijson  # pylint: disable=import-error
 
 from .common import log
 from .state import pipeline_state_path, write_pipeline_state
@@ -62,7 +64,7 @@ def parse_and_split(file_handle, data_output_path, source_label="?"):
         if year_file.exists():
             try:
                 existing = json.loads(year_file.read_text())
-            except Exception:
+            except (json.JSONDecodeError, OSError):
                 existing = []
 
         seen_timestamps = {r.get("timestamp") for r in existing}
@@ -96,6 +98,7 @@ def parse_and_split(file_handle, data_output_path, source_label="?"):
 
 
 def process_reports(input_dir, output_dir):
+    """Walk input_dir for JSON/tarball report files, parse and split into per-app year buckets"""
     input_path = Path(input_dir)
     output_path = Path(output_dir)
     data_output_path = output_path / "data"
@@ -159,7 +162,7 @@ def process_reports(input_dir, output_dir):
                         log(f"[tar]      {count:,} reports parsed")
                         parsed_count += count
                         index_keys.update(src_keys)
-        except Exception as exc:
+        except (tarfile.TarError, OSError) as exc:
             log(f"!! Failed to process {tar_file.name}: {exc}")
         log(f"[tar] Done: {time.time() - t0:.1f}s")
 

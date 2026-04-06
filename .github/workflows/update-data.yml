@@ -323,10 +323,11 @@ jobs:
             --app-ids "${{ inputs.backfill_app_ids }}" \
             /tmp/protondb-output
 
-      - name: Finalize (Indexes + Coverage)
+      - name: Reindex targeted apps
         working-directory: repo
         run: |
-          uv run python scripts/split_reports.py finalize --skip-probe \
+          uv run python scripts/split_reports.py reindex \
+            --app-ids "${{ inputs.backfill_app_ids }}" \
             /tmp/protondb-output
 
       - name: Save pipeline cache
@@ -344,8 +345,9 @@ jobs:
           git checkout --orphan gh-pages-new
           git rm -rf .
           cp -r /tmp/protondb-output/data .
-          cp /tmp/protondb-output/index.html .
-          cp /tmp/protondb-output/coverage.html .
+          # keep existing index.html and coverage.html from gh-pages
+          cp ../gh-pages-data/index.html . 2>/dev/null || true
+          cp ../gh-pages-data/coverage.html . 2>/dev/null || true
           git add data/ index.html coverage.html
           git commit -m "Targeted backfill: ${{ inputs.backfill_app_ids }}"
           git push origin gh-pages-new:gh-pages --force

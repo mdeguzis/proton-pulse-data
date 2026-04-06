@@ -8,7 +8,7 @@ from urllib.error import URLError
 from .backfill import run_backfill, run_probe_backfill
 from .catalog import get_steam_api_key, load_steam_game_catalog
 from .common import clone_repo, log, set_debug
-from .finalize import build_probe_chunk_plan, finalize_output, update_protondb_probe_cache
+from .finalize import build_probe_chunk_plan, finalize_output, reindex_apps, update_protondb_probe_cache
 from .process import process_reports
 
 
@@ -48,7 +48,7 @@ def build_parser():
     backfill_parser = subparsers.add_parser("backfill", help="Backfill missing app data from ProtonDB live detailed reports")
     backfill_parser.add_argument(
         "--app-ids",
-        help="Comma-separated app IDs to target for backfill (in addition to the manifest)",
+        help="Comma-separated app IDs to backfill (skips manifest, only processes these)",
     )
     add_shared_output_arg(backfill_parser)
 
@@ -68,6 +68,14 @@ def build_parser():
 
     probe_backfill_parser = subparsers.add_parser("probe-backfill", help="Backfill data for apps discovered by the ProtonDB probe")
     add_shared_output_arg(probe_backfill_parser)
+
+    reindex_parser = subparsers.add_parser("reindex", help="Rebuild index.json for specific app IDs only")
+    reindex_parser.add_argument(
+        "--app-ids",
+        required=True,
+        help="Comma-separated app IDs to reindex",
+    )
+    add_shared_output_arg(reindex_parser)
 
     subparsers.add_parser("steam-catalog", help="Fetch and cache the Steam game catalog using STEAM_API_KEY")
 
@@ -126,6 +134,14 @@ def main():
 
     if command == "probe-backfill":
         run_probe_backfill(args.output_dir)
+        return
+
+    if command == "reindex":
+        target_ids = _parse_app_ids(getattr(args, "app_ids", None))
+        if not target_ids:
+            log("!! ERROR: --app-ids is required for reindex")
+            sys.exit(1)
+        reindex_apps(args.output_dir, target_ids)
         return
 
     if command == "steam-catalog":

@@ -60,6 +60,24 @@ def generate_latest_files(data_output_path: Path) -> None:
     log(f"[latest] Generated {count} latest.json files", debug=True)
 
 
+def reindex_apps(output_dir: str, app_ids: list[str]) -> None:
+    """Rebuild index.json only for specific app IDs, scanning their year files on disk."""
+    data_path = Path(output_dir) / "data"
+    index_keys: set[tuple[str, str]] = set()
+    for app_id in app_ids:
+        app_dir = data_path / app_id
+        if not app_dir.is_dir():
+            log(f"[reindex] Skipping {app_id}: no data directory")
+            continue
+        for json_file in app_dir.glob("*.json"):
+            if json_file.stem in ("index", "latest", "votes"):
+                continue
+            index_keys.add((app_id, json_file.stem))
+    if index_keys:
+        generate_app_indexes(index_keys, data_path)
+    log(f"[reindex] Rebuilt indexes for {len(app_ids)} app(s)")
+
+
 def generate_app_indexes(index_keys: set, data_output_path: Path) -> None:
     app_years: dict[str, list[str]] = {}
     for (app_id, year) in index_keys:
