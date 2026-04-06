@@ -33,7 +33,11 @@ def parse_and_split(file_handle, data_output_path, source_label="?"):
 
         ts = report.get("timestamp")
         try:
-            year = str(datetime.fromtimestamp(int(ts), tz=timezone.utc).year) if ts else "unknown"
+            year = (
+                str(datetime.fromtimestamp(int(ts), tz=timezone.utc).year)
+                if ts
+                else "unknown"
+            )
         except (ValueError, OSError):
             year = "unknown"
 
@@ -43,7 +47,10 @@ def parse_and_split(file_handle, data_output_path, source_label="?"):
         if count % 10000 == 0:
             log(f"  [parse] {source_label}: {count:,} reports buffered...", debug=True)
 
-    log(f"  [parse] {source_label}: flushing {len(buffer)} app/year buckets to disk...", debug=True)
+    log(
+        f"  [parse] {source_label}: flushing {len(buffer)} app/year buckets to disk...",
+        debug=True,
+    )
     flush_start = time.time()
 
     for (app_id, year), new_reports in buffer.items():
@@ -69,7 +76,10 @@ def parse_and_split(file_handle, data_output_path, source_label="?"):
 
         if added < len(new_reports):
             dupes = len(new_reports) - added
-            log(f"  [dedup] appId={app_id} year={year}: skipped {dupes} duplicate(s)", debug=True)
+            log(
+                f"  [dedup] appId={app_id} year={year}: skipped {dupes} duplicate(s)",
+                debug=True,
+            )
 
         year_file.write_text(json.dumps(existing, indent=2))
 
@@ -77,7 +87,10 @@ def parse_and_split(file_handle, data_output_path, source_label="?"):
     log(f"  [parse] {source_label}: flush done in {flush_elapsed:.1f}s", debug=True)
 
     if skipped:
-        log(f"  [parse] {source_label}: skipped {skipped} records missing appId", debug=True)
+        log(
+            f"  [parse] {source_label}: skipped {skipped} records missing appId",
+            debug=True,
+        )
 
     return count, set(buffer.keys())
 
@@ -109,10 +122,14 @@ def process_reports(input_dir, output_dir):
     log(f"\n[json] Found {len(json_files)} raw JSON file(s)")
     for index, json_file in enumerate(json_files, start=1):
         size = json_file.stat().st_size
-        log(f"[json] Processing {index}/{len(json_files)}: {json_file.name} ({size:,} bytes)")
+        log(
+            f"[json] Processing {index}/{len(json_files)}: {json_file.name} ({size:,} bytes)"
+        )
         t0 = time.time()
         with json_file.open("r") as handle:
-            count, src_keys = parse_and_split(handle, data_output_path, source_label=json_file.name)
+            count, src_keys = parse_and_split(
+                handle, data_output_path, source_label=json_file.name
+            )
         parsed_count += count
         index_keys.update(src_keys)
         log(f"[json] Done: {count:,} reports in {time.time() - t0:.1f}s")
@@ -121,17 +138,24 @@ def process_reports(input_dir, output_dir):
     log(f"\n[tar] Found {len(tar_files)} tarball(s)")
     for index, tar_file in enumerate(tar_files, start=1):
         size = tar_file.stat().st_size
-        log(f"[tar] Processing {index}/{len(tar_files)}: {tar_file.name} ({size:,} bytes)")
+        log(
+            f"[tar] Processing {index}/{len(tar_files)}: {tar_file.name} ({size:,} bytes)"
+        )
         t0 = time.time()
         try:
             with tarfile.open(tar_file, "r:gz") as tar:
                 members = [m for m in tar.getmembers() if m.name.endswith(".json")]
-                log(f"[tar]   Streaming {len(members)} JSON member(s) from archive", debug=True)
+                log(
+                    f"[tar]   Streaming {len(members)} JSON member(s) from archive",
+                    debug=True,
+                )
                 for member in members:
                     log(f"[tar]   -> {member.name} ({member.size:,} bytes)", debug=True)
                     extracted = tar.extractfile(member)
                     if extracted:
-                        count, src_keys = parse_and_split(extracted, data_output_path, source_label=member.name)
+                        count, src_keys = parse_and_split(
+                            extracted, data_output_path, source_label=member.name
+                        )
                         log(f"[tar]      {count:,} reports parsed")
                         parsed_count += count
                         index_keys.update(src_keys)

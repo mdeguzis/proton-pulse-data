@@ -303,7 +303,7 @@ def test_run_backfill_and_finalize_include_backfilled_apps_in_indexes(tmp_path, 
     monkeypatch.setattr(
         backfill_module,
         "backfill_missing_apps",
-        lambda data_output_path, fetch_json_impl=backfill_module.fetch_json, manifest_path=backfill_module.BACKFILL_MANIFEST_PATH: backfill_missing_apps(
+        lambda data_output_path, fetch_json_impl=backfill_module.fetch_json, manifest_path=backfill_module.BACKFILL_MANIFEST_PATH, target_app_ids=None: backfill_missing_apps(
             data_output_path,
             fetch_json_impl=fake_fetch,
             manifest_path=manifest,

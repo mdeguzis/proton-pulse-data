@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: "0 0 * * *"
   workflow_dispatch:
+    inputs:
+      backfill_app_ids:
+        description: "Comma-separated Steam app IDs to backfill and publish (skips full pipeline)"
+        required: false
+        default: ""
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -13,8 +18,14 @@ env:
   PROTONDB_PROBE_LOG_EVERY: "100"
 
 jobs:
-  build-base:
+
+  # ── Stage 1: process reports, backfill, compute probe plan ─────────
+  build:
+    if: inputs.backfill_app_ids == ''
     runs-on: ubuntu-24.04
+    outputs:
+      chunk_count: ${{ steps.plan.outputs.chunk_count }}
+      chunk_matrix: ${{ steps.plan.outputs.chunk_matrix }}
     steps:
       - name: Checkout Scripts
         uses: actions/checkout@v4
@@ -37,11 +48,10 @@ jobs:
         run: uv sync
 
       - name: Restore pipeline cache
-        id: cache-restore
         uses: actions/cache/restore@v4
         with:
           path: .cache
-          key: pipeline-cache-${{ runner.os }}-${{ github.workflow }}-${{ github.ref_name }}-${{ github.run_id }}-${{ github.run_attempt }}-base
+          key: pipeline-cache-${{ runner.os }}-${{ github.workflow }}-${{ github.ref_name }}-${{ github.run_id }}-${{ github.run_attempt }}-build
           restore-keys: |
             pipeline-cache-${{ runner.os }}-${{ github.workflow }}-${{ github.ref_name }}-
 
@@ -51,7 +61,7 @@ jobs:
             printf 'STEAM_API_KEY=%s\n' "${{ secrets.STEAM_API_KEY }}" > .env
             echo "[steam-catalog] .env written from GitHub secret"
           else
-            echo "[steam-catalog] STEAM_API_KEY secret not available to build job"
+            echo "[steam-catalog] STEAM_API_KEY secret not available"
           fi
 
       - name: Process Official Reports
@@ -65,64 +75,6 @@ jobs:
         run: |
           uv run python scripts/split_reports.py backfill \
             /tmp/protondb-output
-
-      - name: Save pipeline cache
-        if: always()
-        uses: actions/cache/save@v4
-        with:
-          path: .cache
-          key: pipeline-cache-${{ runner.os }}-${{ github.workflow }}-${{ github.ref_name }}-${{ github.run_id }}-${{ github.run_attempt }}-base
-
-      - name: Upload probe input artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: probe-input
-          path: |
-            /tmp/protondb-output/data
-            /tmp/protondb-output/pipeline-state.json
-
-  probe-plan:
-    needs: build-base
-    runs-on: ubuntu-24.04
-    outputs:
-      chunk_count: ${{ steps.plan.outputs.chunk_count }}
-      chunk_matrix: ${{ steps.plan.outputs.chunk_matrix }}
-    steps:
-      - name: Checkout Scripts
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v5
-        with:
-          version: "latest"
-
-      - name: Install dependencies
-        run: uv sync
-
-      - name: Download probe input artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: probe-input
-          path: /tmp/protondb-output
-
-      - name: Restore pipeline cache
-        uses: actions/cache/restore@v4
-        with:
-          path: .cache
-          key: pipeline-cache-${{ runner.os }}-${{ github.workflow }}-${{ github.ref_name }}-${{ github.run_id }}-${{ github.run_attempt }}-plan
-          restore-keys: |
-            pipeline-cache-${{ runner.os }}-${{ github.workflow }}-${{ github.ref_name }}-
-
-      - name: Write local .env from secret
-        run: |
-          if [ -n "${{ secrets.STEAM_API_KEY }}" ]; then
-            printf 'STEAM_API_KEY=%s\n' "${{ secrets.STEAM_API_KEY }}" > .env
-            echo "[steam-catalog] .env written from GitHub secret"
-          else
-            echo "[steam-catalog] STEAM_API_KEY secret not available to plan job"
-          fi
 
       - name: Build probe chunk plan
         id: plan
@@ -141,15 +93,31 @@ jobs:
           print(f"[protondb-probe] chunk_count={plan['chunk_count']}, uncached={plan['uncached_count']}")
           PY
 
+      - name: Save pipeline cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: .cache
+          key: pipeline-cache-${{ runner.os }}-${{ github.workflow }}-${{ github.ref_name }}-${{ github.run_id }}-${{ github.run_attempt }}-build
+
+      - name: Upload probe input artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: probe-input
+          path: |
+            /tmp/protondb-output/data
+            /tmp/protondb-output/pipeline-state.json
+
+  # ── Stage 2: probe ProtonDB summaries in chunks ────────────────────
   probe-chunks:
-    needs: [build-base, probe-plan]
-    if: needs.probe-plan.outputs.chunk_count != '0'
+    needs: build
+    if: needs.build.outputs.chunk_count != '0'
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       max-parallel: 1
       matrix:
-        chunk: ${{ fromJson(needs.probe-plan.outputs.chunk_matrix) }}
+        chunk: ${{ fromJson(needs.build.outputs.chunk_matrix) }}
     steps:
       - name: Checkout Scripts
         uses: actions/checkout@v4
@@ -182,9 +150,6 @@ jobs:
         run: |
           if [ -n "${{ secrets.STEAM_API_KEY }}" ]; then
             printf 'STEAM_API_KEY=%s\n' "${{ secrets.STEAM_API_KEY }}" > .env
-            echo "[steam-catalog] .env written from GitHub secret"
-          else
-            echo "[steam-catalog] STEAM_API_KEY secret not available to probe job"
           fi
 
       - name: Probe ProtonDB summary chunk ${{ matrix.chunk }}
@@ -198,14 +163,17 @@ jobs:
           path: .cache
           key: pipeline-cache-${{ runner.os }}-${{ github.workflow }}-${{ github.ref_name }}-${{ github.run_id }}-${{ github.run_attempt }}-chunk-${{ matrix.chunk }}
 
-  build-site:
-    needs: [build-base, probe-plan, probe-chunks]
+  # ── Stage 3: finalize, build site, deploy to gh-pages ──────────────
+  finalize:
+    needs: [build, probe-chunks]
     if: |
       always() &&
-      needs.build-base.result == 'success' &&
-      needs.probe-plan.result == 'success' &&
+      inputs.backfill_app_ids == '' &&
+      needs.build.result == 'success' &&
       (needs.probe-chunks.result == 'success' || needs.probe-chunks.result == 'skipped')
     runs-on: ubuntu-24.04
+    permissions:
+      contents: write
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -238,9 +206,6 @@ jobs:
         run: |
           if [ -n "${{ secrets.STEAM_API_KEY }}" ]; then
             printf 'STEAM_API_KEY=%s\n' "${{ secrets.STEAM_API_KEY }}" > .env
-            echo "[steam-catalog] .env written from GitHub secret"
-          else
-            echo "[steam-catalog] STEAM_API_KEY secret not available to build job"
           fi
 
       - name: Backfill Probe Discoveries
@@ -260,31 +225,7 @@ jobs:
           path: .cache
           key: pipeline-cache-${{ runner.os }}-${{ github.workflow }}-${{ github.ref_name }}-${{ github.run_id }}-${{ github.run_attempt }}-final
 
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: site-content
-          path: |
-            /tmp/protondb-output/data
-            /tmp/protondb-output/index.html
-            /tmp/protondb-output/coverage.html
-
-  deploy-pages:
-    needs: build-site
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: write
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
-
-      - name: Download build artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: site-content
-          path: /tmp/protondb-output
-
-      - name: Deploy to gh-pages (orphan - no history)
+      - name: Deploy to gh-pages (orphan, no history)
         run: |
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
@@ -297,8 +238,121 @@ jobs:
           git commit -m "Deploy: $(date +%F)"
           git push origin gh-pages-new:gh-pages --force
 
+  # ── Targeted backfill: just backfill specific IDs and publish ──────
+  targeted-backfill:
+    if: inputs.backfill_app_ids != ''
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          ref: gh-pages
+          path: gh-pages-data
+
+      - name: Checkout scripts
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          path: repo
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+
+      - name: Install dependencies
+        working-directory: repo
+        run: uv sync
+
+      - name: Restore pipeline cache
+        uses: actions/cache/restore@v4
+        with:
+          path: repo/.cache
+          key: pipeline-cache-${{ runner.os }}-${{ github.workflow }}-${{ github.ref_name }}-targeted
+          restore-keys: |
+            pipeline-cache-${{ runner.os }}-${{ github.workflow }}-${{ github.ref_name }}-
+
+      - name: Prepare output from existing gh-pages data
+        run: |
+          mkdir -p /tmp/protondb-output
+          if [ -d gh-pages-data/data ]; then
+            cp -r gh-pages-data/data /tmp/protondb-output/data
+          else
+            mkdir -p /tmp/protondb-output/data
+          fi
+
+      - name: Initialize pipeline state
+        working-directory: repo
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          output = Path("/tmp/protondb-output")
+          state_file = output / "pipeline-state.json"
+          data_dir = output / "data"
+
+          # build index_keys from existing data dirs
+          index_keys = []
+          if data_dir.is_dir():
+              for app_dir in sorted(data_dir.iterdir()):
+                  if not app_dir.is_dir():
+                      continue
+                  for json_file in app_dir.glob("*.json"):
+                      if json_file.stem in ("index", "latest", "votes"):
+                          continue
+                      index_keys.append([app_dir.name, json_file.stem])
+
+          state = {
+              "parsed_count": 0,
+              "index_keys": index_keys,
+              "backfilled_keys": [],
+          }
+          state_file.write_text(json.dumps(state))
+          print(f"[targeted-backfill] Initialized state with {len(index_keys)} existing index keys")
+          PY
+
+      - name: Backfill targeted app IDs
+        working-directory: repo
+        run: |
+          echo "[targeted-backfill] App IDs: ${{ inputs.backfill_app_ids }}"
+          uv run python scripts/split_reports.py backfill \
+            --app-ids "${{ inputs.backfill_app_ids }}" \
+            /tmp/protondb-output
+
+      - name: Finalize (Indexes + Coverage)
+        working-directory: repo
+        run: |
+          uv run python scripts/split_reports.py finalize --skip-probe \
+            /tmp/protondb-output
+
+      - name: Save pipeline cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: repo/.cache
+          key: pipeline-cache-${{ runner.os }}-${{ github.workflow }}-${{ github.ref_name }}-targeted
+
+      - name: Deploy to gh-pages (orphan, no history)
+        working-directory: repo
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git checkout --orphan gh-pages-new
+          git rm -rf .
+          cp -r /tmp/protondb-output/data .
+          cp /tmp/protondb-output/index.html .
+          cp /tmp/protondb-output/coverage.html .
+          git add data/ index.html coverage.html
+          git commit -m "Targeted backfill: ${{ inputs.backfill_app_ids }}"
+          git push origin gh-pages-new:gh-pages --force
+
+  # ── Status report (runs even on failure) ───────────────────────────
   report-build-status:
-    needs: [build-base, probe-plan, probe-chunks, build-site, deploy-pages]
+    needs: [build, probe-chunks, finalize, targeted-backfill]
     runs-on: ubuntu-24.04
     if: always()
     steps:
@@ -306,13 +360,20 @@ jobs:
         run: |
           echo "### Update ProtonDB Data" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Job | Status |" >> "$GITHUB_STEP_SUMMARY"
-          echo "|-----|--------|" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Build base | ${{ needs.build-base.result }} |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Probe plan | ${{ needs.probe-plan.result }} |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Probe chunks | ${{ needs.probe-chunks.result }} |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Build site | ${{ needs.build-site.result }} |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Deploy Pages | ${{ needs.deploy-pages.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          if [ -n "${{ inputs.backfill_app_ids }}" ]; then
+            echo "**Mode:** Targeted backfill" >> "$GITHUB_STEP_SUMMARY"
+            echo "**App IDs:** ${{ inputs.backfill_app_ids }}" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "| Job | Status |" >> "$GITHUB_STEP_SUMMARY"
+            echo "|-----|--------|" >> "$GITHUB_STEP_SUMMARY"
+            echo "| Targeted backfill | ${{ needs.targeted-backfill.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "| Job | Status |" >> "$GITHUB_STEP_SUMMARY"
+            echo "|-----|--------|" >> "$GITHUB_STEP_SUMMARY"
+            echo "| Build | ${{ needs.build.result }} |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| Probe chunks | ${{ needs.probe-chunks.result }} |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| Finalize + Deploy | ${{ needs.finalize.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Fail if any job failed
         if: contains(needs.*.result, 'failure')

@@ -12,6 +12,14 @@ from .finalize import build_probe_chunk_plan, finalize_output, update_protondb_p
 from .process import process_reports
 
 
+def _parse_app_ids(raw: str | None) -> list[str] | None:
+    """Turn a comma-separated string of app IDs into a clean list, or None."""
+    if not raw or not raw.strip():
+        return None
+    ids = [s.strip() for s in raw.split(",") if s.strip().isdigit()]
+    return ids or None
+
+
 def process_data(input_dir, output_dir):
     process_reports(input_dir, output_dir)
     run_backfill(output_dir)
@@ -38,6 +46,10 @@ def build_parser():
     add_shared_output_arg(process_parser)
 
     backfill_parser = subparsers.add_parser("backfill", help="Backfill missing app data from ProtonDB live detailed reports")
+    backfill_parser.add_argument(
+        "--app-ids",
+        help="Comma-separated app IDs to target for backfill (in addition to the manifest)",
+    )
     add_shared_output_arg(backfill_parser)
 
     finalize_parser = subparsers.add_parser("finalize", help="Generate latest/index files and print final summary")
@@ -96,7 +108,8 @@ def main():
         return
 
     if command == "backfill":
-        run_backfill(args.output_dir)
+        target_ids = _parse_app_ids(getattr(args, "app_ids", None))
+        run_backfill(args.output_dir, target_app_ids=target_ids)
         return
 
     if command == "finalize":
