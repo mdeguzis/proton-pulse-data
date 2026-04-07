@@ -12,7 +12,7 @@ help:
 	@echo "  test     Run the test suite with uv"
 	@echo "  test-py  Run the Python test suite with uv"
 	@echo "  fetch-steam-catalog  Fetch and cache Steam app IDs using STEAM_API_KEY"
-	@echo "  backup-supabase  Create a logical Supabase backup via Supabase CLI"
+	@echo "  backup-supabase  Create a logical Supabase backup via linked Supabase CLI project"
 	@echo "  supabase-login  Log in to the Supabase CLI via npx"
 	@echo "  install-docker  Install Docker Engine via the local helper script"
 

@@ -3,8 +3,98 @@
 <head>
   <meta charset="utf-8">
   <title>proton-pulse-data index</title>
+  <meta name="color-scheme" content="dark">
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0b1220;
+      --bg-accent: #111a2b;
+      --panel-border: #24334d;
+      --text: #e6eef8;
+      --muted: #9ab0c9;
+      --link: #7cc7ff;
+      --link-hover: #b4e2ff;
+      --strong: #ffffff;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 32px 24px 48px;
+      background:
+        radial-gradient(circle at top, rgba(70, 118, 178, 0.18), transparent 38%),
+        linear-gradient(180deg, var(--bg-accent), var(--bg));
+      color: var(--text);
+      font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    main {
+      max-width: 1080px;
+      margin: 0 auto;
+    }
+
+    h1, h2 {
+      color: var(--strong);
+      line-height: 1.2;
+    }
+
+    h1 {
+      margin: 0 0 12px;
+      font-size: 2rem;
+    }
+
+    h2 {
+      margin-top: 32px;
+      font-size: 1.15rem;
+    }
+
+    p {
+      color: var(--muted);
+    }
+
+    strong {
+      color: var(--strong);
+    }
+
+    a {
+      color: var(--link);
+    }
+
+    a:hover {
+      color: var(--link-hover);
+    }
+
+    ul {
+      padding-left: 20px;
+    }
+
+    li {
+      margin: 6px 0;
+    }
+
+    details {
+      background: rgba(22, 33, 51, 0.72);
+      border: 1px solid var(--panel-border);
+      border-radius: 10px;
+      padding: 8px 12px;
+    }
+
+    details > ul {
+      margin: 10px 0 4px;
+    }
+
+    summary {
+      cursor: pointer;
+      color: var(--strong);
+      font-weight: 600;
+    }
+  </style>
 </head>
 <body>
+<main>
 <h1>proton-pulse-data index</h1>
 <p>Monthly-updated ProtonDB per-game community reports. <strong>9752</strong> games tracked.</p>
 <h2>Popular titles</h2>
@@ -92026,5 +92116,6 @@
   </li>
 </ul>
 <p>Generated: 2026-04-01 16:18 UTC</p>
+</main>
 </body>
 </html>

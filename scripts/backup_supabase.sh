@@ -20,7 +20,7 @@ Connection options:
 Environment:
   SUPABASE_DB_URL         Percent-encoded Postgres connection string.
   SUPABASE_ACCESS_TOKEN   Supabase personal access token.
-  SUPABASE_BACKUP_DIR     Root output directory. Default: backups/supabase
+  SUPABASE_BACKUP_DIR     Root output directory. Default: data/supabase
   SUPABASE_BACKUP_LABEL   Backup folder name. Default: UTC timestamp
 
 Examples:
@@ -155,7 +155,7 @@ This repo is not linked to a Supabase project yet.
 
 Run one of these first:
 
-  npx --yes supabase link --project-ref <your-project-ref>
+  npx --yes supabase link
 
 If your project requires a database password during linking:
 
@@ -165,6 +165,18 @@ Then rerun:
 
   make backup-supabase
 EOF
+}
+
+attempt_supabase_link() {
+  if [[ ! -t 0 || ! -t 1 ]]; then
+    return 1
+  fi
+
+  echo "Supabase link metadata is missing. Attempting interactive relink..."
+  (
+    cd "${REPO_ROOT}"
+    "${SUPABASE_CMD[@]}" link
+  )
 }
 
 load_supabase_access_token() {
@@ -201,6 +213,12 @@ ensure_linked_project() {
 
   if [[ -s "${linked_project_json}" ]]; then
     return
+  fi
+
+  if attempt_supabase_link; then
+    if [[ -s "${linked_ref_file}" ]] || [[ -s "${linked_project_json}" ]]; then
+      return
+    fi
   fi
 
   print_link_hint
@@ -241,7 +259,7 @@ ensure_docker_ready() {
 
 linked=false
 backup_label="${SUPABASE_BACKUP_LABEL:-}"
-backup_root="${SUPABASE_BACKUP_DIR:-${REPO_ROOT}/backups/supabase}"
+backup_root="${SUPABASE_BACKUP_DIR:-${REPO_ROOT}/data/supabase}"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in

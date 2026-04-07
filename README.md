@@ -64,20 +64,25 @@ This repo includes a helper for creating downloadable logical Supabase backups
 with the Supabase CLI, following the documented `db dump` flow for `roles`,
 `schema`, and `data` exports.
 
+The default `make` target uses an already-linked local Supabase CLI project, so
+you can avoid putting your database URL or password in shell history:
+
+```bash
+cd proton-pulse-data
+npx --yes supabase link
+make backup-supabase
+```
+
+If you prefer a non-interactive or CI-style flow, the script still supports an
+explicit database URL:
+
 ```bash
 cd proton-pulse-data
 SUPABASE_DB_URL='postgresql://postgres.[ref]:[password]@aws-0-us-east-1.pooler.supabase.com:6543/postgres' \
-  make backup-supabase
+  bash scripts/backup_supabase.sh
 ```
 
-Or, if this repo is already linked to a Supabase project locally:
-
-```bash
-cd proton-pulse-data
-bash scripts/backup_supabase.sh --linked
-```
-
-Outputs are written to `backups/supabase/<timestamp>/` plus a matching
+Outputs are written to `data/supabase/<timestamp>/` plus a matching
 `.tar.gz` archive, and are ignored by git. You can override the location or
 name with:
 
