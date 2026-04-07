@@ -109,13 +109,16 @@ def test_backfill_missing_apps_writes_year_files_for_manifest_app(tmp_path):
             return live_payload
         raise AssertionError(f"Unexpected URL fetched: {url}")
 
-    written_keys = backfill_missing_apps(data_dir, fetch_json_impl=fake_fetch, manifest_path=manifest)
+    written_keys, no_data_ids = backfill_missing_apps(
+        data_dir, fetch_json_impl=fake_fetch, manifest_path=manifest
+    )
 
     assert fetched_urls == [
         "https://www.protondb.com/data/counts.json",
         expected_url,
     ]
     assert written_keys == {("2561580", "2025")}
+    assert no_data_ids == set()
     reports = json.loads((data_dir / "2561580" / "2025.json").read_text())
     assert reports[0]["protonVersion"] == "10.0-3"
     assert reports[0]["rating"] == "platinum"
@@ -160,9 +163,12 @@ def test_backfill_missing_apps_falls_back_to_legacy_candidate_url(tmp_path):
             return live_payload
         raise AssertionError(f"Unexpected URL fetched: {url}")
 
-    written_keys = backfill_missing_apps(data_dir, fetch_json_impl=fake_fetch, manifest_path=manifest)
+    written_keys, no_data_ids = backfill_missing_apps(
+        data_dir, fetch_json_impl=fake_fetch, manifest_path=manifest
+    )
 
     assert written_keys == {("2561580", "2025")}
+    assert no_data_ids == set()
     assert fetched_urls == [
         "https://www.protondb.com/data/counts.json",
         current_url,
@@ -201,9 +207,12 @@ def test_backfill_missing_apps_uses_manifest_report_url_override_first(tmp_path)
             return live_payload
         raise AssertionError(f"Unexpected URL fetched: {url}")
 
-    written_keys = backfill_missing_apps(data_dir, fetch_json_impl=fake_fetch, manifest_path=manifest)
+    written_keys, no_data_ids = backfill_missing_apps(
+        data_dir, fetch_json_impl=fake_fetch, manifest_path=manifest
+    )
 
     assert written_keys == {("2561580", "2025")}
+    assert no_data_ids == set()
     assert fetched_urls == [
         "https://www.protondb.com/data/counts.json",
         override_url,
@@ -223,9 +232,12 @@ def test_backfill_missing_apps_skips_existing_app_directory(tmp_path):
         fetched_urls.append(url)
         return {}
 
-    written_keys = backfill_missing_apps(data_dir, fetch_json_impl=fake_fetch, manifest_path=manifest)
+    written_keys, no_data_ids = backfill_missing_apps(
+        data_dir, fetch_json_impl=fake_fetch, manifest_path=manifest
+    )
 
     assert written_keys == set()
+    assert no_data_ids == set()
     assert fetched_urls == []
 
 
@@ -257,7 +269,9 @@ def test_backfilled_keys_flow_into_app_index_and_main_index(tmp_path):
             return live_payload
         raise AssertionError(f"Unexpected URL fetched: {url}")
 
-    written_keys = backfill_missing_apps(data_dir, fetch_json_impl=fake_fetch, manifest_path=manifest)
+    written_keys, _no_data_ids = backfill_missing_apps(
+        data_dir, fetch_json_impl=fake_fetch, manifest_path=manifest
+    )
     generate_app_indexes(written_keys, data_dir)
     generate_index_html(written_keys, tmp_path)
 
@@ -303,7 +317,7 @@ def test_run_backfill_and_finalize_include_backfilled_apps_in_indexes(tmp_path, 
     monkeypatch.setattr(
         backfill_module,
         "backfill_missing_apps",
-        lambda data_output_path, fetch_json_impl=backfill_module.fetch_json, manifest_path=backfill_module.BACKFILL_MANIFEST_PATH, target_app_ids=None: backfill_missing_apps(
+        lambda data_output_path, fetch_json_impl=backfill_module.fetch_json, manifest_path=backfill_module.BACKFILL_MANIFEST_PATH, target_app_ids=None, force=False: backfill_missing_apps(
             data_output_path,
             fetch_json_impl=fake_fetch,
             manifest_path=manifest,
@@ -322,3 +336,13 @@ def test_run_backfill_and_finalize_include_backfilled_apps_in_indexes(tmp_path, 
     assert "<summary>2561580/</summary>" in html
     assert 'href="data/2561580/2025.json"' in html
     assert 'href="data/2561580/latest.json"' in html
+
+
+def test_run_coverage_backfill_no_titles_does_not_crash_when_targets_already_exist(tmp_path):
+    data_dir = tmp_path / "data"
+    app_dir = data_dir / "2561580"
+    app_dir.mkdir(parents=True)
+    (app_dir / "latest.json").write_text(json.dumps([{"title": "", "timestamp": 1763251200}]))
+    write_pipeline_state(tmp_path, parsed_count=0, index_keys=set())
+
+    run_backfill(tmp_path, target_app_ids=["2561580"])

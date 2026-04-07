@@ -252,15 +252,22 @@ def backfill_missing_apps(
     fetch_json_impl=fetch_json,
     manifest_path: Path = BACKFILL_MANIFEST_PATH,
     target_app_ids: list[str] | None = None,
-) -> set[tuple]:
+    force: bool = False,
+) -> tuple[set[tuple], set[str]]:
     # when specific IDs are passed, only process those and skip the manifest
     if target_app_ids:
         configured_targets = [BackfillTarget(app_id=aid) for aid in target_app_ids]
         log(f"[backfill] Targeting {len(configured_targets)} specific app ID(s)")
     else:
         configured_targets = load_backfill_targets(manifest_path)
-    existing_app_ids = {path.name for path in data_output_path.iterdir() if path.is_dir()}
-    missing_targets = [target for target in configured_targets if target.app_id not in existing_app_ids]
+
+    if force:
+        # force mode: re-fetch all targets even if they already have data
+        missing_targets = configured_targets
+        log(f"[backfill] Force mode: processing all {len(missing_targets)} target(s)")
+    else:
+        existing_app_ids = {path.name for path in data_output_path.iterdir() if path.is_dir()}
+        missing_targets = [target for target in configured_targets if target.app_id not in existing_app_ids]
 
     if not missing_targets:
         log("[backfill] No missing app IDs require live backfill", debug=True)
@@ -415,12 +422,12 @@ def run_probe_backfill(output_dir):
     log("Done backfilling probe discoveries.")
 
 
-def run_backfill(output_dir, target_app_ids: list[str] | None = None):
+def run_backfill(output_dir, target_app_ids: list[str] | None = None, force: bool = False):
     output_path = Path(output_dir)
     data_output_path = output_path / "data"
     state = read_pipeline_state(output_path)
     backfilled_keys, no_data_ids = backfill_missing_apps(
-        data_output_path, target_app_ids=target_app_ids,
+        data_output_path, target_app_ids=target_app_ids, force=force,
     )
     merged_index_keys = set(state["index_keys"])
     merged_index_keys.update(backfilled_keys)
@@ -498,5 +505,8 @@ def run_coverage_backfill(output_dir: str, issue_type: str, limit: int = 0) -> N
         app_ids = app_ids[:limit]
         log(f"[coverage-backfill] Limited to {limit} app(s)")
 
-    run_backfill(output_dir, target_app_ids=app_ids)
+    # no-titles needs force=True because these apps already have data dirs,
+    # they just need re-fetching to pick up Steam titles
+    needs_force = issue_type == "no-titles"
+    run_backfill(output_dir, target_app_ids=app_ids, force=needs_force)
     log(f"[coverage-backfill] Done ({issue_type})")
