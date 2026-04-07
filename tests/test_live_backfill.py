@@ -393,6 +393,7 @@ def test_run_backfill_and_finalize_include_backfilled_apps_in_indexes(tmp_path, 
     assert "<summary>2561580/</summary>" in html
     assert 'href="data/2561580/2025.json"' in html
     assert 'href="data/2561580/latest.json"' in html
+    assert read_app_metadata(data_dir, "2561580")["protondb_live"] is True
 
 
 def test_update_app_metadata_preserves_multiple_provenance_flags(tmp_path):
@@ -402,6 +403,39 @@ def test_update_app_metadata_preserves_multiple_provenance_flags(tmp_path):
 
     assert read_app_metadata(data_dir, "730") == {
         "official_dump": True,
+        "protondb_live": True,
+    }
+
+
+def test_finalize_output_bootstraps_missing_metadata_from_existing_data(tmp_path, monkeypatch):
+    data_dir = tmp_path / "data"
+    official_dir = data_dir / "730"
+    official_dir.mkdir(parents=True)
+    (official_dir / "2024.json").write_text(json.dumps([{"appId": "730", "timestamp": 1704067200, "foo": "bar"}]))
+    live_dir = data_dir / "2561580"
+    live_dir.mkdir(parents=True)
+    (live_dir / "2025.json").write_text(json.dumps([{
+        "appId": "2561580",
+        "duration": "allTheTime",
+        "protonVersion": "10.0-3",
+        "rating": "gold",
+        "timestamp": 1763251200,
+        "title": "Live Game",
+    }]))
+    write_pipeline_state(tmp_path, parsed_count=2, index_keys={("730", "2024"), ("2561580", "2025")})
+
+    monkeypatch.setattr(finalize_module, "fetch_json", lambda url: {"uniqueGames": 2, "reports": 2})
+    monkeypatch.setattr(finalize_module, "load_protondb_signal_catalog", lambda **kw: {})
+    monkeypatch.setattr(finalize_module, "get_steam_api_key", lambda env: None)
+
+    finalize_output(tmp_path, skip_probe=True)
+
+    assert read_app_metadata(data_dir, "730") == {
+        "official_dump": True,
+        "protondb_live": False,
+    }
+    assert read_app_metadata(data_dir, "2561580") == {
+        "official_dump": False,
         "protondb_live": True,
     }
 

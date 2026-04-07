@@ -18,7 +18,7 @@ from .catalog import (
     write_protondb_probe_cache,
 )
 from .common import LIVE_COUNTS_URL, count_year_bucket_files, fetch_json, log
-from .metadata import read_app_metadata
+from .metadata import bootstrap_all_app_metadata, read_app_metadata
 from .state import read_pipeline_state
 
 
@@ -705,6 +705,17 @@ def finalize_output(output_dir, skip_probe: bool = False):
         log(f"[protondb-counts] Failed to fetch counts.json: {exc}")
 
     generate_latest_files(data_output_path)
+    bootstrapped_metadata = bootstrap_all_app_metadata(
+        data_output_path,
+        backfilled_app_ids={app_id for app_id, _ in state["backfilled_keys"]},
+    )
+    if bootstrapped_metadata:
+        official_bootstrapped = sum(1 for meta in bootstrapped_metadata.values() if meta.get("official_dump"))
+        live_bootstrapped = sum(1 for meta in bootstrapped_metadata.values() if meta.get("protondb_live"))
+        log(
+            f"[metadata] Bootstrapped app provenance for {len(bootstrapped_metadata):,} app(s): "
+            f"{official_bootstrapped:,} official, {live_bootstrapped:,} live"
+        )
     generate_app_indexes(state["index_keys"], data_output_path)
     generate_index_html(state["index_keys"], output_path)
     generate_coverage_report(

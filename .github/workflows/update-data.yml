@@ -20,11 +20,11 @@ on:
           - "bad-app-id"
           - "no-protondb-data"
       coverage_backfill_limit:
-        description: "Max apps to backfill for coverage-backfill. Keep this bounded for safety."
+        description: "Max matching apps to process for coverage-backfill. Use 0 only with the unbounded override below."
         required: false
         default: "25"
       coverage_backfill_allow_unbounded:
-        description: "Allow an unbounded coverage-backfill run. Dangerous; use only intentionally."
+        description: "If enabled, allows coverage_backfill_limit=0 to process every matching app ID in the selected issue type. This can trigger very large runs."
         required: false
         default: false
         type: boolean
@@ -329,7 +329,7 @@ jobs:
                   if not app_dir.is_dir():
                       continue
                   for json_file in app_dir.glob("*.json"):
-                      if json_file.stem in ("index", "latest", "votes"):
+                      if json_file.stem in ("index", "latest", "votes", "metadata"):
                           continue
                       index_keys.append([app_dir.name, json_file.stem])
 
@@ -457,7 +457,7 @@ jobs:
                   if not app_dir.is_dir():
                       continue
                   for json_file in app_dir.glob("*.json"):
-                      if json_file.stem in ("index", "latest", "votes"):
+                      if json_file.stem in ("index", "latest", "votes", "metadata"):
                           continue
                       index_keys.append([app_dir.name, json_file.stem])
 
