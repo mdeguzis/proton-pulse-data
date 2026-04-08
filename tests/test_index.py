@@ -89,6 +89,15 @@ def test_generated_timestamp_present(tmp_path):
     assert "Generated:" in html
 
 
+def test_index_html_includes_jump_filter_with_url_state(tmp_path):
+    keys = {("730", "2020")}
+    generate_index_html(keys, tmp_path)
+    html = (tmp_path / "index.html").read_text()
+    assert 'id="index-filter"' in html
+    assert "params.get('q')" in html
+    assert "window.history.replaceState(null,'',next);" in html
+
+
 def test_index_html_includes_dark_mode_support(tmp_path):
     keys = {("730", "2020")}
     generate_index_html(keys, tmp_path)
@@ -477,8 +486,8 @@ def test_generate_coverage_report_shows_title_and_catalog_source_columns(tmp_pat
 
     html = (tmp_path / "coverage.html").read_text()
     assert "Title Source" in html
-    assert "ProtonDB Signal" in html
-    assert "Steam Catalog" in html
+    assert "Seen on ProtonDB" in html
+    assert "Seen in Steam Catalog" in html
     assert "protondb-signal" in html or "protondb signal" in html
 
 
@@ -517,10 +526,32 @@ def test_generate_coverage_report_uses_persisted_metadata_for_provenance(tmp_pat
     )
 
     html = (tmp_path / "coverage.html").read_text()
-    assert "Official Dump" in html
-    assert "Backfilled" in html
+    assert "Official ProtonDB Dump" in html
+    assert "Live Backfill" in html
     assert '<div class="value">1</div>' in html
     assert '"indexed-data",1,1,1,1,"official backfill protondb-signal steam-catalog",1' in html
+
+
+def test_generate_coverage_report_persists_filter_state_in_url(tmp_path):
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+
+    generate_coverage_report(
+        index_keys={("730", "2024")},
+        backfilled_keys=set(),
+        data_output_path=data_dir,
+        output_path=tmp_path,
+        steam_catalog={"730": "Counter-Strike 2"},
+        protondb_signal_catalog={"730": "Counter-Strike 2"},
+    )
+
+    html = (tmp_path / "coverage.html").read_text()
+    assert 'params.get("q")' in html
+    assert 'params.get("src")' in html
+    assert 'params.get("sort")' in html
+    assert 'params.get("dir")' in html
+    assert 'params.get("page")' in html
+    assert 'window.history.replaceState(null,"",next);' in html
 
 
 def test_retry_http_retries_on_transient_error(monkeypatch):

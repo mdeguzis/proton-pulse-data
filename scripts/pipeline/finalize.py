@@ -193,6 +193,18 @@ def generate_index_html(index_keys: set, output_path: Path) -> None:
         "    }",
         "    details + details, li + li { margin-top: 0.5rem; }",
         "    summary { cursor: pointer; font-weight: 600; }",
+        "    .filter-row { margin: 1rem 0 1.25rem; }",
+        "    #index-filter {",
+        "      width: min(100%, 32rem);",
+        "      padding: 0.75rem 0.9rem;",
+        "      border-radius: 12px;",
+        "      border: 1px solid var(--border);",
+        "      background: var(--details-bg);",
+        "      color: var(--text);",
+        "      font: inherit;",
+        "    }",
+        "    #index-filter-help { margin-top: 0.5rem; font-size: 0.95rem; }",
+        "    .is-hidden { display: none; }",
         "    @media (max-width: 640px) {",
         "      body { padding: 1rem; }",
         "      main { padding: 1rem; }",
@@ -213,6 +225,10 @@ def generate_index_html(index_keys: set, output_path: Path) -> None:
 
     lines += [
         "<h2>All games (by app ID)</h2>",
+        '<div class="filter-row">',
+        '  <input id="index-filter" type="search" placeholder="Jump to an App ID or title…" autocomplete="off">',
+        '  <p id="index-filter-help">Type to narrow the list. The filter is saved in the URL.</p>',
+        "</div>",
         "<ul>",
     ]
 
@@ -234,6 +250,46 @@ def generate_index_html(index_keys: set, output_path: Path) -> None:
     lines += [
         "</ul>",
         f"<p>Generated: {now}</p>",
+        "<script>",
+        "const indexFilter=document.getElementById('index-filter');",
+        "const indexFilterHelp=document.getElementById('index-filter-help');",
+        "const indexEntries=[...document.querySelectorAll('details')].map((details)=>({",
+        "  details,",
+        "  item: details.closest('li'),",
+        "  summary: details.querySelector('summary'),",
+        "  text: (details.textContent||'').toLowerCase()",
+        "}));",
+        "function readIndexFilter(){",
+        "  const params=new URLSearchParams(window.location.search);",
+        "  return params.get('q')||'';",
+        "}",
+        "function writeIndexFilter(value){",
+        "  const params=new URLSearchParams(window.location.search);",
+        "  if(value) params.set('q', value); else params.delete('q');",
+        "  const query=params.toString();",
+        "  const next=window.location.pathname+(query?`?${query}`:'');",
+        "  window.history.replaceState(null,'',next);",
+        "}",
+        "function applyIndexFilter(){",
+        "  const raw=indexFilter.value.trim();",
+        "  const query=raw.toLowerCase();",
+        "  let visible=0;",
+        "  for(const entry of indexEntries){",
+        "    const match=!query||entry.text.includes(query);",
+        "    entry.item.classList.toggle('is-hidden', !match);",
+        "    if(match) visible+=1;",
+        "    if(query && match) entry.details.open=true;",
+        "    if(!query) entry.details.open=false;",
+        "  }",
+        "  indexFilterHelp.textContent=query",
+        "    ? `${visible} matching app${visible===1?'':'s'}`",
+        "    : 'Type to narrow the list. The filter is saved in the URL.';",
+        "  writeIndexFilter(raw);",
+        "}",
+        "indexFilter.value=readIndexFilter();",
+        "indexFilter.addEventListener('input', applyIndexFilter);",
+        "applyIndexFilter();",
+        "</script>",
         "</main>",
         "</body>",
         "</html>",
@@ -421,12 +477,12 @@ a {{ color: #5dade2; }}
   <div class="detail"><span class="pct">{pct_of_protondb_total:.1f}%</span> of ProtonDB &middot; <span class="pct">{pct_of_steam:.1f}%</span> of Steam</div>
 </div>
 <div class="stat-card">
-  <div class="label">Official Dump</div>
+  <div class="label">Official ProtonDB Dump</div>
   <div class="value">{official_count:,}</div>
   <div class="detail">From bdefore/protondb-data archive</div>
 </div>
 <div class="stat-card">
-  <div class="label">Backfilled</div>
+  <div class="label">Live Backfill</div>
   <div class="value">{backfill_count:,}</div>
   <div class="detail">Live ProtonDB detailed reports</div>
 </div>
@@ -439,8 +495,8 @@ a {{ color: #5dade2; }}
 <div class="filters">
 <input id="filter" placeholder="Filter by App ID or title\u2026" oninput="onFilter()">
 <button class="toggle active" data-src="all" onclick="toggleSrc('all')">All</button>
-<button class="toggle" data-src="official" onclick="toggleSrc('official')">Official only</button>
-<button class="toggle" data-src="backfill" onclick="toggleSrc('backfill')">Backfill only</button>
+<button class="toggle" data-src="official" onclick="toggleSrc('official')">Official dump only</button>
+<button class="toggle" data-src="backfill" onclick="toggleSrc('backfill')">Live backfill only</button>
 <button class="toggle" data-src="missing-title" onclick="toggleSrc('missing-title')">Missing title</button>
 <button class="toggle" data-src="bad-appid" onclick="toggleSrc('bad-appid')">Bad App ID</button>
 </div>
@@ -454,11 +510,11 @@ a {{ color: #5dade2; }}
 <th onclick="doSort(0)">App ID</th>
 <th onclick="doSort(1)">Title (ProtonDB)</th>
 <th onclick="doSort(2)">Title Source</th>
-<th onclick="doSort(3)">Official Dump</th>
-<th onclick="doSort(4)">ProtonDB Live</th>
-<th onclick="doSort(5)">ProtonDB Signal</th>
-<th onclick="doSort(6)">Steam Catalog</th>
-<th>Index</th>
+<th onclick="doSort(3)">Official ProtonDB Dump</th>
+<th onclick="doSort(4)">Live Backfill</th>
+<th onclick="doSort(5)">Seen on ProtonDB</th>
+<th onclick="doSort(6)">Seen in Steam Catalog</th>
+<th>Indexed</th>
 </tr></thead>
 <tbody id="tbody"></tbody>
 </table>
@@ -477,6 +533,49 @@ let page=0;
 let activeSrc=new Set(["all"]);
 let sortCol=-1,sortAsc=1;
 let filterTimer=null;
+const TITLE_SOURCE_LABELS={{
+  "indexed-data":"Indexed",
+  "protondb-signal":"Seen on ProtonDB",
+  "steam-catalog":"Seen in Steam Catalog",
+  "steam-store":"Steam Store",
+  "steam-store-scrape":"Steam Store Scrape",
+  "steam-store-empty-name":"Steam Store (empty name)",
+  "steam-store-unsuccessful":"Steam Store (unsuccessful)",
+  "steam-store-error":"Steam Store (error)",
+  "none":"None"
+}};
+
+function getStateFromUrl(){{
+  const params=new URLSearchParams(window.location.search);
+  const q=params.get("q")||"";
+  const srcParam=params.get("src")||"all";
+  const srcValues=srcParam.split(",").map(s=>s.trim()).filter(Boolean);
+  const src=new Set(srcValues.length?srcValues:["all"]);
+  const sort=Number.parseInt(params.get("sort")||"-1",10);
+  const dir=Number.parseInt(params.get("dir")||"1",10);
+  const pageValue=Math.max(0,Number.parseInt(params.get("page")||"0",10)||0);
+  return {{
+    q,
+    src: src.has("all")||src.size===0?new Set(["all"]):src,
+    sort: Number.isNaN(sort)?-1:sort,
+    dir: dir===-1?-1:1,
+    page: pageValue
+  }};
+}}
+
+function saveStateToUrl(){{
+  const params=new URLSearchParams(window.location.search);
+  const q=document.getElementById("filter").value.trim();
+  const src=[...activeSrc].sort().join(",");
+  if(q)params.set("q",q);else params.delete("q");
+  if(src&&src!=="all")params.set("src",src);else params.delete("src");
+  if(sortCol>=0)params.set("sort",String(sortCol));else params.delete("sort");
+  if(sortAsc===-1)params.set("dir","-1");else params.delete("dir");
+  if(page>0)params.set("page",String(page));else params.delete("page");
+  const query=params.toString();
+  const next=window.location.pathname+(query?`?${{query}}`:"");
+  window.history.replaceState(null,"",next);
+}}
 
 function toggleSrc(s){{
   if(s==="all"){{activeSrc.clear();activeSrc.add("all")}}
@@ -484,8 +583,8 @@ function toggleSrc(s){{
   document.querySelectorAll(".toggle").forEach(b=>b.classList.toggle("active",activeSrc.has(b.dataset.src)));
   apply();
 }}
-function onFilter(){{clearTimeout(filterTimer);filterTimer=setTimeout(apply,200)}}
-function apply(){{
+function onFilter(){{clearTimeout(filterTimer);filterTimer=setTimeout(()=>apply(),200)}}
+function apply(resetPage=true){{
   const q=document.getElementById("filter").value.toLowerCase();
   const all=activeSrc.has("all");
   filtered=DATA.filter(r=>{{
@@ -500,7 +599,8 @@ function apply(){{
     return true;
   }});
   if(sortCol>=0)doSortFiltered();
-  page=0;render();
+  if(resetPage) page=0;
+  render();
 }}
 function doSort(c){{
   if(sortCol===c)sortAsc*=-1;else{{sortCol=c;sortAsc=1}}
@@ -522,11 +622,15 @@ function render(){{
   const tb=document.getElementById("tbody");
   const start=page*PAGE,slice=filtered.slice(start,start+PAGE);
   const total=filtered.length,pages=Math.ceil(total/PAGE)||1;
-  const info=`${{start+1}}\u2013${{Math.min(start+PAGE,total)}} of ${{total}} (${{page+1}}/${{pages}})`;
+  const maxPage=Math.max(0,pages-1);
+  if(page>maxPage) page=maxPage;
+  const safeStart=page*PAGE;
+  const safeSlice=filtered.slice(safeStart,safeStart+PAGE);
+  const info=total===0?`0\u20130 of 0 (1/1)`:`${{safeStart+1}}\u2013${{Math.min(safeStart+PAGE,total)}} of ${{total}} (${{page+1}}/${{pages}})`;
   document.getElementById("pageInfo").textContent=info;
   document.getElementById("pageInfo2").textContent=info;
   const h=[];
-  for(const r of slice){{
+  for(const r of safeSlice){{
     const id=r[0],t=r[1],ts=r[2],o=r[3],b=r[4],ps=r[5],sc=r[6],ix=r[8];
     const isNum=id.length>0&&[...id].every(c=>c>='0'&&c<='9');
     const ac=isNum?`<a href="https://store.steampowered.com/app/${{id}}">${{id}}</a>`:id;
@@ -535,13 +639,21 @@ function render(){{
     const bc=b?'<span class="yes">yes</span>':'<span class="no">no</span>';
     const psc=ps?'<span class="yes">yes</span>':'<span class="no">no</span>';
     const scc=sc?'<span class="yes">yes</span>':'<span class="no">no</span>';
-    const tsc=ts?ts.replace(/-/g,' '):'<span class="no">none</span>';
+    const tsc=TITLE_SOURCE_LABELS[ts]||ts.replace(/-/g,' ');
     const ixc=ix?`<a href="data/${{id}}/">index</a>`:'<span class="no">\u2014</span>';
     h.push(`<tr><td>${{ac}}</td><td>${{tc}}</td><td>${{tsc}}</td><td>${{oc}}</td><td>${{bc}}</td><td>${{psc}}</td><td>${{scc}}</td><td>${{ixc}}</td></tr>`);
   }}
   tb.innerHTML=h.join("");
+  saveStateToUrl();
 }}
-apply();
+const initialState=getStateFromUrl();
+document.getElementById("filter").value=initialState.q;
+activeSrc=initialState.src;
+sortCol=initialState.sort;
+sortAsc=initialState.dir;
+page=initialState.page;
+document.querySelectorAll(".toggle").forEach(b=>b.classList.toggle("active",activeSrc.has(b.dataset.src)));
+apply(false);
 </script>
 </body></html>
 """

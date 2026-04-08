@@ -195,6 +195,30 @@ def test_backfill_missing_apps_logs_unresolved_title_source(tmp_path, monkeypatc
     assert any(msg == "[backfill] Title unresolved for 2561580: source=steam-store-unsuccessful" for msg in logs)
 
 
+def test_find_no_protondb_data_app_ids_falls_back_to_protondb_presence_catalogs(tmp_path, monkeypatch):
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    write_pipeline_state(tmp_path, 0, index_keys=set(), backfilled_keys=set(), no_data_app_ids=set())
+
+    monkeypatch.setattr(
+        backfill_module,
+        "load_protondb_signal_catalog",
+        lambda: {"2358720": "Black Myth: Wukong", "730": "Counter-Strike 2"},
+    )
+    monkeypatch.setattr(
+        backfill_module,
+        "read_protondb_probe_cache",
+        lambda: {"3065920": {"title": "Black Myth: Heaven", "tracked": True}},
+    )
+
+    app_dir = data_dir / "730"
+    app_dir.mkdir()
+
+    app_ids = backfill_module._find_no_protondb_data_app_ids(data_dir)
+
+    assert app_ids == ["2358720", "3065920"]
+
+
 def test_backfill_missing_apps_falls_back_to_legacy_candidate_url(tmp_path):
     data_dir = tmp_path / "data"
     data_dir.mkdir()
@@ -507,15 +531,24 @@ def test_run_coverage_backfill_logs_candidate_and_selected_app_ids(tmp_path, mon
     assert any(msg == "[coverage-backfill] Selected app IDs (1-2/2): 570,730" for msg in logs)
 
 
-def test_run_coverage_backfill_requires_positive_limit_by_default(tmp_path):
+def test_run_coverage_backfill_allows_unbounded_by_default(tmp_path, monkeypatch):
+    _mock_empty_catalogs(monkeypatch)
     data_dir = tmp_path / "data"
     app_dir = data_dir / "2561580"
     app_dir.mkdir(parents=True)
+    (app_dir / "2024.json").write_text(json.dumps([{"title": "", "timestamp": 1763251200}]))
     (app_dir / "latest.json").write_text(json.dumps([{"title": "", "timestamp": 1763251200}]))
-    write_pipeline_state(tmp_path, parsed_count=0, index_keys=set())
+    write_pipeline_state(tmp_path, parsed_count=0, index_keys={("2561580", "2024")})
 
-    with pytest.raises(ValueError, match="Coverage backfill requires --limit > 0 by default"):
-        run_coverage_backfill(tmp_path, issue_type="no-titles", limit=0)
+    monkeypatch.setattr(
+        backfill_module, "fetch_steam_title_with_source",
+        lambda app_id: ("Test Game", "steam-store"),
+    )
+
+    run_coverage_backfill(tmp_path, issue_type="no-titles", limit=0)
+
+    reports = json.loads((app_dir / "2024.json").read_text())
+    assert reports[0]["title"] == "Test Game"
 
 
 def test_run_coverage_backfill_can_explicitly_allow_unbounded(tmp_path, monkeypatch):

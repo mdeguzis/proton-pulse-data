@@ -20,11 +20,11 @@ on:
           - "bad-app-id"
           - "no-protondb-data"
       coverage_backfill_limit:
-        description: "Max matching apps to process for coverage-backfill. Use 0 only with the unbounded override below."
+        description: "Max matching apps to process for coverage-backfill. Use 0 for no limit."
         required: false
-        default: "25"
+        default: "0"
       coverage_backfill_allow_unbounded:
-        description: "If enabled, allows coverage_backfill_limit=0 to process every matching app ID in the selected issue type. This can trigger very large runs."
+        description: "Deprecated compatibility toggle. Coverage backfill is unbounded by default when limit is 0."
         required: false
         default: false
         type: boolean
@@ -480,9 +480,6 @@ jobs:
           LIMIT_ARG=""
           if [ "${{ inputs.coverage_backfill_limit }}" != "0" ]; then
             LIMIT_ARG="--limit ${{ inputs.coverage_backfill_limit }}"
-          elif [ "${{ inputs.coverage_backfill_allow_unbounded }}" != "true" ]; then
-            echo "::error::coverage_backfill_limit must be > 0 unless coverage_backfill_allow_unbounded is true"
-            exit 1
           fi
           ALLOW_UNBOUNDED_ARG=""
           if [ "${{ inputs.coverage_backfill_allow_unbounded }}" = "true" ]; then
@@ -555,7 +552,11 @@ jobs:
           if [ -n "${{ inputs.coverage_backfill_issue_type }}" ]; then
             echo "**Mode:** Coverage backfill" >> "$GITHUB_STEP_SUMMARY"
             echo "**Issue type:** ${{ inputs.coverage_backfill_issue_type }}" >> "$GITHUB_STEP_SUMMARY"
-            echo "**Limit:** ${{ inputs.coverage_backfill_limit }}" >> "$GITHUB_STEP_SUMMARY"
+            if [ "${{ inputs.coverage_backfill_limit }}" = "0" ]; then
+              echo "**Limit:** unbounded" >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "**Limit:** ${{ inputs.coverage_backfill_limit }}" >> "$GITHUB_STEP_SUMMARY"
+            fi
             echo "**Allow unbounded:** ${{ inputs.coverage_backfill_allow_unbounded }}" >> "$GITHUB_STEP_SUMMARY"
             echo "" >> "$GITHUB_STEP_SUMMARY"
             echo "| Job | Status |" >> "$GITHUB_STEP_SUMMARY"

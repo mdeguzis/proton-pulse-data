@@ -83,12 +83,12 @@ def build_parser():
         "--limit",
         type=int,
         default=0,
-        help="Max apps to backfill (required unless --allow-unbounded is set)",
+        help="Max apps to backfill (0 means no limit)",
     )
     coverage_backfill_parser.add_argument(
         "--allow-unbounded",
         action="store_true",
-        help="Explicitly allow unbounded coverage backfill runs",
+        help="Deprecated no-op kept for compatibility; unbounded runs are allowed by default",
     )
     add_shared_output_arg(coverage_backfill_parser)
 

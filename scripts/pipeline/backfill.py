@@ -694,11 +694,43 @@ def _find_bad_app_id_entries(data_output_path: Path) -> list[str]:
 
 
 def _find_no_protondb_data_app_ids(data_output_path: Path) -> list[str]:
-    """Find apps in the no_data_app_ids set from pipeline state."""
+    """Find apps with ProtonDB presence but no local on-disk ProtonDB data.
+
+    Prefer the explicit ``no_data_app_ids`` tracked in pipeline state when
+    present, but fall back to deriving candidates from the ProtonDB signal and
+    probe catalogs so coverage-backfill can still repair visible coverage gaps
+    like signal-only apps with no ``data/{appId}`` directory.
+    """
     state = read_pipeline_state(data_output_path.parent)
-    return sorted(
-        state.get("no_data_app_ids", set()), key=lambda a: int(a) if a.isdigit() else 0
-    )
+    no_data_ids = set(state.get("no_data_app_ids", set()))
+    if no_data_ids:
+        return sorted(no_data_ids, key=lambda a: int(a) if a.isdigit() else 0)
+
+    derived_ids: set[str] = set()
+    try:
+        derived_ids.update(load_protondb_signal_catalog().keys())
+    except (OSError, ValueError, TypeError, json.JSONDecodeError):
+        pass
+
+    try:
+        probe_cache = read_protondb_probe_cache()
+        derived_ids.update(probe_cache_to_catalog(probe_cache).keys())
+    except (OSError, ValueError, TypeError, json.JSONDecodeError):
+        pass
+
+    indexed_app_ids = {app_id for app_id, _year in state.get("index_keys", set())}
+    backfilled_app_ids = {app_id for app_id, _year in state.get("backfilled_keys", set())}
+    on_disk_app_ids = {p.name for p in data_output_path.iterdir() if p.is_dir() and p.name.isdigit()}
+
+    candidates = [
+        app_id
+        for app_id in derived_ids
+        if app_id.isdigit()
+        and app_id not in indexed_app_ids
+        and app_id not in backfilled_app_ids
+        and app_id not in on_disk_app_ids
+    ]
+    return sorted(candidates, key=lambda a: int(a) if a.isdigit() else 0)
 
 
 def _require_bounded_coverage_backfill(
@@ -712,11 +744,10 @@ def _require_bounded_coverage_backfill(
         log(
             f"[coverage-backfill] Unbounded run explicitly allowed for issue type: {issue_type}"
         )
-        return
-    raise ValueError(
-        "Coverage backfill requires --limit > 0 by default. "
-        "Pass --allow-unbounded to override explicitly."
-    )
+    else:
+        log(
+            f"[coverage-backfill] Running unbounded for issue type: {issue_type}"
+        )
 
 
 def _log_app_id_batches(prefix: str, app_ids: list[str], batch_size: int = 100) -> None:
