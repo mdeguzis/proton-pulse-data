@@ -91,7 +91,7 @@ def generate_app_indexes(index_keys: set, data_output_path: Path) -> None:
         index_file = app_dir / "index.json"
         index_file.write_text(json.dumps(sorted_years))
 
-        links = [f'<li><a href="latest.json"><strong>latest.json</strong></a></li>']
+        links = ['<li><a href="latest.json"><strong>latest.json</strong></a></li>']
         for year in sorted_years:
             links.append(f'<li><a href="{year}.json">{year}.json</a></li>')
         html = (

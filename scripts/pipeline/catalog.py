@@ -1,10 +1,11 @@
+from collections.abc import Mapping
 import importlib.util
-import os
-import random
-import time
 import json
 from functools import wraps
+import os
 from pathlib import Path
+import random
+import time
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 
@@ -58,19 +59,20 @@ def load_dotenv(path: Path | None = None) -> dict[str, str]:
     return loaded
 
 
-def get_steam_api_key(env: dict[str, str] | None = None) -> str | None:
-    merged_env = {}
+def _merged_env(env: Mapping[str, str] | None = None) -> dict[str, str]:
+    merged_env: dict[str, str] = {}
     merged_env.update(load_dotenv())
     merged_env.update(env if env is not None else os.environ)
-    value = (merged_env.get(STEAM_API_KEY_ENV) or "").strip()
+    return merged_env
+
+
+def get_steam_api_key(env: Mapping[str, str] | None = None) -> str | None:
+    value = (_merged_env(env).get(STEAM_API_KEY_ENV) or "").strip()
     return value or None
 
 
-def get_protondb_probe_limit(env: dict[str, str] | None = None, default: int = 0) -> int:
-    merged_env = {}
-    merged_env.update(load_dotenv())
-    merged_env.update(env if env is not None else os.environ)
-    raw = str(merged_env.get(PROTONDB_PROBE_LIMIT_ENV, default)).strip()
+def get_protondb_probe_limit(env: Mapping[str, str] | None = None, default: int = 0) -> int:
+    raw = str(_merged_env(env).get(PROTONDB_PROBE_LIMIT_ENV, default)).strip()
     try:
         value = int(raw)
     except ValueError:
@@ -78,11 +80,8 @@ def get_protondb_probe_limit(env: dict[str, str] | None = None, default: int = 0
     return max(0, value)
 
 
-def get_protondb_probe_backfill_limit(env: dict[str, str] | None = None, default: int = 0) -> int:
-    merged_env = {}
-    merged_env.update(load_dotenv())
-    merged_env.update(env if env is not None else os.environ)
-    raw = str(merged_env.get(PROTONDB_PROBE_BACKFILL_LIMIT_ENV, default)).strip()
+def get_protondb_probe_backfill_limit(env: Mapping[str, str] | None = None, default: int = 0) -> int:
+    raw = str(_merged_env(env).get(PROTONDB_PROBE_BACKFILL_LIMIT_ENV, default)).strip()
     try:
         value = int(raw)
     except ValueError:
@@ -90,11 +89,11 @@ def get_protondb_probe_backfill_limit(env: dict[str, str] | None = None, default
     return max(0, value)
 
 
-def get_protondb_probe_cache_max_age_seconds(env: dict[str, str] | None = None, default_days: int = PROTONDB_PROBE_CACHE_MAX_AGE_DAYS_DEFAULT) -> int:
-    merged_env = {}
-    merged_env.update(load_dotenv())
-    merged_env.update(env if env is not None else os.environ)
-    raw = str(merged_env.get(PROTONDB_PROBE_CACHE_MAX_AGE_DAYS_ENV, default_days)).strip()
+def get_protondb_probe_cache_max_age_seconds(
+    env: Mapping[str, str] | None = None,
+    default_days: int = PROTONDB_PROBE_CACHE_MAX_AGE_DAYS_DEFAULT,
+) -> int:
+    raw = str(_merged_env(env).get(PROTONDB_PROBE_CACHE_MAX_AGE_DAYS_ENV, default_days)).strip()
     try:
         days = int(raw)
     except ValueError:
@@ -102,11 +101,11 @@ def get_protondb_probe_cache_max_age_seconds(env: dict[str, str] | None = None, 
     return max(1, days) * 24 * 60 * 60
 
 
-def get_protondb_probe_log_every(env: dict[str, str] | None = None, default: int = PROTONDB_PROBE_LOG_EVERY) -> int:
-    merged_env = {}
-    merged_env.update(load_dotenv())
-    merged_env.update(env if env is not None else os.environ)
-    raw = str(merged_env.get(PROTONDB_PROBE_LOG_EVERY_ENV, default)).strip()
+def get_protondb_probe_log_every(
+    env: Mapping[str, str] | None = None,
+    default: int = PROTONDB_PROBE_LOG_EVERY,
+) -> int:
+    raw = str(_merged_env(env).get(PROTONDB_PROBE_LOG_EVERY_ENV, default)).strip()
     try:
         value = int(raw)
     except ValueError:

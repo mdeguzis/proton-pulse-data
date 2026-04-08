@@ -11,8 +11,35 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "pylint>=3.3.8",
+    "pyright>=1.1.403",
     "pytest>=9.0.2",
 ]
 
 [tool.uv]
 default-groups = ["dev"]
+
+[tool.pylint.main]
+py-version = "3.12"
+
+[tool.pylint."messages control"]
+disable = [
+    "broad-exception-caught",
+    "duplicate-code",
+    "global-statement",
+    "import-outside-toplevel",
+    "inconsistent-return-statements",
+    "line-too-long",
+    "missing-class-docstring",
+    "missing-function-docstring",
+    "missing-module-docstring",
+    "subprocess-run-check",
+    "too-many-arguments",
+    "too-many-branches",
+    "too-many-locals",
+    "too-many-positional-arguments",
+    "too-many-return-statements",
+    "too-many-statements",
+    "unnecessary-lambda",
+    "unused-variable",
+]

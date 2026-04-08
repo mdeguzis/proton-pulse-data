@@ -128,6 +128,19 @@ Each chunk saves `.cache/protondb-summary-probe-cache.json` under a fresh cache 
 so an interrupted multi-hour run can resume from the latest completed chunk rather
 than restarting the whole probe sweep.
 
+## Local development setup
+
+Bootstrap the local toolchain with:
+
+```bash
+make setup
+```
+
+That setup flow now:
+- initializes git submodules
+- installs `shellcheck` with `sudo apt install -y shellcheck` when missing
+- installs the Python dev environment with `uv`
+
 ## Storage strategy
 
 The `gh-pages` branch is an orphan with a single commit — it is force-pushed

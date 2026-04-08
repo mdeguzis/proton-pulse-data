@@ -1,3 +1,4 @@
+from email.message import Message
 import json
 
 import pytest
@@ -23,6 +24,18 @@ from scripts.pipeline.finalize import (
 )
 from scripts.pipeline.metadata import read_app_metadata, update_app_metadata
 from scripts.pipeline.state import write_pipeline_state
+
+
+def build_http_error(
+    url: str,
+    code: int,
+    message: str,
+    headers: dict[str, str] | None = None,
+) -> backfill_module.error.HTTPError:
+    header_message = Message()
+    for key, value in (headers or {}).items():
+        header_message[key] = value
+    return backfill_module.error.HTTPError(url, code, message, header_message, None)
 
 
 def test_load_backfill_app_ids_returns_sorted_unique_ids(tmp_path):
@@ -215,7 +228,7 @@ def test_backfill_missing_apps_falls_back_to_legacy_candidate_url(tmp_path):
         if url == "https://www.protondb.com/data/counts.json":
             return counts_payload
         if url == current_url:
-            raise backfill_module.error.HTTPError(url, 404, "not found", hdrs=None, fp=None)
+            raise build_http_error(url, 404, "not found")
         if url == legacy_url:
             return live_payload
         raise AssertionError(f"Unexpected URL fetched: {url}")
@@ -445,6 +458,10 @@ def _mock_empty_catalogs(monkeypatch):
     monkeypatch.setattr(catalog_module, "load_protondb_signal_catalog", lambda **kw: {})
     monkeypatch.setattr(catalog_module, "read_protondb_probe_cache", lambda **kw: {})
     monkeypatch.setattr(catalog_module, "get_steam_api_key", lambda *a, **kw: None)
+    monkeypatch.setattr(backfill_module, "load_protondb_signal_catalog", lambda **kw: {})
+    monkeypatch.setattr(backfill_module, "read_protondb_probe_cache", lambda **kw: {})
+    monkeypatch.setattr(backfill_module, "get_steam_api_key", lambda *a, **kw: None)
+    monkeypatch.setattr(backfill_module, "load_steam_game_catalog", lambda *a, **kw: {})
 
 
 def test_run_coverage_backfill_no_titles_patches_existing_reports(tmp_path, monkeypatch):

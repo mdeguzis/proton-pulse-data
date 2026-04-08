@@ -2,14 +2,18 @@
 
 UV_CACHE_DIR ?= /tmp/uv-cache
 
-.PHONY: help setup test test-py init-submodules fetch-steam-catalog backup-supabase supabase-login install-docker
+.PHONY: help setup test lint lint-py lint-pylint lint-sh test-py init-submodules fetch-steam-catalog backup-supabase supabase-login install-docker
 
 help:
 	@echo "Usage: make <target>"
 	@echo ""
-	@echo "  setup    Install Python dependencies with uv"
+	@echo "  setup    Bootstrap local dev tools and Python dependencies"
 	@echo "  init-submodules  Initialize and update git submodules"
-	@echo "  test     Run the test suite with uv"
+	@echo "  test     Run linting and the Python test suite"
+	@echo "  lint     Run static checks that should match VS Code Problems output"
+	@echo "  lint-py  Run pyright over the Python workspace"
+	@echo "  lint-pylint  Run pylint over Python sources"
+	@echo "  lint-sh  Run shellcheck over shell scripts"
 	@echo "  test-py  Run the Python test suite with uv"
 	@echo "  fetch-steam-catalog  Fetch and cache Steam app IDs using STEAM_API_KEY"
 	@echo "  backup-supabase  Create a logical Supabase backup via linked Supabase CLI project"
@@ -19,10 +23,26 @@ help:
 init-submodules:
 	git submodule update --init --recursive
 
-setup: init-submodules
-	UV_CACHE_DIR=$(UV_CACHE_DIR) uv sync --group dev
+setup:
+	UV_CACHE_DIR=$(UV_CACHE_DIR) bash scripts/setup_dev.sh
 
-test: test-py
+test: lint test-py
+
+lint: lint-py lint-pylint lint-sh
+
+lint-py:
+	UV_CACHE_DIR=$(UV_CACHE_DIR) uv run --group dev pyright
+
+lint-pylint:
+	PYLINTHOME=/tmp/pylint-cache PYTHONPATH=scripts UV_CACHE_DIR=$(UV_CACHE_DIR) uv run --group dev pylint scripts/split_reports.py scripts/pipeline
+
+lint-sh:
+	@command -v shellcheck >/dev/null 2>&1 || { \
+		echo "error: shellcheck is required for 'make lint-sh' and 'make test'." >&2; \
+		echo "install it first, for example: sudo apt-get install shellcheck" >&2; \
+		exit 1; \
+	}
+	find scripts -type f -name '*.sh' -print0 | xargs -0r shellcheck -x
 
 test-py:
 	UV_CACHE_DIR=$(UV_CACHE_DIR) uv run --group dev python -m pytest tests/ -v

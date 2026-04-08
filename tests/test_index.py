@@ -1,7 +1,8 @@
-from pathlib import Path
+from email.message import Message
 import json
 from http.client import HTTPResponse
 from io import BytesIO
+from pathlib import Path
 from urllib.error import HTTPError
 
 from scripts.pipeline.finalize import build_probe_chunk_plan, generate_coverage_report, generate_index_html, generate_app_indexes
@@ -29,6 +30,13 @@ from scripts.pipeline.catalog import (
     write_cached_steam_game_catalog,
 )
 from scripts.pipeline.metadata import update_app_metadata
+
+
+def build_http_error(url: str, code: int, message: str, headers: dict[str, str] | None = None) -> HTTPError:
+    header_message = Message()
+    for key, value in (headers or {}).items():
+        header_message[key] = value
+    return HTTPError(url, code, message, header_message, None)
 
 
 def test_index_html_created(tmp_path):
@@ -277,7 +285,7 @@ def test_fetch_protondb_summary_retries_transient_errors():
     def fake_fetch(_url: str):
         attempts["count"] += 1
         if attempts["count"] < 3:
-            raise HTTPError(_url, 500, "server error", hdrs=None, fp=None)
+            raise build_http_error(_url, 500, "server error")
         return {"tier": "gold", "total": 10, "title": "Counter-Strike"}
 
     payload = fetch_protondb_summary("10", fetch_json_impl=fake_fetch)
@@ -524,7 +532,7 @@ def test_retry_http_retries_on_transient_error(monkeypatch):
         nonlocal call_count
         call_count += 1
         if call_count < 3:
-            raise HTTPError("http://example.com", 500, "error", {}, None)
+            raise build_http_error("http://example.com", 500, "error")
         return "ok"
 
     assert flaky() == "ok"
@@ -539,7 +547,7 @@ def test_retry_http_raises_404_immediately(monkeypatch):
     def not_found():
         nonlocal call_count
         call_count += 1
-        raise HTTPError("http://example.com", 404, "not found", {}, None)
+        raise build_http_error("http://example.com", 404, "not found")
 
     try:
         not_found()
@@ -555,16 +563,12 @@ def test_retry_http_handles_429_with_retry_after(monkeypatch):
     monkeypatch.setattr("scripts.pipeline.catalog.random.uniform", lambda a, b: 0.5)
     call_count = 0
 
-    class FakeHeaders:
-        def get(self, key, default=""):
-            return "2" if key == "Retry-After" else default
-
     @retry_http(attempts=3, base_delay_seconds=0.01)
     def rate_limited():
         nonlocal call_count
         call_count += 1
         if call_count == 1:
-            exc = HTTPError("http://example.com", 429, "too many", FakeHeaders(), None)
+            exc = build_http_error("http://example.com", 429, "too many", {"Retry-After": "2"})
             raise exc
         return "ok"
 
@@ -581,7 +585,7 @@ def test_probe_protondb_app_ids_unlimited_when_limit_zero():
     def fake_fetch(url):
         nonlocal call_count
         call_count += 1
-        raise HTTPError(url, 404, "not found", {}, None)
+        raise build_http_error(url, 404, "not found")
 
     candidates = [str(i) for i in range(10)]
     cache, catalog = probe_protondb_app_ids(

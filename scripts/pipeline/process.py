@@ -14,7 +14,9 @@ from .metadata import update_app_metadata
 from .state import pipeline_state_path, write_pipeline_state
 
 TARBALL_CACHE_FILENAME = "processed-tarballs.json"
-DEFAULT_TARBALL_CACHE_PATH = Path(__file__).resolve().parents[2] / ".cache" / TARBALL_CACHE_FILENAME
+DEFAULT_TARBALL_CACHE_PATH = (
+    Path(__file__).resolve().parents[2] / ".cache" / TARBALL_CACHE_FILENAME
+)
 
 
 def parse_and_split(file_handle, data_output_path, source_label="?"):
@@ -111,13 +113,15 @@ def _read_tarball_cache() -> set[str]:
         return set()
     try:
         return set(json.loads(DEFAULT_TARBALL_CACHE_PATH.read_text()))
-    except Exception:
+    except (OSError, ValueError, TypeError, json.JSONDecodeError):
         return set()
 
 
 def _write_tarball_cache(processed: set[str]) -> None:
     DEFAULT_TARBALL_CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
-    DEFAULT_TARBALL_CACHE_PATH.write_text(json.dumps(sorted(processed), indent=2) + "\n")
+    DEFAULT_TARBALL_CACHE_PATH.write_text(
+        json.dumps(sorted(processed), indent=2) + "\n"
+    )
 
 
 def process_reports(input_dir, output_dir):
@@ -202,7 +206,9 @@ def process_reports(input_dir, output_dir):
         log(f"[tar] Done: {time.time() - t0:.1f}s")
 
     if skipped_count:
-        log(f"[cache] Skipped {skipped_count}/{len(tar_files)} already-processed tarball(s)")
+        log(
+            f"[cache] Skipped {skipped_count}/{len(tar_files)} already-processed tarball(s)"
+        )
 
     _write_tarball_cache(tarball_cache)
     log(f"[cache] Saved tarball cache: {DEFAULT_TARBALL_CACHE_PATH}")
