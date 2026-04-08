@@ -358,11 +358,15 @@ def backfill_missing_apps(
     if force:
         # force mode: re-fetch all targets even if they already have data
         missing_targets = configured_targets
+        already_present = 0
         log(f"[backfill] Force mode: processing all {len(missing_targets)} target(s)")
     else:
         existing_app_ids = {
             path.name for path in data_output_path.iterdir() if path.is_dir()
         }
+        already_present = sum(
+            1 for target in configured_targets if target.app_id in existing_app_ids
+        )
         missing_targets = [
             target
             for target in configured_targets
@@ -394,6 +398,11 @@ def backfill_missing_apps(
 
     written_keys: set[tuple] = set()
     no_data_app_ids: set[str] = set()
+    attempted = len(missing_targets)
+    succeeded = 0
+    no_candidate = 0
+    no_usable_reports = 0
+    unresolved_title = 0
     for target in missing_targets:
         candidate_urls = build_live_report_candidate_urls(
             target.app_id,
@@ -409,6 +418,7 @@ def backfill_missing_apps(
                 f"[backfill] Skipping {target.app_id}: no live detailed report candidate succeeded"
             )
             no_data_app_ids.add(target.app_id)
+            no_candidate += 1
             continue
 
         title, title_source = resolve_backfill_title(target.app_id)
@@ -418,6 +428,7 @@ def backfill_missing_apps(
             log(
                 f"[backfill] Title unresolved for {target.app_id}: source={title_source}"
             )
+            unresolved_title += 1
         reports = normalize_live_detailed_reports(
             target.app_id, payload.get("reports") or [], title=title
         )
@@ -426,6 +437,7 @@ def backfill_missing_apps(
                 f"[backfill] Skipping {target.app_id}: live detailed payload had no usable reports"
             )
             no_data_app_ids.add(target.app_id)
+            no_usable_reports += 1
             continue
 
         year_buckets = bucket_reports_by_year(reports)
@@ -433,6 +445,7 @@ def backfill_missing_apps(
             write_bucketed_reports(data_output_path, target.app_id, year_buckets)
         )
         update_app_metadata(data_output_path, target.app_id, protondb_live=True)
+        succeeded += 1
         log(
             f"[backfill] Wrote {sum(len(rows) for rows in year_buckets.values())} reports across "
             f"{len(year_buckets)} year file(s) for {target.app_id} using {resolved_url}"
@@ -442,6 +455,17 @@ def backfill_missing_apps(
         log(
             f"[backfill] {len(no_data_app_ids)} app(s) had no ProtonDB data: {sorted(no_data_app_ids)}"
         )
+
+    _log_backfill_summary(
+        "backfill",
+        attempted,
+        succeeded,
+        written_keys,
+        no_candidate=no_candidate,
+        no_usable_reports=no_usable_reports,
+        unresolved_title=unresolved_title,
+        already_present=already_present,
+    )
 
     return written_keys, no_data_app_ids
 
@@ -454,6 +478,36 @@ def _target_app_id_sort_key(target: BackfillTarget) -> int:
 def _string_app_id_sort_key(app_id: str) -> int:
     """Sort app ID strings numerically."""
     return int(app_id)
+
+
+def _log_backfill_summary(
+    prefix: str,
+    attempted: int,
+    succeeded: int,
+    written_keys: set[tuple],
+    *,
+    no_candidate: int = 0,
+    no_usable_reports: int = 0,
+    unresolved_title: int = 0,
+    already_present: int = 0,
+) -> None:
+    missed = max(0, attempted - succeeded)
+    reason_parts = []
+    if no_candidate:
+        reason_parts.append(f"{no_candidate} no live detailed payload")
+    if no_usable_reports:
+        reason_parts.append(f"{no_usable_reports} no usable reports")
+    if unresolved_title:
+        reason_parts.append(f"{unresolved_title} unresolved title")
+    if already_present:
+        reason_parts.append(f"{already_present} already present")
+    reason_text = ", ".join(reason_parts) if reason_parts else "none"
+    log(
+        f"[{prefix}] Summary: attempted {attempted:,} app(s), "
+        f"succeeded {succeeded:,}, missed {missed:,}; "
+        f"year buckets written {len(written_keys):,}; "
+        f"miss reasons: {reason_text}"
+    )
 
 
 def backfill_probe_discoveries(
@@ -502,7 +556,9 @@ def backfill_probe_discoveries(
 
     written_keys: set[tuple] = set()
     succeeded = 0
-    skipped = 0
+    no_candidate = 0
+    no_usable_reports = 0
+    unresolved_title = 0
     for app_id in missing_app_ids:
         candidate_urls = build_live_report_candidate_urls(
             app_id, report_count, timestamp
@@ -514,7 +570,7 @@ def backfill_probe_discoveries(
             log(
                 f"[probe-backfill] Skipping {app_id}: no live detailed report candidate succeeded"
             )
-            skipped += 1
+            no_candidate += 1
             continue
 
         title, title_source = resolve_backfill_title(
@@ -526,6 +582,7 @@ def backfill_probe_discoveries(
             log(
                 f"[probe-backfill] Title unresolved for {app_id}: source={title_source}"
             )
+            unresolved_title += 1
         reports = normalize_live_detailed_reports(
             app_id, payload.get("reports") or [], title=title
         )
@@ -533,7 +590,7 @@ def backfill_probe_discoveries(
             log(
                 f"[probe-backfill] Skipping {app_id}: live detailed payload had no usable reports"
             )
-            skipped += 1
+            no_usable_reports += 1
             continue
 
         year_buckets = bucket_reports_by_year(reports)
@@ -547,9 +604,14 @@ def backfill_probe_discoveries(
             f"{len(year_buckets)} year file(s) for {app_id} using {resolved_url}"
         )
 
-    log(
-        f"[probe-backfill] Complete: {succeeded:,} apps backfilled, "
-        f"{skipped:,} skipped, {len(written_keys):,} year bucket(s) written"
+    _log_backfill_summary(
+        "probe-backfill",
+        len(missing_app_ids),
+        succeeded,
+        written_keys,
+        no_candidate=no_candidate,
+        no_usable_reports=no_usable_reports,
+        unresolved_title=unresolved_title,
     )
     return written_keys
 

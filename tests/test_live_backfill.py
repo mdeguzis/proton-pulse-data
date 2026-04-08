@@ -219,6 +219,30 @@ def test_find_no_protondb_data_app_ids_falls_back_to_protondb_presence_catalogs(
     assert app_ids == ["2358720", "3065920"]
 
 
+def test_backfill_probe_discoveries_logs_summary_with_reason_buckets(tmp_path, monkeypatch):
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    logs = []
+    counts_payload = {"reports": 415099, "timestamp": 1775051127}
+
+    def fake_fetch(url: str):
+        if url == "https://www.protondb.com/data/counts.json":
+            return counts_payload
+        raise build_http_error(url, 404, "not found")
+
+    monkeypatch.setattr(backfill_module, "log", lambda msg, debug=False: logs.append(msg))
+
+    written_keys = backfill_module.backfill_probe_discoveries(
+        data_dir,
+        {"2561580": "Example Title"},
+        fetch_json_impl=fake_fetch,
+    )
+
+    assert written_keys == set()
+    assert any(
+        msg == "[probe-backfill] Summary: attempted 1 app(s), succeeded 0, missed 1; year buckets written 0; miss reasons: 1 no live detailed payload"
+        for msg in logs
+    )
 def test_backfill_missing_apps_falls_back_to_legacy_candidate_url(tmp_path):
     data_dir = tmp_path / "data"
     data_dir.mkdir()
@@ -333,6 +357,34 @@ def test_backfill_missing_apps_skips_existing_app_directory(tmp_path):
     assert written_keys == set()
     assert no_data_ids == set()
     assert fetched_urls == []
+
+
+def test_backfill_missing_apps_logs_summary_with_reason_buckets(tmp_path, monkeypatch):
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    manifest = tmp_path / "live_backfill_app_ids.json"
+    manifest.write_text(json.dumps(["2561580"]))
+
+    counts_payload = {"reports": 415099, "timestamp": 1775051127}
+    logs = []
+
+    def fake_fetch(url: str):
+        if url == "https://www.protondb.com/data/counts.json":
+            return counts_payload
+        raise build_http_error(url, 404, "not found")
+
+    monkeypatch.setattr(backfill_module, "log", lambda msg, debug=False: logs.append(msg))
+
+    written_keys, no_data_ids = backfill_missing_apps(
+        data_dir, fetch_json_impl=fake_fetch, manifest_path=manifest
+    )
+
+    assert written_keys == set()
+    assert no_data_ids == {"2561580"}
+    assert any(
+        msg == "[backfill] Summary: attempted 1 app(s), succeeded 0, missed 1; year buckets written 0; miss reasons: 1 no live detailed payload"
+        for msg in logs
+    )
 
 
 def test_backfilled_keys_flow_into_app_index_and_main_index(tmp_path):
