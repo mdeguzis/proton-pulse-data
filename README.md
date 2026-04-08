@@ -2,8 +2,8 @@
 
 # proton-pulse-data
 
-Monthly-updated GitHub Pages CDN for ProtonDB per-game community reports.
-Consumed by the [decky-proton-pulse](https://github.com/mdeguzis/decky-proton-pulse) plugin.
+Monthly GitHub Pages mirror for ProtonDB per-game community reports.
+It is used by the [decky-proton-pulse](https://github.com/mdeguzis/decky-proton-pulse) plugin.
 
 ## Endpoints
 
@@ -45,18 +45,18 @@ that game, and `latest.json` mirrors the most recent year bucket.
 ## Update schedule
 
 Runs automatically each day via GitHub Actions.
-Source: [bdefore/protondb-data](https://github.com/bdefore/protondb-data) monthly dumps.
+Source data comes from the monthly dumps in [bdefore/protondb-data](https://github.com/bdefore/protondb-data).
 
 ## Live backfills
 
 Some games are missing from the monthly upstream dump even though ProtonDB live
-detailed report data exists. Those games can be added to
-`config/live_backfill_app_ids.json`, and the pipeline will materialize normal
+detailed report data exists. Add those games to
+`config/live_backfill_app_ids.json`, and the pipeline will generate normal
 `data/{appId}/...` files for them during the build.
 
 ## Triggering manually
 
-Go to **Actions → Update ProtonDB Data → Run workflow**.
+Go to **Actions -> Update ProtonDB Data -> Run workflow**.
 
 ## Supabase backups
 
@@ -65,7 +65,7 @@ with the Supabase CLI, following the documented `db dump` flow for `roles`,
 `schema`, and `data` exports.
 
 The default `make` target uses an already-linked local Supabase CLI project, so
-you can avoid putting your database URL or password in shell history:
+you do not have to put your database URL or password into shell history:
 
 ```bash
 cd proton-pulse-data
@@ -91,13 +91,13 @@ SUPABASE_BACKUP_DIR=artifacts/supabase
 SUPABASE_BACKUP_LABEL=nightly
 ```
 
-This is intended to be easy to lift into GitHub Actions later by supplying
+This should also be easy to move into GitHub Actions later by supplying
 `SUPABASE_DB_URL` from repository secrets and uploading the generated archive
 as a workflow artifact.
 
 ## Steam catalog coverage
 
-The coverage report can optionally expand to the full Steam game catalog when
+The coverage report can expand to the full Steam game catalog when
 `STEAM_API_KEY` is available. For local runs, place the key in a local `.env`
 file at the repo root:
 
@@ -109,7 +109,7 @@ That file is ignored by git. In GitHub Actions, the workflow writes the secret
 into the same `.env` shape during the build so local and CI behavior stay
 consistent.
 
-The Steam app ID pull is backed by the vendored
+The Steam app ID pull currently relies on the vendored
 `vendor/Steam-Games-Scraper` git submodule while that project remains active.
 After cloning this repo, initialize submodules before running local commands:
 
@@ -123,10 +123,10 @@ or:
 git submodule update --init --recursive
 ```
 
-The GitHub Actions probe pass is chunked into resumable cache-backed checkpoints.
+The GitHub Actions probe pass is split into resumable cache-backed checkpoints.
 Each chunk saves `.cache/protondb-summary-probe-cache.json` under a fresh cache key
-so an interrupted multi-hour run can resume from the latest completed chunk rather
-than restarting the whole probe sweep.
+so an interrupted multi-hour run can resume from the latest completed chunk instead
+of restarting the whole probe sweep.
 
 ## Local development setup
 
@@ -136,12 +136,12 @@ Bootstrap the local toolchain with:
 make setup
 ```
 
-That setup flow now:
+That setup flow:
 - initializes git submodules
 - installs `shellcheck` with `sudo apt install -y shellcheck` when missing
 - installs the Python dev environment with `uv`
 
 ## Storage strategy
 
-The `gh-pages` branch is an orphan with a single commit — it is force-pushed
-each run so no history accumulates. Repo size equals the current dataset only.
+The `gh-pages` branch is an orphan with a single commit. It is force-pushed
+on each run so history does not pile up. Repo size stays close to the current dataset.
