@@ -9,7 +9,7 @@ from .backfill import run_backfill, run_coverage_backfill, run_probe_backfill
 from .catalog import get_steam_api_key, load_steam_game_catalog
 from .common import clone_repo, log, set_debug
 from .finalize import build_probe_chunk_plan, finalize_output, reindex_apps, update_protondb_probe_cache
-from .process import process_reports
+from .process import process_reports, seed_official_dump_metadata
 
 
 def _parse_app_ids(raw: str | None) -> list[str] | None:
@@ -44,6 +44,15 @@ def build_parser():
     process_parser.add_argument("--url", help="Git repo URL to clone as data source (e.g. https://github.com/bdefore/protondb-data)")
     process_parser.add_argument("--subfolder", default="reports", help="Subfolder within the cloned repo to use as input (default: reports)")
     add_shared_output_arg(process_parser)
+
+    seed_official_parser = subparsers.add_parser(
+        "seed-official-metadata",
+        help="Seed official_dump metadata from the official ProtonDB dump without rewriting report buckets",
+    )
+    seed_official_parser.add_argument("input_dir", nargs="?", help="Local directory containing JSON/tar.gz report files")
+    seed_official_parser.add_argument("--url", help="Git repo URL to clone as data source (e.g. https://github.com/bdefore/protondb-data)")
+    seed_official_parser.add_argument("--subfolder", default="reports", help="Subfolder within the cloned repo to use as input (default: reports)")
+    add_shared_output_arg(seed_official_parser)
 
     backfill_parser = subparsers.add_parser("backfill", help="Backfill missing app data from ProtonDB live detailed reports")
     backfill_parser.add_argument(
@@ -118,7 +127,7 @@ def main():
     set_debug(args.debug)
     command = args.command or "run"
 
-    if command in {"process", "run"}:
+    if command in {"process", "run", "seed-official-metadata"}:
         output_dir = args.output_dir
         if getattr(args, "url", None):
             tmp_dir = tempfile.mkdtemp(prefix="protondb-clone-")
@@ -134,6 +143,8 @@ def main():
 
         if command == "process":
             process_reports(input_dir, output_dir)
+        elif command == "seed-official-metadata":
+            seed_official_dump_metadata(input_dir, output_dir)
         else:
             process_data(input_dir, output_dir)
         return

@@ -124,6 +124,57 @@ def _write_tarball_cache(processed: set[str]) -> None:
     )
 
 
+def _iter_app_ids_from_stream(file_handle):
+    parser = ijson.items(file_handle, "item")
+    for report in parser:
+        app_id = str(report.get("appId", "")).strip()
+        if app_id and app_id.isdigit():
+            yield app_id
+
+
+def seed_official_dump_metadata(input_dir, output_dir):
+    """Mark app metadata as official_dump=True using the upstream dump archive."""
+    input_path = Path(input_dir)
+    output_path = Path(output_dir)
+    data_output_path = output_path / "data"
+    data_output_path.mkdir(parents=True, exist_ok=True)
+
+    if not input_path.exists():
+        raise SystemExit(f"!! ERROR: Input directory does not exist: {input_path}")
+
+    official_app_ids: set[str] = set()
+    json_files = sorted(input_path.glob("*.json"))
+    tar_files = sorted(input_path.glob("*.tar.gz"))
+
+    log(
+        f"[official-metadata] Scanning {len(json_files):,} JSON file(s) and "
+        f"{len(tar_files):,} tarball(s) for official app IDs"
+    )
+
+    for json_file in json_files:
+        with json_file.open("rb") as handle:
+            official_app_ids.update(_iter_app_ids_from_stream(handle))
+
+    for tar_file in tar_files:
+        with tarfile.open(tar_file, "r:gz") as tar:
+            members = [m for m in tar.getmembers() if m.isfile() and m.name.endswith(".json")]
+            for member in members:
+                extracted = tar.extractfile(member)
+                if extracted is None:
+                    continue
+                official_app_ids.update(_iter_app_ids_from_stream(extracted))
+
+    updated = 0
+    for app_id in sorted(official_app_ids):
+        metadata = update_app_metadata(data_output_path, app_id, official_dump=True)
+        if metadata.get("official_dump"):
+            updated += 1
+
+    log(
+        f"[official-metadata] Marked {updated:,} app(s) as official dump provenance"
+    )
+
+
 def process_reports(input_dir, output_dir):
     """Walk input_dir for JSON/tarball report files, parse and split into per-app year buckets"""
     input_path = Path(input_dir)
@@ -160,7 +211,7 @@ def process_reports(input_dir, output_dir):
             f"[json] Processing {index}/{len(json_files)}: {json_file.name} ({size:,} bytes)"
         )
         t0 = time.time()
-        with json_file.open("r") as handle:
+        with json_file.open("rb") as handle:
             count, src_keys = parse_and_split(
                 handle, data_output_path, source_label=json_file.name
             )

@@ -532,6 +532,25 @@ def test_generate_coverage_report_uses_persisted_metadata_for_provenance(tmp_pat
     assert '"indexed-data",1,1,1,1,"official backfill protondb-signal steam-catalog",1' in html
 
 
+def test_generate_coverage_report_includes_no_data_filter_and_flag(tmp_path):
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+
+    generate_coverage_report(
+        index_keys=set(),
+        backfilled_keys=set(),
+        data_output_path=data_dir,
+        output_path=tmp_path,
+        steam_catalog={"396420": "Steam-only Game"},
+        protondb_signal_catalog={},
+    )
+
+    html = (tmp_path / "coverage.html").read_text()
+    assert 'data-src="no-data"' in html
+    assert ">No data<" in html
+    assert '"steam-catalog",0,0,0,1,"steam-catalog no-data",0' in html
+
+
 def test_generate_coverage_report_persists_filter_state_in_url(tmp_path):
     data_dir = tmp_path / "data"
     data_dir.mkdir()

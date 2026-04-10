@@ -417,6 +417,8 @@ def generate_coverage_report(
             flags.append("missing-title")
         if not app_id.isdigit():
             flags.append("bad-appid")
+        if not official and not backfill and not indexed:
+            flags.append("no-data")
         # Escape for JS string
         safe_title = title.replace("\\", "\\\\").replace('"', '\\"').replace("\n", " ")
         safe_title_source = title_source.replace("\\", "\\\\").replace('"', '\\"')
@@ -497,6 +499,7 @@ a {{ color: #5dade2; }}
 <button class="toggle active" data-src="all" onclick="toggleSrc('all')">All</button>
 <button class="toggle" data-src="official" onclick="toggleSrc('official')">Official dump only</button>
 <button class="toggle" data-src="backfill" onclick="toggleSrc('backfill')">Live backfill only</button>
+<button class="toggle" data-src="no-data" onclick="toggleSrc('no-data')">No data</button>
 <button class="toggle" data-src="missing-title" onclick="toggleSrc('missing-title')">Missing title</button>
 <button class="toggle" data-src="bad-appid" onclick="toggleSrc('bad-appid')">Bad App ID</button>
 </div>

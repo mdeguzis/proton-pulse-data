@@ -272,6 +272,13 @@ jobs:
           ref: gh-pages
           path: gh-pages-data
 
+      - name: Checkout Official ProtonDB Data
+        uses: actions/checkout@v4
+        with:
+          repository: bdefore/protondb-data
+          path: official-data
+          fetch-depth: 1
+
       - name: Checkout scripts
         uses: actions/checkout@v4
         with:
@@ -310,6 +317,13 @@ jobs:
           else
             mkdir -p /tmp/protondb-output/data
           fi
+
+      - name: Repair official dump provenance metadata
+        working-directory: repo
+        run: |
+          uv run python scripts/split_reports.py seed-official-metadata \
+            ../official-data/reports \
+            /tmp/protondb-output
 
       - name: Initialize pipeline state
         working-directory: repo
@@ -398,6 +412,13 @@ jobs:
           ref: gh-pages
           path: gh-pages-data
 
+      - name: Checkout Official ProtonDB Data
+        uses: actions/checkout@v4
+        with:
+          repository: bdefore/protondb-data
+          path: official-data
+          fetch-depth: 1
+
       - name: Checkout scripts
         uses: actions/checkout@v4
         with:
@@ -439,6 +460,13 @@ jobs:
           else
             mkdir -p /tmp/protondb-output/data
           fi
+
+      - name: Repair official dump provenance metadata
+        working-directory: repo
+        run: |
+          uv run python scripts/split_reports.py seed-official-metadata \
+            ../official-data/reports \
+            /tmp/protondb-output
 
       - name: Initialize pipeline state
         working-directory: repo

@@ -23,6 +23,7 @@ from scripts.pipeline.finalize import (
     generate_index_html,
 )
 from scripts.pipeline.metadata import read_app_metadata, update_app_metadata
+from scripts.pipeline.process import seed_official_dump_metadata
 from scripts.pipeline.state import write_pipeline_state
 
 
@@ -493,6 +494,32 @@ def test_update_app_metadata_preserves_multiple_provenance_flags(tmp_path):
     assert read_app_metadata(data_dir, "730") == {
         "official_dump": True,
         "protondb_live": True,
+    }
+
+
+def test_seed_official_dump_metadata_repairs_existing_live_metadata(tmp_path):
+    reports_dir = tmp_path / "reports"
+    reports_dir.mkdir()
+    (reports_dir / "sample.json").write_text(
+        json.dumps([
+            {"appId": "730", "timestamp": 1704067200},
+            {"appId": "570", "timestamp": 1704067201},
+        ])
+    )
+
+    data_dir = tmp_path / "out" / "data"
+    data_dir.mkdir(parents=True)
+    update_app_metadata(data_dir, "730", protondb_live=True)
+
+    seed_official_dump_metadata(reports_dir, tmp_path / "out")
+
+    assert read_app_metadata(data_dir, "730") == {
+        "official_dump": True,
+        "protondb_live": True,
+    }
+    assert read_app_metadata(data_dir, "570") == {
+        "official_dump": True,
+        "protondb_live": False,
     }
 
 
