@@ -216,7 +216,8 @@ def generate_index_html(index_keys: set, output_path: Path) -> None:
         "<h1>proton-pulse-data index</h1>",
         "<p>Monthly-updated ProtonDB per-game community reports. "
         f"<strong>{len(sorted_app_ids)}</strong> games tracked. "
-        '<a href="coverage.html">Coverage Report</a></p>',
+        '<a href="coverage.html">Coverage Report</a> · '
+        '<a href="app.html">Game Search</a></p>',
     ]
 
     if sample_entries:
