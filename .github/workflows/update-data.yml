@@ -5,6 +5,11 @@ on:
     - cron: "0 0 * * *"
   workflow_dispatch:
     inputs:
+      pages_only:
+        description: "Republish GitHub Pages shell files only (app.html/index.html) without running the data pipeline"
+        required: false
+        default: false
+        type: boolean
       backfill_app_ids:
         description: "Comma-separated Steam app IDs to backfill and publish (skips full pipeline)"
         required: false
@@ -40,7 +45,7 @@ jobs:
 
   # ── Stage 1: process reports, backfill, compute probe plan ─────────
   build:
-    if: inputs.backfill_app_ids == '' && inputs.coverage_backfill_issue_type == ''
+    if: inputs.pages_only != true && inputs.backfill_app_ids == '' && inputs.coverage_backfill_issue_type == ''
     runs-on: ubuntu-24.04
     outputs:
       chunk_count: ${{ steps.plan.outputs.chunk_count }}
@@ -187,6 +192,7 @@ jobs:
     needs: [build, probe-chunks]
     if: |
       always() &&
+      inputs.pages_only != true &&
       inputs.backfill_app_ids == '' &&
       inputs.coverage_backfill_issue_type == '' &&
       needs.build.result == 'success' &&
@@ -259,6 +265,39 @@ jobs:
           git add data/ data-index.html coverage.html app.html index.html
           git commit -m "Deploy: $(date +%F)"
           git push origin gh-pages-new:gh-pages --force
+
+  # ── Pages-only redeploy: refresh app/index shell files on gh-pages ─────────
+  pages-only:
+    if: inputs.pages_only == true
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout current gh-pages
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: gh-pages-data
+
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          path: repo
+
+      - name: Republish GitHub Pages shell files
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          cd gh-pages-data
+          cp ../repo/app.html ./app.html
+          cp ../repo/index.html ./index.html
+          git add app.html index.html
+          if git diff --cached --quiet; then
+            echo "No shell changes to publish."
+            exit 0
+          fi
+          git commit -m "Pages shell refresh: $(date +%F)"
+          git push origin gh-pages
 
   # ── Targeted backfill: just backfill specific IDs and publish ──────
   targeted-backfill:
