@@ -99,6 +99,19 @@ header a { font-size: .85rem; color: var(--muted); }
   color: var(--muted); padding: 4px 10px; cursor: pointer; font-size: 12px;
 }
 .sort-bar button.active { color: var(--link); border-color: var(--link); }
+
+/* filter bar */
+.filter-bar { display: flex; gap: 8px; margin-bottom: 12px; align-items: center; flex-wrap: wrap; }
+.filter-bar label { font-size: 11px; color: var(--muted); }
+.filter-bar select {
+  background: rgba(13,27,42,.9); border: 1px solid var(--border); border-radius: 6px;
+  color: var(--text); padding: 4px 8px; font-size: 12px; outline: none;
+}
+.filter-bar select:focus { border-color: var(--link); }
+
+/* trend */
+.trend { font-size: 12px; color: var(--muted); margin-bottom: 14px; padding: 8px 10px;
+  background: rgba(13,19,28,.5); border: 1px solid var(--border); border-radius: 6px; }
 </style>
 </head>
 <body>
@@ -239,12 +252,56 @@ async function renderGamePage(appId) {
 
   // sort by timestamp desc initially
   let sortMode = 'recent';
+  let filterGpu = '';
+  let filterOs = '';
+
+  const gpuVendor = g => {
+    if (!g) return '';
+    const l = g.toLowerCase();
+    if (/nvidia|geforce|rtx|gtx/.test(l)) return 'nvidia';
+    if (/\bamd\b|radeon/.test(l)) return 'amd';
+    if (/\bintel\b|iris|arc\b/.test(l)) return 'intel';
+    return '';
+  };
+  const osFamily = o => {
+    if (!o) return '';
+    const l = o.toLowerCase();
+    if (/steamos|holoisos/.test(l)) return 'steamos';
+    if (/arch|cachyos|manjaro|garuda|endeavour/.test(l)) return 'arch';
+    if (/fedora|bazzite|nobara/.test(l)) return 'fedora';
+    if (/ubuntu|pop|mint|elementary/.test(l)) return 'ubuntu';
+    if (/debian/.test(l)) return 'debian';
+    if (/nixos/.test(l)) return 'nixos';
+    return '';
+  };
+
+  const filtered = () => {
+    let arr = [...reports];
+    if (filterGpu) arr = arr.filter(r => gpuVendor(r.gpu) === filterGpu);
+    if (filterOs) arr = arr.filter(r => osFamily(r.os) === filterOs);
+    return arr;
+  };
+
   const sorted = () => {
-    const arr = [...reports];
+    const arr = filtered();
     if (sortMode === 'recent') arr.sort((a, b) => b.timestamp - a.timestamp);
     else if (sortMode === 'votes') arr.sort((a, b) => ((votes[reportKey(b)]?.up||0) - (votes[reportKey(b)]?.down||0)) - ((votes[reportKey(a)]?.up||0) - (votes[reportKey(a)]?.down||0)));
     return arr;
   };
+
+  function trendSummary(reps) {
+    if (reps.length < 2) return '';
+    const ratingVal = { platinum: 5, gold: 4, silver: 3, bronze: 2, borked: 1 };
+    const now = Date.now() / 1000;
+    const recent = reps.filter(r => now - r.timestamp < 180 * 86400);
+    const older = reps.filter(r => now - r.timestamp >= 180 * 86400);
+    if (!recent.length || !older.length) return '';
+    const avg = arr => arr.reduce((s, r) => s + (ratingVal[r.rating] || 3), 0) / arr.length;
+    const diff = avg(recent) - avg(older);
+    if (Math.abs(diff) < 0.3) return `<span class="trend">📊 Compatibility is <strong>stable</strong> — ${recent.length} recent vs ${older.length} older reports</span>`;
+    if (diff > 0) return `<span class="trend">📈 Compatibility is <strong style="color:#4caf50">improving</strong> — ${recent.length} recent vs ${older.length} older reports</span>`;
+    return `<span class="trend">📉 Compatibility is <strong style="color:#f44336">declining</strong> — ${recent.length} recent vs ${older.length} older reports</span>`;
+  }
 
   function render() {
     const reps = sorted();
@@ -257,13 +314,36 @@ async function renderGamePage(appId) {
         </div>
         <span class="tier-badge" style="background:${RATING_COLORS[tier]}">${tier}</span>
       </div>
+      ${trendSummary(reports)}
       <div class="sort-bar">
         <button class="${sortMode==='recent'?'active':''}" data-sort="recent">Recent</button>
         <button class="${sortMode==='votes'?'active':''}" data-sort="votes">Top Voted</button>
       </div>
-      <div class="cards">${reps.map((r, i) => renderCard(r, i, votes)).join('')}</div>
+      <div class="filter-bar">
+        <label>GPU</label>
+        <select id="fGpu">
+          <option value="">Any</option>
+          <option value="nvidia" ${filterGpu==='nvidia'?'selected':''}>NVIDIA</option>
+          <option value="amd" ${filterGpu==='amd'?'selected':''}>AMD</option>
+          <option value="intel" ${filterGpu==='intel'?'selected':''}>Intel</option>
+        </select>
+        <label>OS</label>
+        <select id="fOs">
+          <option value="">Any</option>
+          <option value="steamos" ${filterOs==='steamos'?'selected':''}>SteamOS</option>
+          <option value="arch" ${filterOs==='arch'?'selected':''}>Arch</option>
+          <option value="fedora" ${filterOs==='fedora'?'selected':''}>Fedora</option>
+          <option value="ubuntu" ${filterOs==='ubuntu'?'selected':''}>Ubuntu</option>
+          <option value="debian" ${filterOs==='debian'?'selected':''}>Debian</option>
+          <option value="nixos" ${filterOs==='nixos'?'selected':''}>NixOS</option>
+        </select>
+        ${(filterGpu || filterOs) ? `<span style="font-size:11px;color:var(--muted)">${reps.length} of ${reports.length} reports</span>` : ''}
+      </div>
+      <div class="cards">${reps.length ? reps.map((r, i) => renderCard(r, i, votes)).join('') : '<div class="empty">No reports match filters</div>'}</div>
     `;
     el.querySelectorAll('.sort-bar button').forEach(b => b.onclick = () => { sortMode = b.dataset.sort; render(); });
+    el.querySelector('#fGpu').onchange = e => { filterGpu = e.target.value; render(); };
+    el.querySelector('#fOs').onchange = e => { filterOs = e.target.value; render(); };
     el.querySelectorAll('.card').forEach(c => c.onclick = () => {
       const d = c.nextElementSibling;
       if (d && d.classList.contains('detail')) d.classList.toggle('open');
