@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Proton Pulse</title>
-<meta name="description" content="ProtonDB community compatibility reports for Steam games — searchable, filterable, and updated daily.">
+<meta name="description" content="ProtonDB community compatibility reports for Steam games -- searchable, filterable, and updated daily.">
 <meta name="color-scheme" content="dark">
 <link rel="stylesheet" href="site.css">
 <style>
@@ -229,12 +229,12 @@
   <div class="main-inner">
 
     <div class="welcome-header">
-      <div class="eyebrow">ProtonDB Community Mirror</div>
+      <div class="eyebrow">Open Source ProtonDB Mirror</div>
       <h1 class="welcome-title">Proton Pulse</h1>
       <p class="welcome-sub">
-        Searchable, filterable ProtonDB compatibility reports for Steam games &mdash;
-        combined with user-submitted Proton configs and community voting.
-        Updated daily.
+        Fully open source ProtonDB compatibility data for Steam games.
+        Searchable reports, filterable configs, and community voting -- all code and data
+        are public on GitHub. Updated daily.
       </p>
     </div>
 
@@ -270,32 +270,51 @@
       </a>
       <a class="explore-item" href="https://github.com/mdeguzis/proton-pulse-data" target="_blank" rel="noopener">
         <div class="ei-title">Data Repository</div>
-        <div class="ei-desc">GitHub repository for this data mirror &mdash; API endpoints, update schedule, and source code.</div>
+        <div class="ei-desc">GitHub repository for this data mirror -- API endpoints, update schedule, and source code.</div>
         <div class="ei-tag">Source</div>
       </a>
     </div>
 
-    <!-- Info -->
+    <!-- Open source -->
+    <div class="section-label">Open source</div>
+    <div class="info-block">
+      <strong>100% open source</strong> -- Unlike ProtonDB itself, Proton Pulse is fully open source.
+      All code, data pipelines, and community configs are public. Fork it, self-host it, contribute to it.
+    </div>
+
+    <!-- Project links -->
+    <div class="section-label">Project links</div>
+    <div class="info-block">
+      <a href="https://github.com/mdeguzis/proton-pulse-data">proton-pulse-data</a> -- Data pipeline, static site, and API.
+      Fetches ProtonDB reports daily and publishes them as static JSON.
+    </div>
+    <div class="info-block">
+      <a href="https://github.com/mdeguzis/decky-proton-pulse">decky-proton-pulse</a> -- Decky Loader plugin for Steam Deck.
+      Submit Proton configs and view compatibility data in-game.
+    </div>
+
+    <!-- How it works -->
     <div class="section-label">How it works</div>
     <div class="info-block">
-      <strong>ProtonDB mirror</strong> &mdash; Community reports are fetched daily and stored as static JSON files.
+      <strong>ProtonDB mirror</strong> -- Community reports are fetched daily and stored as static JSON files.
       Each game has a <code>latest.json</code> with all known reports, accessible under <code>/data/{appId}/</code>.
     </div>
     <div class="info-block">
-      <strong>Proton Pulse configs</strong> &mdash; Users submit their working Proton configurations (version, launch options, env vars) via the
+      <strong>Proton Pulse configs</strong> -- Users submit their working Proton configurations (version, launch options, env vars) via the
       <a href="https://github.com/mdeguzis/decky-proton-pulse" target="_blank" rel="noopener">Decky Plugin</a>.
       Configs are stored in Supabase and displayed alongside ProtonDB reports.
     </div>
     <div class="info-block">
-      <strong>Community voting</strong> &mdash; Reports can be upvoted or downvoted to surface the most helpful
+      <strong>Community voting</strong> -- Reports can be upvoted or downvoted to surface the most helpful
       compatibility info. Vote totals are aggregated from Supabase in real-time.
     </div>
 
   </div>
 
   <footer class="sitefooter">
-    Built on <a href="https://www.protondb.com/" target="_blank" rel="noopener">ProtonDB</a> community data &middot;
-    <a href="https://github.com/mdeguzis/proton-pulse-data" target="_blank" rel="noopener">GitHub</a> &middot;
+    Open source -- built on <a href="https://www.protondb.com/" target="_blank" rel="noopener">ProtonDB</a> community data |
+    <a href="https://github.com/mdeguzis/proton-pulse-data" target="_blank" rel="noopener">Data repo</a> |
+    <a href="https://github.com/mdeguzis/decky-proton-pulse" target="_blank" rel="noopener">Decky plugin repo</a> |
     Updated daily via GitHub Actions
   </footer>
 </div>

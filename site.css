@@ -1,5 +1,5 @@
 /* ---------------------------------------------
-   Proton Pulse – shared design system
+   Proton Pulse - shared design system
    --------------------------------------------- */
 
 :root {
@@ -301,7 +301,7 @@ code {
 .tier-pending  { background: #3a4a5a; color: var(--muted); }
 
 /* ============================================================
-   RESPONSIVE – sidebar collapse
+   RESPONSIVE - sidebar collapse
    ============================================================ */
 
 @media (max-width: 860px) {
@@ -337,7 +337,7 @@ code {
 }
 
 /* ============================================================
-   LEGACY compat – keep old topnav / topnav-* classes working
+   LEGACY compat - keep old topnav / topnav-* classes working
    for pages that haven't been migrated yet
    ============================================================ */
 

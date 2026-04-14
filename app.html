@@ -28,7 +28,7 @@
   gap: 1px;
   border: 1px solid var(--border);
   background: var(--border);
-  overflow: hidden;
+  overflow: visible;
 }
 .sidebar-block {
   background: var(--s1);
@@ -600,8 +600,8 @@ a.card:hover { text-decoration: none; }
 </div>
 
 <footer class="sitefooter" style="max-width: calc(1380px + 32px); margin: 0 auto;">
-  Built on <a href="https://www.protondb.com/" target="_blank" rel="noopener">ProtonDB</a> community data &middot;
-  <a href="https://github.com/mdeguzis/proton-pulse-data" target="_blank" rel="noopener">GitHub</a> &middot;
+  Built on <a href="https://www.protondb.com/" target="_blank" rel="noopener">ProtonDB</a> community data |
+  <a href="https://github.com/mdeguzis/proton-pulse-data" target="_blank" rel="noopener">GitHub</a> |
   Updated daily via GitHub Actions
 </footer>
 
@@ -660,7 +660,7 @@ async function renderHomePage() {
         ${rows.map(row => {
           const cfg = row.config || {};
           const name = row.app_name || cfg.appName || `App ${row.app_id}`;
-          const proton = cfg.protonVersion || '—';
+          const proton = cfg.protonVersion || '-';
           const profile = cfg.profileName || '';
           const d = Math.round((Date.now() / 1000 - new Date(row.updated_at).getTime() / 1000) / 86400);
           const age = d < 1 ? 'today' : d === 1 ? '1 day ago' : `${d} days ago`;
@@ -670,7 +670,7 @@ async function renderHomePage() {
                    style="width:108px;height:40px;object-fit:cover;flex-shrink:0;border:1px solid var(--border)">
               <div class="left">
                 <div class="proton">${esc(name)}</div>
-                <div class="hw">${esc(proton)}${profile ? ' &middot; ' + esc(profile) : ''}</div>
+                <div class="hw">${esc(proton)}${profile ? ' | ' + esc(profile) : ''}</div>
                 <div class="age">${age}</div>
               </div>
               <div class="right">
@@ -855,7 +855,7 @@ function renderConfigCard(c) {
         <div class="config-row"><span class="config-lbl">OS</span><span>${NA_SPAN}</span></div>
         <div class="config-row"><span class="config-lbl">Kernel</span><span>${NA_SPAN}</span></div>
       </div>
-      <div class="config-meta">Updated ${daysAgo(c.timestamp)} &middot; Source: ${esc(c.source)}</div>
+      <div class="config-meta">Updated ${daysAgo(c.timestamp)} | Source: ${esc(c.source)}</div>
     </div>`;
 }
 
@@ -1040,6 +1040,7 @@ async function renderGamePage(appId) {
       <div class="hub-links">
         <a class="hub-link" href="https://store.steampowered.com/app/${appId}" target="_blank" rel="noopener">Steam ></a>
         <a class="hub-link" href="https://steamdb.info/app/${appId}/" target="_blank" rel="noopener">SteamDB ></a>
+        <a class="hub-link" href="https://www.protondb.com/app/${appId}" target="_blank" rel="noopener">ProtonDB ></a>
         <a class="hub-link" href="https://www.pcgamingwiki.com/w/index.php?search=${encodeURIComponent(title)}" target="_blank" rel="noopener">PCGamingWiki ></a>
         <a class="hub-link" href="data/${appId}/">Data Files ></a>
       </div>
@@ -1074,7 +1075,7 @@ async function renderGamePage(appId) {
           </div>`;
       })() : `
         <div class="configs-empty">
-          No Proton Pulse configs for this game yet &mdash;
+          No Proton Pulse configs for this game yet --
           <a href="https://github.com/mdeguzis/decky-proton-pulse" target="_blank" rel="noopener">add one via the Decky Plugin</a>.
         </div>`}
 
