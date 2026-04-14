@@ -150,18 +150,30 @@ code {
     position: fixed;
     top: 50px;
     left: 0;
-    right: 0;
+    width: 220px;
+    bottom: 0;
     background: var(--s1);
-    border-bottom: 2px solid var(--border);
+    border-right: 2px solid var(--border);
     z-index: 99;
     height: auto;
+    overflow-y: auto;
+    box-shadow: 4px 0 16px rgba(0,0,0,0.4);
   }
   .topnav-links.open { display: flex; }
   .topnav-links a {
-    padding: 12px 24px;
+    padding: 14px 20px;
     border-bottom: 1px solid var(--border);
     border-left: none !important;
+    font-size: 0.9rem;
   }
   .topnav-links a:last-child { border-bottom: none; }
   .topnav-brand { margin-right: auto; }
+  .nav-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 98;
+    background: rgba(0,0,0,0.45);
+  }
+  .nav-overlay.open { display: block; }
 }

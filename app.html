@@ -308,6 +308,18 @@
   border: 1px solid rgba(74, 159, 208, 0.25);
   color: var(--accent);
 }
+.config-hw {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+.config-hw-label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
 .config-meta {
   margin-top: 8px;
   font-size: 0.72rem;
@@ -519,6 +531,7 @@ a.card:hover { text-decoration: none; }
 <body>
 
 <nav class="topnav">
+  <button class="topnav-toggle" aria-label="Toggle navigation" onclick="document.getElementById('topnav-links').classList.toggle('open');document.getElementById('nav-overlay').classList.toggle('open')">&#9776;</button>
   <a class="topnav-brand" href="index.html">
     <img src="https://raw.githubusercontent.com/mdeguzis/decky-proton-pulse/main/assets/logo.png" alt="">
     Proton Pulse
@@ -531,8 +544,8 @@ a.card:hover { text-decoration: none; }
     <a href="https://github.com/mdeguzis/decky-proton-pulse">Decky Plugin</a>
     <a href="https://github.com/mdeguzis/proton-pulse-data">GitHub</a>
   </div>
-  <button class="topnav-toggle" aria-label="Toggle navigation" onclick="document.getElementById('topnav-links').classList.toggle('open')">&#9776;</button>
 </nav>
+<div id="nav-overlay" class="nav-overlay" onclick="document.getElementById('topnav-links').classList.remove('open');this.classList.remove('open')"></div>
 
 <div class="app-shell">
 
@@ -812,6 +825,9 @@ function estimateScore(r) {
 
 // -- Render: Proton Pulse Configs section ------------
 
+const NA_SPAN = '<span style="color:#4a5f70;font-style:italic">Not available</span>';
+function cfgNa(s) { return s || NA_SPAN; }
+
 function renderConfigCard(c) {
   const vars = Object.entries(c.enabledVars || {}).filter(([, v]) => v);
   return `
@@ -819,7 +835,7 @@ function renderConfigCard(c) {
       <div class="config-name">${esc(c.profileName)}</div>
       <div class="config-row">
         <span class="config-lbl">Proton</span>
-        <span class="config-val">${esc(c.protonVersion || '-')}</span>
+        <span class="config-val">${cfgNa(esc(c.protonVersion))}</span>
       </div>
       ${c.launchOptions ? `
       <div class="config-row">
@@ -831,6 +847,14 @@ function renderConfigCard(c) {
         <span class="config-lbl">Env Vars</span>
         <span class="config-vars">${vars.map(([k]) => `<span class="var-tag">${esc(k)}</span>`).join('')}</span>
       </div>` : ''}
+      <div class="config-hw">
+        <div class="config-hw-label">Hardware (not captured by configs)</div>
+        <div class="config-row"><span class="config-lbl">GPU</span><span>${NA_SPAN}</span></div>
+        <div class="config-row"><span class="config-lbl">CPU</span><span>${NA_SPAN}</span></div>
+        <div class="config-row"><span class="config-lbl">RAM</span><span>${NA_SPAN}</span></div>
+        <div class="config-row"><span class="config-lbl">OS</span><span>${NA_SPAN}</span></div>
+        <div class="config-row"><span class="config-lbl">Kernel</span><span>${NA_SPAN}</span></div>
+      </div>
       <div class="config-meta">Updated ${daysAgo(c.timestamp)} &middot; Source: ${esc(c.source)}</div>
     </div>`;
 }

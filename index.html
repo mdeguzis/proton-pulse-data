@@ -109,6 +109,7 @@
 <body>
 
 <nav class="topnav">
+  <button class="topnav-toggle" aria-label="Toggle navigation" onclick="document.getElementById('topnav-links').classList.toggle('open');document.getElementById('nav-overlay').classList.toggle('open')">&#9776;</button>
   <a class="topnav-brand" href="index.html">
     <img src="https://raw.githubusercontent.com/mdeguzis/decky-proton-pulse/main/assets/logo.png" alt="">
     Proton Pulse
@@ -121,8 +122,8 @@
     <a href="https://github.com/mdeguzis/decky-proton-pulse">Decky Plugin</a>
     <a href="https://github.com/mdeguzis/proton-pulse-data">GitHub</a>
   </div>
-  <button class="topnav-toggle" aria-label="Toggle navigation" onclick="document.getElementById('topnav-links').classList.toggle('open')">&#9776;</button>
 </nav>
+<div id="nav-overlay" class="nav-overlay" onclick="document.getElementById('topnav-links').classList.remove('open');this.classList.remove('open')"></div>
 
 <div class="page">
   <div class="hero">
