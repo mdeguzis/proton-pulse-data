@@ -403,7 +403,9 @@ def backfill_missing_apps(
     no_candidate = 0
     no_usable_reports = 0
     unresolved_title = 0
-    for target in missing_targets:
+    backfill_total = len(missing_targets)
+    for bf_idx, target in enumerate(missing_targets, 1):
+        bf_progress = f"({bf_idx}/{backfill_total})"
         candidate_urls = build_live_report_candidate_urls(
             target.app_id,
             report_count,
@@ -415,7 +417,7 @@ def backfill_missing_apps(
         )
         if payload is None:
             log(
-                f"[backfill] Skipping {target.app_id}: no live detailed report candidate succeeded"
+                f"[backfill] {bf_progress} Skipping {target.app_id}: no live detailed report candidate succeeded"
             )
             no_data_app_ids.add(target.app_id)
             no_candidate += 1
@@ -423,10 +425,10 @@ def backfill_missing_apps(
 
         title, title_source = resolve_backfill_title(target.app_id)
         if title:
-            log(f"[backfill] Title for {target.app_id}: {title!r} via {title_source}")
+            log(f"[backfill] {bf_progress} Title for {target.app_id}: {title!r} via {title_source}")
         else:
             log(
-                f"[backfill] Title unresolved for {target.app_id}: source={title_source}"
+                f"[backfill] {bf_progress} Title unresolved for {target.app_id}: source={title_source}"
             )
             unresolved_title += 1
         reports = normalize_live_detailed_reports(
@@ -434,7 +436,7 @@ def backfill_missing_apps(
         )
         if not reports:
             log(
-                f"[backfill] Skipping {target.app_id}: live detailed payload had no usable reports"
+                f"[backfill] {bf_progress} Skipping {target.app_id}: live detailed payload had no usable reports"
             )
             no_data_app_ids.add(target.app_id)
             no_usable_reports += 1
@@ -447,7 +449,7 @@ def backfill_missing_apps(
         update_app_metadata(data_output_path, target.app_id, protondb_live=True)
         succeeded += 1
         log(
-            f"[backfill] Wrote {sum(len(rows) for rows in year_buckets.values())} reports across "
+            f"[backfill] {bf_progress} Wrote {sum(len(rows) for rows in year_buckets.values())} reports across "
             f"{len(year_buckets)} year file(s) for {target.app_id} using {resolved_url}"
         )
 
@@ -559,7 +561,9 @@ def backfill_probe_discoveries(
     no_candidate = 0
     no_usable_reports = 0
     unresolved_title = 0
-    for app_id in missing_app_ids:
+    total_to_process = len(missing_app_ids)
+    for idx, app_id in enumerate(missing_app_ids, 1):
+        progress = f"({idx}/{total_to_process})"
         candidate_urls = build_live_report_candidate_urls(
             app_id, report_count, timestamp
         )
@@ -568,7 +572,7 @@ def backfill_probe_discoveries(
         )
         if payload is None:
             log(
-                f"[probe-backfill] Skipping {app_id}: no live detailed report candidate succeeded"
+                f"[probe-backfill] {progress} Skipping {app_id}: no live detailed report candidate succeeded"
             )
             no_candidate += 1
             continue
@@ -577,10 +581,10 @@ def backfill_probe_discoveries(
             app_id, preferred_title=probe_catalog.get(app_id, "")
         )
         if title:
-            log(f"[probe-backfill] Title for {app_id}: {title!r} via {title_source}")
+            log(f"[probe-backfill] {progress} Title for {app_id}: {title!r} via {title_source}")
         else:
             log(
-                f"[probe-backfill] Title unresolved for {app_id}: source={title_source}"
+                f"[probe-backfill] {progress} Title unresolved for {app_id}: source={title_source}"
             )
             unresolved_title += 1
         reports = normalize_live_detailed_reports(
@@ -588,7 +592,7 @@ def backfill_probe_discoveries(
         )
         if not reports:
             log(
-                f"[probe-backfill] Skipping {app_id}: live detailed payload had no usable reports"
+                f"[probe-backfill] {progress} Skipping {app_id}: live detailed payload had no usable reports"
             )
             no_usable_reports += 1
             continue
@@ -600,7 +604,7 @@ def backfill_probe_discoveries(
         update_app_metadata(data_output_path, app_id, protondb_live=True)
         succeeded += 1
         log(
-            f"[probe-backfill] Wrote {sum(len(rows) for rows in year_buckets.values())} reports across "
+            f"[probe-backfill] {progress} Wrote {sum(len(rows) for rows in year_buckets.values())} reports across "
             f"{len(year_buckets)} year file(s) for {app_id} using {resolved_url}"
         )
 
