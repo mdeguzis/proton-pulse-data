@@ -1139,52 +1139,19 @@ async function renderGamePage(appId) {
 
 // -- Search --------------------------------------------
 
-let searchTimer = null;
-const searchInput   = document.getElementById('search');
-const searchResults = document.getElementById('search-results');
-
-searchInput.addEventListener('input', () => {
-  clearTimeout(searchTimer);
-  const q = searchInput.value.trim();
-  if (!q) { searchResults.classList.remove('open'); return; }
-  if (/^\d+$/.test(q) && q.length >= 3) {
-    searchResults.innerHTML = `<a href="#/app/${q}">Go to App ${q}</a>`;
-    searchResults.classList.add('open');
-    return;
-  }
-  searchTimer = setTimeout(() => searchSteam(q), 350);
-});
-
+const searchInput = document.getElementById('search');
+// Search: Enter to navigate (avoids CORS issues with Steam storesearch API)
 searchInput.addEventListener('keydown', e => {
   if (e.key === 'Enter') {
-    const first = searchResults.querySelector('a');
-    if (first) { first.click(); searchResults.classList.remove('open'); searchInput.blur(); }
+    const q = searchInput.value.trim();
+    if (!q) return;
+    if (/^\d+$/.test(q)) {
+      location.hash = '#/app/' + q;
+    } else {
+      window.location.href = 'data-index.html?q=' + encodeURIComponent(q);
+    }
   }
 });
-
-document.addEventListener('click', e => {
-  if (!e.target.closest('.search-wrap')) searchResults.classList.remove('open');
-});
-
-async function searchSteam(q) {
-  try {
-    const r = await fetch(`https://store.steampowered.com/api/storesearch/?term=${encodeURIComponent(q)}&l=english&cc=US`);
-    if (!r.ok) return;
-    const data  = await r.json();
-    const items = (data.items || []).slice(0, 8);
-    if (!items.length) {
-      searchResults.innerHTML = `<div class="search-no-results">No results</div>`;
-      searchResults.classList.add('open');
-      return;
-    }
-    searchResults.innerHTML = items.map(g => `
-      <a href="#/app/${g.id}">
-        <img src="${STEAM_IMG(g.id)}" onerror="this.style.display='none'" alt="">
-        <span>${esc(g.name)}</span>
-      </a>`).join('');
-    searchResults.classList.add('open');
-  } catch {}
-}
 </script>
 </body>
 </html>
