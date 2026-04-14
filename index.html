@@ -206,7 +206,7 @@
     <div class="sidebar-label">Search</div>
     <div class="search-wrap">
       <input id="search" type="text" placeholder="Game name or app ID..." autocomplete="off">
-      <div id="search-results" class="search-results"></div>
+      <div style="font-size:0.68rem;color:var(--muted);margin-top:4px">Press Enter to search</div>
     </div>
   </div>
 
@@ -358,59 +358,20 @@
   var searchInput   = document.getElementById('search');
   var searchResults = document.getElementById('search-results');
 
-  function positionDropdown() {
-    var rect = searchInput.getBoundingClientRect();
-    searchResults.style.top = (rect.bottom + 4) + 'px';
-    searchResults.style.left = rect.left + 'px';
-    searchResults.style.width = rect.width + 'px';
-  }
-
-  searchInput.addEventListener('input', function() {
-    clearTimeout(searchTimer);
-    var q = searchInput.value.trim();
-    if (!q) { searchResults.classList.remove('open'); return; }
-    if (/^\d+$/.test(q) && q.length >= 3) {
-      searchResults.innerHTML = '<a href="app.html#/app/' + q + '">Go to App ' + q + '</a>';
-      positionDropdown();
-      searchResults.classList.add('open');
-      return;
-    }
-    searchTimer = setTimeout(function() { searchSteam(q); }, 350);
-  });
-
+  // Search: navigate to data-index with filter query (avoids CORS issues
+  // with Steam storesearch API on GitHub Pages)
   searchInput.addEventListener('keydown', function(e) {
     if (e.key === 'Enter') {
-      var first = searchResults.querySelector('a');
-      if (first) { first.click(); searchResults.classList.remove('open'); searchInput.blur(); }
+      var q = searchInput.value.trim();
+      if (!q) return;
+      // Numeric = go directly to game page; text = filter data index
+      if (/^\d+$/.test(q)) {
+        window.location.href = 'app.html#/app/' + q;
+      } else {
+        window.location.href = 'data-index.html?q=' + encodeURIComponent(q);
+      }
     }
   });
-
-  document.addEventListener('click', function(e) {
-    if (!e.target.closest('.search-wrap')) searchResults.classList.remove('open');
-  });
-
-  function searchSteam(q) {
-    fetch('https://store.steampowered.com/api/storesearch/?term=' + encodeURIComponent(q) + '&l=english&cc=US')
-      .then(function(r) { return r.ok ? r.json() : null; })
-      .then(function(data) {
-        if (!data) return;
-        var items = (data.items || []).slice(0, 8);
-        if (!items.length) {
-          searchResults.innerHTML = '<div class="search-no-results">No results</div>';
-          positionDropdown();
-          searchResults.classList.add('open');
-          return;
-        }
-        searchResults.innerHTML = items.map(function(g) {
-          return '<a href="app.html#/app/' + g.id + '">' +
-            '<img src="' + STEAM_IMG(g.id) + '" onerror="this.style.display=\'none\'" alt="">' +
-            '<span>' + esc(g.name) + '</span></a>';
-        }).join('');
-        positionDropdown();
-        searchResults.classList.add('open');
-      })
-      .catch(function() {});
-  }
 })();
 </script>
 </body>
