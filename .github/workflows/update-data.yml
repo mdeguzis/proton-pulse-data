@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       pages_only:
-        description: "Republish GitHub Pages shell files only (app.html/index.html) without running the data pipeline"
+        description: "Republish GitHub Pages shell files only (app.html/index.html/site.css) without running the data pipeline"
         required: false
         default: false
         type: boolean
@@ -257,7 +257,8 @@ jobs:
           cp /tmp/protondb-output/coverage.html .
           git show main:app.html > app.html 2>/dev/null || true
           git show main:index.html > index.html 2>/dev/null || true
-          git add data/ data-index.html coverage.html app.html index.html
+          git show main:site.css > site.css 2>/dev/null || true
+          git add data/ data-index.html coverage.html app.html index.html site.css
           git commit -m "Deploy: $(date +%F)"
           git push origin gh-pages-new:gh-pages --force
 
@@ -286,7 +287,8 @@ jobs:
           git config user.name "github-actions[bot]"
           cp ../repo/app.html ./app.html
           cp ../repo/index.html ./index.html
-          git add app.html index.html
+          cp ../repo/site.css ./site.css
+          git add app.html index.html site.css
           if git diff --cached --quiet; then
             echo "No shell changes to publish."
             exit 0
@@ -432,7 +434,8 @@ jobs:
           cp /tmp/protondb-output/coverage.html .
           git show main:app.html > app.html 2>/dev/null || true
           git show main:index.html > index.html 2>/dev/null || true
-          git add data/ data-index.html coverage.html app.html index.html
+          git show main:site.css > site.css 2>/dev/null || true
+          git add data/ data-index.html coverage.html app.html index.html site.css
           git commit -m "Targeted backfill: ${{ inputs.backfill_app_ids }}"
           git push origin gh-pages-new:gh-pages --force
 
@@ -603,7 +606,8 @@ jobs:
           cp /tmp/protondb-output/coverage.html .
           git show main:app.html > app.html 2>/dev/null || true
           git show main:index.html > index.html 2>/dev/null || true
-          git add data/ data-index.html coverage.html app.html index.html
+          git show main:site.css > site.css 2>/dev/null || true
+          git add data/ data-index.html coverage.html app.html index.html site.css
           git commit -m "Coverage backfill: ${{ inputs.coverage_backfill_issue_type }}"
           git push origin gh-pages-new:gh-pages --force
 
