@@ -25,9 +25,11 @@ Project landing page with links to all tools and repos.
 
 **[Game Search App](https://mdeguzis.github.io/proton-pulse-data/app.html) (`app.html`) — Game page**
 Per-game report viewer. Pass an `appid` query parameter (e.g. `app.html?appid=730`) to load community reports for that game. Features include:
-- Report cards with extended fields (CPU, GPU, kernel, Proton version, OS, RAM, notes)
-- Hardware filters to narrow results by GPU driver, kernel, or Proton version
-- Compatibility trend chart showing rating distribution over time
+- Report cards with extended fields (CPU, GPU, kernel, Proton version, OS, RAM, notes) — always visible, no tap required
+- Hardware filters to narrow results by GPU, OS, and rating
+- Native Pulse reports (submitted from the plugin) shown alongside ProtonDB community reports
+- Pulse config cards showing saved launch option profiles per game
+- Mobile-friendly layout with a collapsible left-side hamburger menu
 
 **[Data Index](https://mdeguzis.github.io/proton-pulse-data/data-index.html) (`data-index.html`) — Coverage dashboard**
 Lists all games with ProtonDB data available in this mirror, along with Steam catalog coverage stats.
