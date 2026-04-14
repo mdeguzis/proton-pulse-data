@@ -457,6 +457,18 @@
 .detail .label { color: var(--muted); min-width: 100px; }
 .detail .notes-full { margin-top: 10px; white-space: pre-wrap; line-height: 1.5; color: #a0b4c4; }
 
+/* configs empty state */
+.configs-empty {
+  font-size: 0.8rem;
+  color: var(--muted);
+  padding: 10px 14px;
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--border2);
+  margin-bottom: 16px;
+}
+.configs-empty a { color: var(--accent); }
+
 /* empty / loading */
 .state-box {
   padding: 48px 24px;
@@ -482,6 +494,12 @@
   .card { flex-direction: column; }
   .card .right { flex-direction: row; align-items: center; min-width: 0; }
   .detail .row { flex-direction: column; gap: 2px; }
+  .reports-section-head { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .filter-bar { gap: 6px; }
+  .hub-links { gap: 4px; }
+  .hub-link { font-size: 0.72rem; padding: 4px 8px; }
+  .config-row { flex-direction: column; gap: 2px; }
+  .config-lbl { width: auto; }
 }
 </style>
 </head>
@@ -492,7 +510,7 @@
     <img src="https://raw.githubusercontent.com/mdeguzis/decky-proton-pulse/main/assets/logo.png" alt="">
     Proton Pulse
   </a>
-  <div class="topnav-links">
+  <div class="topnav-links" id="topnav-links">
     <a href="index.html">Home</a>
     <a href="app.html" class="active">Game Search</a>
     <a href="data-index.html">Data Index</a>
@@ -500,6 +518,7 @@
     <a href="https://github.com/mdeguzis/decky-proton-pulse">Decky Plugin</a>
     <a href="https://github.com/mdeguzis/proton-pulse-data">GitHub</a>
   </div>
+  <button class="topnav-toggle" aria-label="Toggle navigation" onclick="document.getElementById('topnav-links').classList.toggle('open')">&#9776;</button>
 </nav>
 
 <div class="app-shell">
@@ -635,7 +654,7 @@ async function fetchSupabase(appId) {
         notes:         cfg.profileName ? `Proton Pulse config: ${cfg.profileName}` : 'Proton Pulse config',
         timestamp:     Math.floor(new Date(row.updated_at).getTime() / 1000),
         rating:        cfg.protonVersion ? 'gold' : 'silver',
-        source:        cfg.source || 'proton-pulse',
+        source:        'proton-pulse',
         enabledVars:   cfg.enabledVars || {},
       };
     });
@@ -896,7 +915,11 @@ async function renderGamePage(appId) {
       </div>
 
       ${trendSummary(reports)}
-      ${renderConfigsSection(configs)}
+      ${configs.length ? renderConfigsSection(configs) : `
+        <div class="configs-empty">
+          No Proton Pulse configs for this game yet &mdash;
+          <a href="https://github.com/mdeguzis/decky-proton-pulse" target="_blank" rel="noopener">add one via the Decky Plugin</a>.
+        </div>`}
 
       <div class="reports-section-head">
         <span class="reports-section-title">Community Reports</span>

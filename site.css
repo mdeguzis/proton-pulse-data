@@ -59,6 +59,18 @@ code {
   z-index: 100;
 }
 
+.topnav-toggle {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--text);
+  font-size: 1.25rem;
+  cursor: pointer;
+  padding: 0 4px;
+  margin-left: auto;
+  line-height: 1;
+}
+
 .topnav-brand {
   display: flex;
   align-items: center;
@@ -131,5 +143,25 @@ code {
 .tier-pending  { background: #3a4a5a; color: var(--muted); }
 
 @media (max-width: 600px) {
-  .topnav-links { display: none; }
+  .topnav-toggle { display: flex; align-items: center; }
+  .topnav-links {
+    display: none;
+    flex-direction: column;
+    position: fixed;
+    top: 50px;
+    left: 0;
+    right: 0;
+    background: var(--s1);
+    border-bottom: 2px solid var(--border);
+    z-index: 99;
+    height: auto;
+  }
+  .topnav-links.open { display: flex; }
+  .topnav-links a {
+    padding: 12px 24px;
+    border-bottom: 1px solid var(--border);
+    border-left: none !important;
+  }
+  .topnav-links a:last-child { border-bottom: none; }
+  .topnav-brand { margin-right: auto; }
 }
