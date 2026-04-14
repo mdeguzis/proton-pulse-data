@@ -883,8 +883,13 @@ async function renderGamePage(appId) {
   document.title = `${title} - Proton Pulse`;
 
   let sortMode = 'recent';
-  let filterGpu = '';
-  let filterOs  = '';
+  let filterGpu    = '';
+  let filterOs     = '';
+  let filterRating = '';
+
+  // Pulse config filters
+  let filterCfgProton = '';
+  let filterCfgSource = '';
 
   const gpuVendor = g => {
     if (!g) return '';
@@ -908,8 +913,16 @@ async function renderGamePage(appId) {
 
   const filtered = () => {
     let arr = [...reports];
-    if (filterGpu) arr = arr.filter(r => gpuVendor(r.gpu) === filterGpu);
-    if (filterOs)  arr = arr.filter(r => osFamily(r.os)   === filterOs);
+    if (filterGpu)    arr = arr.filter(r => gpuVendor(r.gpu) === filterGpu);
+    if (filterOs)     arr = arr.filter(r => osFamily(r.os)   === filterOs);
+    if (filterRating) arr = arr.filter(r => r.rating === filterRating);
+    return arr;
+  };
+
+  const filteredConfigs = () => {
+    let arr = [...configs];
+    if (filterCfgProton) arr = arr.filter(c => c.protonVersion === filterCfgProton);
+    if (filterCfgSource) arr = arr.filter(c => (c.source || 'proton-pulse') === filterCfgSource);
     return arr;
   };
 
@@ -951,7 +964,34 @@ async function renderGamePage(appId) {
       </div>
 
       ${trendSummary(reports)}
-      ${configs.length ? renderConfigsSection(configs) : `
+      ${configs.length ? (() => {
+        const cfgVersions = [...new Set(configs.map(c => c.protonVersion).filter(Boolean))].sort();
+        const cfgSources  = [...new Set(configs.map(c => c.source || 'proton-pulse'))].sort();
+        const visibleCfgs = filteredConfigs();
+        return `
+          <div class="configs-section-head" style="border:1px solid var(--border);border-bottom:none;padding:8px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <span class="configs-section-title">Proton Pulse Configs</span>
+            <span class="configs-section-count">${configs.length} saved</span>
+            <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+              ${cfgVersions.length > 1 ? `
+              <select id="fCfgProton" style="background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:3px 7px;font-size:0.72rem;font-family:inherit">
+                <option value="">Any Proton</option>
+                ${cfgVersions.map(v => `<option value="${esc(v)}" ${filterCfgProton===v?'selected':''}>${esc(v)}</option>`).join('')}
+              </select>` : ''}
+              ${cfgSources.length > 1 ? `
+              <select id="fCfgSource" style="background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:3px 7px;font-size:0.72rem;font-family:inherit">
+                <option value="">Any Source</option>
+                ${cfgSources.map(s => `<option value="${esc(s)}" ${filterCfgSource===s?'selected':''}>${esc(s)}</option>`).join('')}
+              </select>` : ''}
+              ${(filterCfgProton || filterCfgSource) ? `<span style="font-size:0.72rem;color:var(--muted)">${visibleCfgs.length} of ${configs.length}</span>` : ''}
+            </div>
+          </div>
+          <div class="configs-list" style="border:1px solid var(--border)">
+            ${visibleCfgs.length
+              ? visibleCfgs.map(renderConfigCard).join('')
+              : '<div class="state-box" style="border:none;padding:20px">No configs match filters</div>'}
+          </div>`;
+      })() : `
         <div class="configs-empty">
           No Proton Pulse configs for this game yet &mdash;
           <a href="https://github.com/mdeguzis/decky-proton-pulse" target="_blank" rel="noopener">add one via the Decky Plugin</a>.
@@ -983,7 +1023,16 @@ async function renderGamePage(appId) {
           <option value="debian"  ${filterOs==='debian' ?'selected':''}>Debian</option>
           <option value="nixos"   ${filterOs==='nixos'  ?'selected':''}>NixOS</option>
         </select>
-        ${(filterGpu || filterOs) ? `<span class="filter-count">${reps.length} of ${reports.length}</span>` : ''}
+        <label>Rating</label>
+        <select id="fRating">
+          <option value="">Any</option>
+          <option value="platinum" ${filterRating==='platinum'?'selected':''}>Platinum</option>
+          <option value="gold"     ${filterRating==='gold'    ?'selected':''}>Gold</option>
+          <option value="silver"   ${filterRating==='silver'  ?'selected':''}>Silver</option>
+          <option value="bronze"   ${filterRating==='bronze'  ?'selected':''}>Bronze</option>
+          <option value="borked"   ${filterRating==='borked'  ?'selected':''}>Borked</option>
+        </select>
+        ${(filterGpu || filterOs || filterRating) ? `<span class="filter-count">${reps.length} of ${reports.length}</span>` : ''}
       </div>
 
       <div class="cards">
@@ -996,8 +1045,11 @@ async function renderGamePage(appId) {
     el.querySelectorAll('.sort-bar button').forEach(b =>
       b.onclick = () => { sortMode = b.dataset.sort; render(); }
     );
-    el.querySelector('#fGpu').onchange = e => { filterGpu = e.target.value; render(); };
-    el.querySelector('#fOs').onchange  = e => { filterOs  = e.target.value; render(); };
+    el.querySelector('#fGpu').onchange    = e => { filterGpu    = e.target.value; render(); };
+    el.querySelector('#fOs').onchange     = e => { filterOs     = e.target.value; render(); };
+    el.querySelector('#fRating').onchange = e => { filterRating = e.target.value; render(); };
+    el.querySelector('#fCfgProton')?.addEventListener('change', e => { filterCfgProton = e.target.value; render(); });
+    el.querySelector('#fCfgSource')?.addEventListener('change', e => { filterCfgSource = e.target.value; render(); });
     el.querySelectorAll('.card').forEach(c => c.onclick = () => {
       const d = c.nextElementSibling;
       if (d && d.classList.contains('detail')) d.classList.toggle('open');
