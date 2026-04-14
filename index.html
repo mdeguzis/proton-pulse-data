@@ -110,6 +110,24 @@
 .info-block strong { color: var(--text); font-weight: 600; }
 .info-block a { color: var(--accent); }
 
+/* prose section */
+.prose {
+  font-size: 0.88rem;
+  color: var(--text);
+  line-height: 1.7;
+  max-width: 720px;
+}
+.prose p { margin-bottom: 14px; color: var(--text); }
+.prose p:last-child { margin-bottom: 0; }
+.prose strong { color: var(--strong); }
+.prose a { color: var(--accent); }
+.prose code {
+  font-size: 0.85em;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--border);
+  padding: 1px 5px;
+}
+
 /* search (reuse app.html styles) */
 .search-wrap { position: relative; }
 .search-wrap input {
@@ -275,38 +293,28 @@
       </a>
     </div>
 
-    <!-- Open source -->
-    <div class="section-label">Open source</div>
-    <div class="info-block">
-      <strong>100% open source</strong> -- Unlike ProtonDB itself, Proton Pulse is fully open source.
-      All code, data pipelines, and community configs are public. Fork it, self-host it, contribute to it.
-    </div>
-
-    <!-- Project links -->
-    <div class="section-label">Project links</div>
-    <div class="info-block">
-      <a href="https://github.com/mdeguzis/proton-pulse-data">proton-pulse-data</a> -- Data pipeline, static site, and API.
-      Fetches ProtonDB reports daily and publishes them as static JSON.
-    </div>
-    <div class="info-block">
-      <a href="https://github.com/mdeguzis/decky-proton-pulse">decky-proton-pulse</a> -- Decky Loader plugin for Steam Deck.
-      Submit Proton configs and view compatibility data in-game.
-    </div>
-
-    <!-- How it works -->
-    <div class="section-label">How it works</div>
-    <div class="info-block">
-      <strong>ProtonDB mirror</strong> -- Community reports are fetched daily and stored as static JSON files.
-      Each game has a <code>latest.json</code> with all known reports, accessible under <code>/data/{appId}/</code>.
-    </div>
-    <div class="info-block">
-      <strong>Proton Pulse configs</strong> -- Users submit their working Proton configurations (version, launch options, env vars) via the
-      <a href="https://github.com/mdeguzis/decky-proton-pulse" target="_blank" rel="noopener">Decky Plugin</a>.
-      Configs are stored in Supabase and displayed alongside ProtonDB reports.
-    </div>
-    <div class="info-block">
-      <strong>Community voting</strong> -- Reports can be upvoted or downvoted to surface the most helpful
-      compatibility info. Vote totals are aggregated from Supabase in real-time.
+    <!-- About -->
+    <div class="section-label">About this project</div>
+    <div class="prose">
+      <p>
+        Proton Pulse is <strong>100% open source</strong>. Unlike ProtonDB itself, all code,
+        data pipelines, and community configs are public on GitHub. Fork it, self-host it,
+        contribute to it.
+      </p>
+      <p>
+        Community reports are fetched daily from ProtonDB and stored as static JSON files --
+        each game gets a <code>latest.json</code> under <code>/data/{appId}/</code>.
+        Users can also submit their own working Proton configurations (version, launch options,
+        environment variables) via the
+        <a href="https://github.com/mdeguzis/decky-proton-pulse" target="_blank" rel="noopener">Decky Plugin</a>,
+        which are stored in Supabase and displayed alongside the ProtonDB reports.
+        Reports can be upvoted or downvoted to surface the most helpful compatibility info.
+      </p>
+      <p>
+        <strong>Project repositories:</strong><br>
+        <a href="https://github.com/mdeguzis/proton-pulse-data">proton-pulse-data</a> -- Data pipeline, static site, and API.<br>
+        <a href="https://github.com/mdeguzis/decky-proton-pulse">decky-proton-pulse</a> -- Decky Loader plugin for Steam Deck.
+      </p>
     </div>
 
   </div>
