@@ -652,6 +652,7 @@ async function renderGamePage(appId) {
         <a class="hub-link" href="https://www.protondb.com/app/${appId}" target="_blank" rel="noopener">ProtonDB ></a>
         <a class="hub-link" href="https://www.pcgamingwiki.com/w/index.php?search=${encodeURIComponent(title)}" target="_blank" rel="noopener">PCGamingWiki ></a>
         <a class="hub-link" href="${dataFilesHref(appId)}">Data Files ></a>
+        <button class="hub-link" id="scoring-info-btn">How Scoring Works ></button>
       </div>
 
       ${trendSummary(reports)}
@@ -727,12 +728,12 @@ async function renderGamePage(appId) {
               <option value="">Any</option>
               ${availRatings.map(v => `<option value="${v}" ${filterRating===v?'selected':''}>${RATING_LABEL[v]||v}</option>`).join('')}
             </select>` : '';
-          const srcSel    = availSrcs.length > 1 ? `
+          const srcSel    = `
             <label>Source</label>
             <select id="fSource">
               <option value="">Any</option>
               ${availSrcs.map(v => `<option value="${v}" ${filterSource===v?'selected':''}>${SRC_LABEL[v]||v}</option>`).join('')}
-            </select>` : '';
+            </select>`;
 
           const anyActive = filterGpu || filterOs || filterRating || filterSource;
           return gpuSel + osSel + ratingSel + srcSel +
@@ -751,6 +752,9 @@ async function renderGamePage(appId) {
       b.onclick = () => { sortMode = b.dataset.sort; render(); }
     );
     el.querySelector('#rating-info-btn')?.addEventListener('click', () => {
+      el.querySelector('#rating-info-tip')?.classList.toggle('open');
+    });
+    el.querySelector('#scoring-info-btn')?.addEventListener('click', () => {
       el.querySelector('#rating-info-tip')?.classList.toggle('open');
     });
     el.querySelector('#fGpu')?.addEventListener('change', e => { filterGpu    = e.target.value; render(); });
