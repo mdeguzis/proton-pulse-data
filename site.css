@@ -140,7 +140,7 @@ code {
   display: flex;
   flex-direction: column;
   overflow-y: auto;
-  overflow-x: hidden;
+  overflow-x: visible;
   -webkit-overflow-scrolling: touch;
 }
 
