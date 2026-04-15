@@ -29,9 +29,12 @@
   z-index: 9999;
   background: var(--s1);
   border: 1px solid var(--border2);
+  min-width: 420px;
+  max-width: min(620px, calc(100vw - 32px));
   max-height: 300px;
   overflow-y: auto;
   display: none;
+  box-shadow: 0 14px 36px rgba(0,0,0,0.35);
 }
 .search-results.open { display: block; }
 .search-results a {
@@ -50,6 +53,7 @@
 .search-no-results { padding: 12px 10px; font-size: 13px; color: var(--muted); }
 .search-result-info { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .search-result-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
+.search-result-info { flex: 1; }
 .search-result-badges { display: flex; gap: 4px; flex-wrap: wrap; }
 .badge {
   display: inline-block;
@@ -553,6 +557,10 @@ a.card:hover { text-decoration: none; }
   .page-title { font-size: 1.5rem; }
 }
 @media (max-width: 640px) {
+  .search-results {
+    min-width: 0;
+    max-width: calc(100vw - 20px);
+  }
   .game-header { flex-direction: column; }
   .game-header img { height: auto; width: 100%; max-width: 240px; }
   .card { flex-direction: column; }
@@ -574,7 +582,6 @@ a.card:hover { text-decoration: none; }
 <header class="topbar">
   <button class="topbar-toggle" id="sidebar-toggle" aria-label="Toggle menu"><span class="hamburger"></span></button>
   <a class="topbar-brand" href="index.html">
-    <img src="https://raw.githubusercontent.com/mdeguzis/decky-proton-pulse/main/assets/logo.png" alt="">
     Proton Pulse
   </a>
   <div class="topbar-spacer"></div>
@@ -654,6 +661,11 @@ const CDN    = 'https://mdeguzis.github.io/proton-pulse-data/data';
 const SB_URL = 'https://ilsgdshkaocrmibwdezk.supabase.co/rest/v1';
 const SB_KEY = 'sb_publishable_3Oqhm4JneafJNQw9BuUaxw_L9qZa-5V';
 const STEAM_IMG = id => `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${id}/header.jpg`;
+const SITE_BASE = (() => {
+  const parts = window.location.pathname.split('/').filter(Boolean);
+  return parts.length ? `/${parts[0]}` : '';
+})();
+const dataFilesHref = appId => `${SITE_BASE}/data/${appId}/`;
 
 const RATING_COLORS = {
   platinum: '#b4c7dc', gold: '#c8a050', silver: '#8fa0b0',
@@ -663,6 +675,9 @@ const RATING_TEXT = {
   platinum: '#0a0c10', gold: '#0a0c10', silver: '#0a0c10',
   bronze: '#0a0c10', borked: '#fff', pending: '#c8d4e0'
 };
+
+let searchIndex     = null;   // [[appId, title], ...]
+let searchFocusIdx  = -1;
 
 // -- Routing ------------------------------------------
 
@@ -698,7 +713,9 @@ async function renderHomePage() {
       `${SB_URL}/user_proton_configs?select=voter_id,app_id,app_name,config,updated_at&order=updated_at.desc`,
       { headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` } }
     );
-    const rows = r.ok ? latestPerClient(await r.json()) : [];
+    const rows = r.ok
+      ? latestPerApp(await r.json()).sort((a, b) => String(b.updated_at || '').localeCompare(String(a.updated_at || '')))
+      : [];
     if (!rows.length) {
       el.innerHTML = `
         <div class="state-box">
@@ -781,6 +798,15 @@ async function fetchMatchingPulseConfigs(query) {
   } catch {
     return [];
   }
+}
+
+function withTimeout(promise, ms, fallback) {
+  return Promise.race([
+    promise,
+    new Promise((resolve) => {
+      window.setTimeout(() => resolve(fallback), ms);
+    }),
+  ]);
 }
 
 // -- Data fetching ------------------------------------
@@ -968,15 +994,13 @@ async function renderSearchPage(query) {
   const q = query.trim();
   el.innerHTML = '<div class="state-box">Searching Proton Pulse and index data...</div>';
   await loadSearchIndex();
-  const [pulseResults] = await Promise.all([
-    fetchMatchingPulseConfigs(q),
-  ]);
+  const pulseResults = await withTimeout(fetchMatchingPulseConfigs(q), 2500, []);
   const indexResults = searchIndexMatches(q, 24);
   const total = pulseResults.length + indexResults.length;
 
   el.innerHTML = `
     <div class="search-summary">
-      Search results for <strong>${esc(q)}</strong> · ${total} grouped hit${total === 1 ? '' : 's'}
+      Search results for <strong>${esc(q)}</strong> · ${total} grouped hit${total === 1 ? '' : 's'}${pulseResults.length === 0 && indexResults.length > 0 ? ' · Proton Pulse config search may still be catching up' : ''}
     </div>
     <div class="search-groups">
       <section class="search-group">
@@ -1220,7 +1244,7 @@ async function renderGamePage(appId) {
         <a class="hub-link" href="https://steamdb.info/app/${appId}/" target="_blank" rel="noopener">SteamDB ></a>
         <a class="hub-link" href="https://www.protondb.com/app/${appId}" target="_blank" rel="noopener">ProtonDB ></a>
         <a class="hub-link" href="https://www.pcgamingwiki.com/w/index.php?search=${encodeURIComponent(title)}" target="_blank" rel="noopener">PCGamingWiki ></a>
-        <a class="hub-link" href="data/${appId}/">Data Files ></a>
+        <a class="hub-link" href="${dataFilesHref(appId)}">Data Files ></a>
       </div>
 
       ${trendSummary(reports)}
@@ -1319,8 +1343,6 @@ async function renderGamePage(appId) {
 
 const searchInput   = document.getElementById('search');
 const searchResults = document.getElementById('search-results');
-let searchIndex     = null;   // [[appId, title], ...]
-let searchFocusIdx  = -1;
 
 async function loadSearchIndex() {
   if (searchIndex !== null) return;
@@ -1338,9 +1360,12 @@ function closeSearch() {
 
 function positionSearchResults() {
   const rect = searchInput.getBoundingClientRect();
+  const desiredWidth = Math.max(rect.width, 420);
+  const maxWidth = Math.min(desiredWidth, window.innerWidth - 24);
+  const left = Math.max(12, Math.min(rect.left, window.innerWidth - maxWidth - 12));
   searchResults.style.top = `${Math.round(rect.bottom + 4)}px`;
-  searchResults.style.left = `${Math.round(rect.left)}px`;
-  searchResults.style.width = `${Math.round(rect.width)}px`;
+  searchResults.style.left = `${Math.round(left)}px`;
+  searchResults.style.width = `${Math.round(maxWidth)}px`;
 }
 
 function renderSearchResults(q) {

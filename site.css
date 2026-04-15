@@ -115,7 +115,6 @@ code {
   letter-spacing: -0.01em;
   flex-shrink: 0;
 }
-.topbar-brand img { width: 22px; height: 22px; object-fit: contain; }
 .topbar-brand:hover { text-decoration: none; color: var(--strong); }
 
 .topbar-spacer { flex: 1; }
@@ -202,23 +201,24 @@ code {
 
 .sidebar-brand-block {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 16px;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px 18px;
   border-bottom: 1px solid var(--border);
   background: var(--s1);
 }
 .sidebar-brand-icon {
-  width: 36px;
-  height: 36px;
+  width: 46px;
+  height: 46px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   background: var(--s3);
   border: 1px solid var(--border2);
+  margin-top: 2px;
 }
-.sidebar-brand-icon img { width: 24px; height: 24px; object-fit: contain; }
+.sidebar-brand-icon img { width: 32px; height: 32px; object-fit: contain; }
 .sidebar-brand-copy h2 {
   font-size: 0.82rem;
   font-weight: 700;
