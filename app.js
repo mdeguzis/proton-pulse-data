@@ -19,8 +19,97 @@ const RATING_TEXT = {
 
 let searchIndex     = null;   // [[appId, title], ...]
 let searchFocusIdx  = -1;
+let scoringInfo     = null;   // loaded from scoring-info.json
+
+async function loadScoringInfo() {
+  if (scoringInfo) return scoringInfo;
+  try {
+    const r = await fetch('scoring-info.json');
+    scoringInfo = r.ok ? await r.json() : null;
+  } catch { scoringInfo = null; }
+  return scoringInfo;
+}
+
+function normalizeOs(raw) {
+  if (!raw) return '';
+  let s = raw.trim();
+  if (/^\d+$/.test(s)) return '';
+  // strip parenthetical suffixes
+  s = s.replace(/\s*\(.*\)$/, '');
+  // strip trailing edition/variant words
+  s = s.replace(/\s+(LTS|Holo|Core|Silverblue|Kinoite|Workstation|Server|Desktop)$/i, '');
+  // collapse long build versions like "44.20260407.n.0" to just "44"
+  s = s.replace(/\s(\d{1,3})\.\d{5,}[\w.]*/g, ' $1');
+  // "24.04.3" -> "24.04"
+  s = s.replace(/(\d+\.\d+)\.\d+/g, '$1');
+  return s.trim();
+}
 
 // -- Routing ------------------------------------------
+
+async function populateScoringTooltip(el) {
+  const container = el.querySelector('#rating-info-content');
+  if (!container || container.dataset.loaded) return;
+  const s = await loadScoringInfo();
+  if (!s) { container.textContent = 'Could not load scoring-info.json'; return; }
+  const w = s.weights;
+  const rs = s.ratingScores;
+  const t = s.scoreTiers;
+  const ratingLine = Object.entries(rs).map(([k,v]) => `${k[0].toUpperCase()+k.slice(1)}=${Math.round(v*w.BASE_MAX)}`).join(', ');
+  const tierLine = Object.entries(t).map(([k,v]) => `>=${v}: ${k[0].toUpperCase()+k.slice(1)}`).join(' | ') + ' | <' + t.bronze + ': Borked';
+  const osFams = Object.entries(s.osFamilies).map(([parent, kids]) => `${parent}: ${kids.join(', ')}`).join(' | ');
+  container.innerHTML = `
+    <h3 style="margin:0 0 10px">ProtonDB Ratings</h3>
+    <span style="color:#b4c7dc">Platinum</span> - Runs perfectly out of the box<br>
+    <span style="color:#c8a050">Gold</span> - Runs after tweaks<br>
+    <span style="color:#8fa0b0">Silver</span> - Runs with minor issues<br>
+    <span style="color:#b07040">Bronze</span> - Runs but with significant issues<br>
+    <span style="color:#c85050">Borked</span> - Does not run or is unplayable<br><br>
+    The tier shown is the most common rating across all reports for this game.<br><br>
+
+    <h3 style="margin:0 0 10px">Confidence Scoring</h3>
+    Each report gets a relevance score (0-100) based on how closely it matches <em>your</em> hardware when viewed in the Decky plugin. On this website, an estimate is shown without local system info.<br><br>
+
+    <h4 style="margin:0 0 6px">1. Base Rating (0-${w.BASE_MAX} pts)</h4>
+    <code>${ratingLine}</code><br>
+    Borked reports older than ${w.BORKED_DECAY_DAYS} days are treated as Bronze.<br><br>
+
+    <h4 style="margin:0 0 6px">2. Recency Bonus</h4>
+    <code>&lt;90 days: +${w.RECENCY_RECENT} | 90-365 days: +${w.RECENCY_MID} | &gt;1 year: ${w.RECENCY_OLD}</code><br><br>
+
+    <h4 style="margin:0 0 6px">3. Custom Proton Bonus (+${w.CUSTOM_PROTON})</h4>
+    Reports using ${s.customProtonMarkers.join(', ')} builds get +${w.CUSTOM_PROTON}.<br><br>
+
+    <h4 style="margin:0 0 6px">4. Proton Version Match</h4>
+    <code>Same major: +${w.PROTON_MATCH} | Adjacent: +${w.PROTON_CLOSE}</code><br><br>
+
+    <h4 style="margin:0 0 6px">5. GPU Multiplier</h4>
+    <code>Same vendor: ${w.GPU_MATCH}x | Different: ${w.GPU_MISMATCH}x | Unknown: ${w.GPU_UNKNOWN}x</code><br>
+    Same vendor + same driver major: ${w.GPU_DRIVER_EXACT}x | Close driver: ${w.GPU_DRIVER_CLOSE}x<br><br>
+
+    <h4 style="margin:0 0 6px">6. OS Multiplier</h4>
+    <code>Exact match: ${w.OS_EXACT}x | Same family: ${w.OS_FAMILY_MATCH}x</code><br>
+    Families: ${osFams}<br><br>
+
+    <h4 style="margin:0 0 6px">7. Kernel Multiplier</h4>
+    <code>Exact: ${w.KERNEL_EXACT}x | Same minor: ${w.KERNEL_PATCH_CLOSE}x | Same major: ${w.KERNEL_MINOR_CLOSE}x</code><br>
+    Valve/SteamOS kernels compare build numbers instead of upstream versions.<br><br>
+
+    <h4 style="margin:0 0 6px">8. Notes Sentiment (-${w.NOTES_MAX} to +${w.NOTES_MAX})</h4>
+    Negative keywords: <code>${s.negativeKeywords.join(', ')}</code> (-3 each)<br>
+    Positive keywords: <code>${s.positiveKeywords.join(', ')}</code> (+2 each)<br>
+    Negation-aware: "no crash" does NOT count as negative.<br><br>
+
+    <h4 style="margin:0 0 6px">Final Formula</h4>
+    <code>${s.formula}</code><br><br>
+
+    <h4 style="margin:0 0 6px">Score-to-Tier Mapping</h4>
+    <code>${tierLine}</code><br><br>
+
+    <a href="${s._source}" target="_blank" rel="noopener" style="color:var(--accent)">View full scoring source on GitHub</a>
+  `;
+  container.dataset.loaded = '1';
+}
 
 function getRoute() {
   const h = location.hash.replace(/^#\/?/, '');
@@ -584,7 +673,7 @@ async function renderGamePage(appId) {
   const filtered = () => {
     let arr = [...reports];
     if (filterGpu)    arr = arr.filter(r => gpuVendor(r.gpu) === filterGpu);
-    if (filterOs)     arr = arr.filter(r => (r.os || '').trim() === filterOs);
+    if (filterOs)     arr = arr.filter(r => normalizeOs(r.os) === filterOs);
     if (filterRating) arr = arr.filter(r => r.rating === filterRating);
     if (filterSource) arr = arr.filter(r => (r.source || 'protondb') === filterSource);
     return arr;
@@ -628,56 +717,7 @@ async function renderGamePage(appId) {
         <span class="tier-badge" style="background:${rc};color:${rt}">${tier}</span>
         <button class="info-btn" id="rating-info-btn" title="What does this rating mean?"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="11" fill="#3b82f6"/><text x="12" y="17" text-anchor="middle" font-size="15" font-weight="700" fill="#fff" font-family="serif">i</text></svg></button>
         <div class="info-tooltip" id="rating-info-tip">
-          <div class="info-tooltip-inner">
-          <h3 style="margin:0 0 10px">ProtonDB Ratings</h3>
-          <span style="color:#b4c7dc">Platinum</span> - Runs perfectly out of the box<br>
-          <span style="color:#c8a050">Gold</span> - Runs after tweaks<br>
-          <span style="color:#8fa0b0">Silver</span> - Runs with minor issues<br>
-          <span style="color:#b07040">Bronze</span> - Runs but with significant issues<br>
-          <span style="color:#c85050">Borked</span> - Does not run or is unplayable<br><br>
-          The tier shown is the most common rating across all reports for this game.<br><br>
-
-          <h3 style="margin:0 0 10px">Confidence Scoring</h3>
-          Each report gets a relevance score (0-100) based on how closely it matches <em>your</em> hardware when viewed in the Decky plugin. On this website, an estimate is shown without local system info.<br><br>
-
-          <h4 style="margin:0 0 6px">1. Base Rating (0-60 pts)</h4>
-          <code>Platinum=60, Gold=48, Silver=36, Bronze=24, Borked=0</code><br>
-          Borked reports older than 365 days are treated as Bronze (games get fixed over time).<br><br>
-
-          <h4 style="margin:0 0 6px">2. Recency Bonus</h4>
-          <code>&lt;90 days: +15 | 90-365 days: +5 | &gt;1 year: -5</code><br><br>
-
-          <h4 style="margin:0 0 6px">3. Custom Proton Bonus (+10)</h4>
-          Reports using GE-Proton, CachyOS, TKG, or ProtonPlus builds get +10.<br><br>
-
-          <h4 style="margin:0 0 6px">4. Proton Version Match</h4>
-          <code>Same major version: +8 | Adjacent: +4</code><br><br>
-
-          <h4 style="margin:0 0 6px">5. GPU Multiplier</h4>
-          <code>Same vendor: 1.0x | Different: 0.5x | Unknown: 0.75x</code><br>
-          Same vendor + same driver major: 1.3x | Close driver: 1.1x<br><br>
-
-          <h4 style="margin:0 0 6px">6. OS Multiplier</h4>
-          <code>Exact match: 1.08x | Same family: 1.04x</code><br>
-          OS families: SteamOS/Arch, Bazzite/Nobara/Fedora, Ubuntu/Pop/Mint/Debian, NixOS<br><br>
-
-          <h4 style="margin:0 0 6px">7. Kernel Multiplier</h4>
-          <code>Exact: 1.12x | Same minor: 1.08x | Same major: 1.04x</code><br>
-          Valve/SteamOS kernels compare build numbers instead of upstream versions.<br><br>
-
-          <h4 style="margin:0 0 6px">8. Notes Sentiment (-10 to +10)</h4>
-          Keywords like "crash", "broken", "freeze" reduce score (-3 each).<br>
-          Keywords like "perfect", "flawless", "no issues" boost score (+2 each).<br>
-          Negation-aware: "no crash" does NOT count as negative.<br><br>
-
-          <h4 style="margin:0 0 6px">Final Formula</h4>
-          <code>score = (rating + recency + customProton + protonMatch) * gpuMult * osMult * kernelMult + notesSentiment</code><br><br>
-
-          <h4 style="margin:0 0 6px">Score-to-Tier Mapping</h4>
-          <code>&gt;=80: Platinum | &gt;=60: Gold | &gt;=40: Silver | &gt;=20: Bronze | &lt;20: Borked</code><br><br>
-
-          <a href="https://github.com/mdeguzis/decky-proton-pulse/blob/main/src/lib/scoring.ts" target="_blank" rel="noopener" style="color:var(--accent)">View full scoring source code on GitHub</a>
-          </div>
+          <div class="info-tooltip-inner" id="rating-info-content">Loading...</div>
         </div>
       </div>
 
@@ -740,7 +780,7 @@ async function renderGamePage(appId) {
           const RATING_ORDER = ['platinum','gold','silver','bronze','borked'];
 
           const availGpus    = [...new Set(reports.map(r => gpuVendor(r.gpu)).filter(Boolean))];
-          const availOs      = [...new Set(reports.map(r => (r.os || '').trim()).filter(Boolean))].sort();
+          const availOs      = [...new Set(reports.map(r => normalizeOs(r.os)).filter(Boolean))].sort();
           const availRatings = RATING_ORDER.filter(rt => reports.some(r => r.rating === rt));
           const availSrcs    = [...new Set(reports.map(r => r.source || 'protondb').filter(Boolean))];
 
@@ -785,11 +825,15 @@ async function renderGamePage(appId) {
     el.querySelectorAll('.sort-bar button').forEach(b =>
       b.onclick = () => { sortMode = b.dataset.sort; render(); }
     );
-    el.querySelector('#rating-info-btn')?.addEventListener('click', () => {
-      el.querySelector('#rating-info-tip')?.classList.toggle('open');
+    el.querySelector('#rating-info-btn')?.addEventListener('click', async () => {
+      const tip = el.querySelector('#rating-info-tip');
+      tip?.classList.toggle('open');
+      if (tip?.classList.contains('open')) await populateScoringTooltip(el);
     });
-    el.querySelector('#scoring-info-btn')?.addEventListener('click', () => {
-      el.querySelector('#rating-info-tip')?.classList.toggle('open');
+    el.querySelector('#scoring-info-btn')?.addEventListener('click', async () => {
+      const tip = el.querySelector('#rating-info-tip');
+      tip?.classList.toggle('open');
+      if (tip?.classList.contains('open')) await populateScoringTooltip(el);
     });
     el.querySelector('#fGpu')?.addEventListener('change', e => { filterGpu    = e.target.value; render(); });
     el.querySelector('#fOs')?.addEventListener('change',  e => { filterOs     = e.target.value; render(); });
