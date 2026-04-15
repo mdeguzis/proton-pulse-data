@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       pages_only:
-        description: "Republish GitHub Pages shell files only (app.html/index.html/site.css) without running the data pipeline"
+        description: "Republish GitHub Pages shell files only (app.html/app.js/app.css/index.html/index.js/index.css/site.css) without running the data pipeline"
         required: false
         default: false
         type: boolean
@@ -257,9 +257,13 @@ jobs:
           cp /tmp/protondb-output/coverage.html .
           cp /tmp/protondb-output/search-index.json . 2>/dev/null || true
           git show main:app.html > app.html 2>/dev/null || true
+          git show main:app.js > app.js 2>/dev/null || true
+          git show main:app.css > app.css 2>/dev/null || true
           git show main:index.html > index.html 2>/dev/null || true
+          git show main:index.js > index.js 2>/dev/null || true
+          git show main:index.css > index.css 2>/dev/null || true
           git show main:site.css > site.css 2>/dev/null || true
-          git add data/ data-index.html coverage.html search-index.json app.html index.html site.css
+          git add data/ data-index.html coverage.html search-index.json app.html app.js app.css index.html index.js index.css site.css
           git commit -m "Deploy: $(date +%F)"
           git push origin gh-pages-new:gh-pages --force
 
@@ -287,9 +291,13 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
           cp ../repo/app.html ./app.html
+          cp ../repo/app.js ./app.js
+          cp ../repo/app.css ./app.css
           cp ../repo/index.html ./index.html
+          cp ../repo/index.js ./index.js
+          cp ../repo/index.css ./index.css
           cp ../repo/site.css ./site.css
-          git add app.html index.html site.css
+          git add app.html app.js app.css index.html index.js index.css site.css
           if git diff --cached --quiet; then
             echo "No shell changes to publish."
             exit 0
@@ -435,9 +443,13 @@ jobs:
           cp /tmp/protondb-output/coverage.html .
           cp /tmp/protondb-output/search-index.json . 2>/dev/null || true
           git show main:app.html > app.html 2>/dev/null || true
+          git show main:app.js > app.js 2>/dev/null || true
+          git show main:app.css > app.css 2>/dev/null || true
           git show main:index.html > index.html 2>/dev/null || true
+          git show main:index.js > index.js 2>/dev/null || true
+          git show main:index.css > index.css 2>/dev/null || true
           git show main:site.css > site.css 2>/dev/null || true
-          git add data/ data-index.html coverage.html search-index.json app.html index.html site.css
+          git add data/ data-index.html coverage.html search-index.json app.html app.js app.css index.html index.js index.css site.css
           git commit -m "Targeted backfill: ${{ inputs.backfill_app_ids }}"
           git push origin gh-pages-new:gh-pages --force
 
@@ -608,9 +620,13 @@ jobs:
           cp /tmp/protondb-output/coverage.html .
           cp /tmp/protondb-output/search-index.json . 2>/dev/null || true
           git show main:app.html > app.html 2>/dev/null || true
+          git show main:app.js > app.js 2>/dev/null || true
+          git show main:app.css > app.css 2>/dev/null || true
           git show main:index.html > index.html 2>/dev/null || true
+          git show main:index.js > index.js 2>/dev/null || true
+          git show main:index.css > index.css 2>/dev/null || true
           git show main:site.css > site.css 2>/dev/null || true
-          git add data/ data-index.html coverage.html search-index.json app.html index.html site.css
+          git add data/ data-index.html coverage.html search-index.json app.html app.js app.css index.html index.js index.css site.css
           git commit -m "Coverage backfill: ${{ inputs.coverage_backfill_issue_type }}"
           git push origin gh-pages-new:gh-pages --force
 
