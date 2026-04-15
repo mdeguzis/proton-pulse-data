@@ -73,7 +73,7 @@ async function submitReport(appId, title, form) {
     gpu_driver: form.gpuDriver.value,
     gpu_vendor: form.gpuVendor.value,
     ram: form.ram.value,
-    os: form.os.value,
+    os: (form.os.value + (form.osVersion.value ? ' ' + form.osVersion.value.trim() : '')),
     kernel: form.kernel.value,
     proton_version: form.protonVersion.value,
     duration: form.duration.value || 'unreported',
@@ -122,7 +122,7 @@ async function populateSubmitForm(el) {
       <div class="sf-row"><label>CPU Cores</label><input name="cpuCores" type="number" placeholder="e.g. 8"></div>
       <div class="sf-row"><label>RAM *</label><input name="ram" required placeholder="e.g. 16 GB" pattern="\\d+ GB"></div>
       <div class="sf-row"><label>VRAM (MB)</label><input name="vramMb" type="number" placeholder="e.g. 8192"></div>
-      <div class="sf-row"><label>OS *</label><select name="os" required>${opts(osList,false)}</select></div>
+      <div class="sf-row"><label>OS *</label><select name="os" required>${opts(osList,false)}</select><input name="osVersion" placeholder="Version (e.g. 24.04)" style="max-width:120px"></div>
       <div class="sf-row"><label>Kernel</label><input name="kernel" placeholder="e.g. 6.8.0"></div>
       <div class="sf-row"><label>Duration</label><input name="duration" placeholder="e.g. severalHours"></div>
       <div class="sf-row"><label>Display Resolution</label><input name="displayRes" placeholder="e.g. 1920x1080"></div>
