@@ -332,9 +332,13 @@ code {
 
 @media (min-width: 861px) {
   /* sidebar always open on desktop */
-  .sidebar-nav { transform: translateX(0); }
+  .sidebar-nav {
+    transform: translateX(0);
+    top: 0;
+  }
   .sidebar-overlay { display: none !important; }
   .topbar { left: var(--sidebar-w); }
+  .topbar-brand { display: none; }
 }
 
 /* ============================================================
