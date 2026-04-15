@@ -1219,6 +1219,7 @@ async function renderGamePage(appId) {
   let filterGpu    = '';
   let filterOs     = '';
   let filterRating = '';
+  let filterSource = '';
 
   // Pulse config filters
   let filterCfgProton = '';
@@ -1249,6 +1250,7 @@ async function renderGamePage(appId) {
     if (filterGpu)    arr = arr.filter(r => gpuVendor(r.gpu) === filterGpu);
     if (filterOs)     arr = arr.filter(r => osFamily(r.os)   === filterOs);
     if (filterRating) arr = arr.filter(r => r.rating === filterRating);
+    if (filterSource) arr = arr.filter(r => (r.source || 'protondb') === filterSource);
     return arr;
   };
 
@@ -1341,33 +1343,47 @@ async function renderGamePage(appId) {
       </div>
 
       <div class="filter-bar">
-        <label>GPU</label>
-        <select id="fGpu">
-          <option value="">Any</option>
-          <option value="nvidia" ${filterGpu==='nvidia'?'selected':''}>NVIDIA</option>
-          <option value="amd"    ${filterGpu==='amd'   ?'selected':''}>AMD</option>
-          <option value="intel"  ${filterGpu==='intel' ?'selected':''}>Intel</option>
-        </select>
-        <label>OS</label>
-        <select id="fOs">
-          <option value="">Any</option>
-          <option value="steamos" ${filterOs==='steamos'?'selected':''}>SteamOS</option>
-          <option value="arch"    ${filterOs==='arch'   ?'selected':''}>Arch</option>
-          <option value="fedora"  ${filterOs==='fedora' ?'selected':''}>Fedora</option>
-          <option value="ubuntu"  ${filterOs==='ubuntu' ?'selected':''}>Ubuntu</option>
-          <option value="debian"  ${filterOs==='debian' ?'selected':''}>Debian</option>
-          <option value="nixos"   ${filterOs==='nixos'  ?'selected':''}>NixOS</option>
-        </select>
-        <label>Rating</label>
-        <select id="fRating">
-          <option value="">Any</option>
-          <option value="platinum" ${filterRating==='platinum'?'selected':''}>Platinum</option>
-          <option value="gold"     ${filterRating==='gold'    ?'selected':''}>Gold</option>
-          <option value="silver"   ${filterRating==='silver'  ?'selected':''}>Silver</option>
-          <option value="bronze"   ${filterRating==='bronze'  ?'selected':''}>Bronze</option>
-          <option value="borked"   ${filterRating==='borked'  ?'selected':''}>Borked</option>
-        </select>
-        ${(filterGpu || filterOs || filterRating) ? `<span class="filter-count">${reps.length} of ${reports.length}</span>` : ''}
+        ${(() => {
+          const GPU_LABEL = { nvidia: 'NVIDIA', amd: 'AMD', intel: 'Intel' };
+          const OS_LABEL  = { steamos: 'SteamOS', arch: 'Arch', fedora: 'Fedora', ubuntu: 'Ubuntu', debian: 'Debian', nixos: 'NixOS' };
+          const SRC_LABEL = { 'protondb': 'ProtonDB', 'proton-pulse': 'Pulse' };
+          const RATING_LABEL = { platinum: 'Platinum', gold: 'Gold', silver: 'Silver', bronze: 'Bronze', borked: 'Borked' };
+          const RATING_ORDER = ['platinum','gold','silver','bronze','borked'];
+
+          const availGpus    = [...new Set(reports.map(r => gpuVendor(r.gpu)).filter(Boolean))];
+          const availOs      = [...new Set(reports.map(r => osFamily(r.os)).filter(Boolean))];
+          const availRatings = RATING_ORDER.filter(rt => reports.some(r => r.rating === rt));
+          const availSrcs    = [...new Set(reports.map(r => r.source || 'protondb').filter(Boolean))];
+
+          const gpuSel    = availGpus.length > 0 ? `
+            <label>GPU</label>
+            <select id="fGpu">
+              <option value="">Any</option>
+              ${availGpus.map(v => `<option value="${v}" ${filterGpu===v?'selected':''}>${GPU_LABEL[v]||v}</option>`).join('')}
+            </select>` : '';
+          const osSel     = availOs.length > 0 ? `
+            <label>OS</label>
+            <select id="fOs">
+              <option value="">Any</option>
+              ${availOs.map(v => `<option value="${v}" ${filterOs===v?'selected':''}>${OS_LABEL[v]||v}</option>`).join('')}
+            </select>` : '';
+          const ratingSel = availRatings.length > 0 ? `
+            <label>Rating</label>
+            <select id="fRating">
+              <option value="">Any</option>
+              ${availRatings.map(v => `<option value="${v}" ${filterRating===v?'selected':''}>${RATING_LABEL[v]||v}</option>`).join('')}
+            </select>` : '';
+          const srcSel    = availSrcs.length > 1 ? `
+            <label>Source</label>
+            <select id="fSource">
+              <option value="">Any</option>
+              ${availSrcs.map(v => `<option value="${v}" ${filterSource===v?'selected':''}>${SRC_LABEL[v]||v}</option>`).join('')}
+            </select>` : '';
+
+          const anyActive = filterGpu || filterOs || filterRating || filterSource;
+          return gpuSel + osSel + ratingSel + srcSel +
+            (anyActive ? `<span class="filter-count">${reps.length} of ${reports.length}</span>` : '');
+        })()}
       </div>
 
       <div class="cards">
@@ -1380,9 +1396,10 @@ async function renderGamePage(appId) {
     el.querySelectorAll('.sort-bar button').forEach(b =>
       b.onclick = () => { sortMode = b.dataset.sort; render(); }
     );
-    el.querySelector('#fGpu').onchange    = e => { filterGpu    = e.target.value; render(); };
-    el.querySelector('#fOs').onchange     = e => { filterOs     = e.target.value; render(); };
-    el.querySelector('#fRating').onchange = e => { filterRating = e.target.value; render(); };
+    el.querySelector('#fGpu')?.addEventListener('change', e => { filterGpu    = e.target.value; render(); });
+    el.querySelector('#fOs')?.addEventListener('change',  e => { filterOs     = e.target.value; render(); });
+    el.querySelector('#fRating')?.addEventListener('change', e => { filterRating = e.target.value; render(); });
+    el.querySelector('#fSource')?.addEventListener('change', e => { filterSource = e.target.value; render(); });
     el.querySelector('#fCfgProton')?.addEventListener('change', e => { filterCfgProton = e.target.value; render(); });
     el.querySelector('#fCfgSource')?.addEventListener('change', e => { filterCfgSource = e.target.value; render(); });
   }
