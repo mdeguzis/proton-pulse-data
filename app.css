@@ -538,7 +538,7 @@
 .filter-count { font-size: 0.72rem; color: var(--muted); margin-left: auto; }
 
 /* report cards */
-.cards { display: flex; flex-direction: column; gap: 0; border: 1px solid var(--border); }
+.cards { display: flex; flex-direction: column; gap: 12px; }
 a.card { display: flex; color: inherit; }
 a.card:hover { text-decoration: none; }
 .card {
@@ -546,11 +546,10 @@ a.card:hover { text-decoration: none; }
   gap: 14px;
   padding: 13px 14px;
   background: var(--s1);
-  border-bottom: 1px solid var(--border);
+  border: 1px solid var(--border);
   cursor: pointer;
   transition: background .1s;
 }
-.card:last-of-type { border-bottom: none; }
 .card:hover { background: var(--s2); }
 .card .left { flex: 1; min-width: 0; }
 .card .proton { font-size: 0.88rem; font-weight: 700; color: var(--strong); margin-bottom: 3px; font-family: var(--mono); }
@@ -615,7 +614,10 @@ a.card:hover { text-decoration: none; }
 .card-summary {
   padding: 10px 14px;
   background: var(--bg);
-  border-bottom: 1px solid var(--border);
+  border: 1px solid var(--border);
+  border-top: none;
+  margin-top: -12px;
+  margin-bottom: 0;
   font-size: 0.76rem;
   color: var(--text);
 }

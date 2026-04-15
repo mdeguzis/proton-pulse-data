@@ -84,8 +84,6 @@ async function submitReport(appId, title, form) {
     confidence_score: null,
     source: 'user',
     vram_mb: form.vramMb.value ? Number(form.vramMb.value) : null,
-    display_resolution: form.displayRes.value || null,
-    steam_deck_model: form.deckModel.value || null,
   };
   const r = await fetch(`${SB_URL}/user_configs?on_conflict=client_id,app_id`, {
     method: 'POST',
@@ -140,10 +138,8 @@ async function populateSubmitForm(el) {
       <div class="sf-row"><label>OS *</label><select name="os" required>${opts(osList,false)}</select><input name="osVersion" placeholder="Version (e.g. 24.04)" style="max-width:120px"></div>
       <div class="sf-row"><label>Kernel</label><input name="kernel" placeholder="e.g. 6.8.0"></div>
       <div class="sf-row"><label>Duration</label><input name="duration" placeholder="e.g. severalHours"></div>
-      <div class="sf-row"><label>Display Resolution</label><input name="displayRes" placeholder="e.g. 1920x1080"></div>
-      <div class="sf-row"><label>Steam Deck Model</label><input name="deckModel" placeholder="e.g. lcd or oled"></div>
       <div class="sf-row"><label>Launch Options</label><input name="launchOptions" placeholder="e.g. PROTON_USE_WINED3D=1 %command%"></div>
-      <div class="sf-row"><label>Notes</label><textarea name="notes" rows="3" placeholder="How did it run?"></textarea></div>
+      <div class="sf-row"><label>Notes *</label><textarea name="notes" rows="3" required placeholder="How did it run? Any issues or tweaks?"></textarea></div>
       <div class="sf-row" style="justify-content:flex-end;gap:8px">
         <span id="submit-status" style="font-size:0.76rem;color:var(--muted)"></span>
         <button type="submit" class="submit-report-btn">Submit</button>
@@ -403,7 +399,7 @@ async function fetchSupabase(appId) {
 async function fetchNativeReports(appId) {
   try {
     const r = await fetch(
-      `${SB_URL}/user_configs?app_id=eq.${appId}&select=client_id,app_id,title,cpu,gpu,gpu_driver,gpu_vendor,ram,os,kernel,proton_version,rating,duration,notes,vram_mb,display_resolution,steam_deck_model,created_at&order=created_at.desc`,
+      `${SB_URL}/user_configs?app_id=eq.${appId}&select=client_id,app_id,title,cpu,gpu,gpu_driver,gpu_vendor,ram,os,kernel,proton_version,rating,duration,notes,vram_mb,created_at&order=created_at.desc`,
       { headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` } }
     );
     if (!r.ok) return [];
@@ -429,8 +425,6 @@ async function fetchNativeReports(appId) {
       duration:          row.duration || '',
       notes:             row.notes || '',
       vramMb:            row.vram_mb ?? null,
-      displayResolution: row.display_resolution ?? null,
-      steamDeckModel:    row.steam_deck_model ?? null,
       timestamp:         Math.floor(new Date(row.created_at).getTime() / 1000),
       source:            'proton-pulse',
     }));
@@ -716,8 +710,6 @@ function renderCard(r, votes) {
         <div class="row"><span class="label">GPU Driver</span><span>${na(esc(r.gpuDriver))}</span></div>
         <div class="row"><span class="label">Kernel</span><span>${na(esc(r.kernel))}</span></div>
         <div class="row"><span class="label">Duration</span><span>${na(esc(r.duration))}</span></div>
-        ${r.displayResolution ? `<div class="row"><span class="label">Resolution</span><span>${esc(r.displayResolution)}</span></div>` : ''}
-        ${r.steamDeckModel ? `<div class="row"><span class="label">Steam Deck</span><span>${esc(r.steamDeckModel.toUpperCase())}</span></div>` : ''}
         ${r.launchOptions ? `<div class="row"><span class="label">Launch Options</span><span>${esc(r.launchOptions)}</span></div>` : ''}
       </div>
       <div class="card-footer"><button class="cfg-dl-btn" data-report-json='${JSON.stringify(r).replace(/'/g,"&#39;")}' title="Download as JSON">JSON</button></div>
@@ -784,7 +776,7 @@ async function renderGamePage(appId) {
   const filtered = () => {
     let arr = [...reports];
     if (filterGpu)    arr = arr.filter(r => gpuVendor(r.gpu) === filterGpu);
-    if (filterOs)     arr = arr.filter(r => normalizeOs(r.os) === filterOs);
+    if (filterOs)     arr = arr.filter(r => osFamily(r.os) === filterOs);
     if (filterRating) arr = arr.filter(r => r.rating === filterRating);
     if (filterSource) arr = arr.filter(r => (r.source || 'protondb') === filterSource);
     return arr;
@@ -895,7 +887,8 @@ async function renderGamePage(appId) {
           const RATING_ORDER = ['platinum','gold','silver','bronze','borked'];
 
           const availGpus    = [...new Set(reports.map(r => gpuVendor(r.gpu)).filter(Boolean))];
-          const availOs      = [...new Set(reports.map(r => normalizeOs(r.os)).filter(Boolean))].sort();
+          const OS_LABEL  = { steamos: 'SteamOS', arch: 'Arch', fedora: 'Fedora', ubuntu: 'Ubuntu', debian: 'Debian', nixos: 'NixOS' };
+          const availOs      = [...new Set(reports.map(r => osFamily(r.os)).filter(Boolean))].sort();
           const availRatings = RATING_ORDER.filter(rt => reports.some(r => r.rating === rt));
           const availSrcs    = [...new Set(reports.map(r => r.source || 'protondb').filter(Boolean))];
 
@@ -909,7 +902,7 @@ async function renderGamePage(appId) {
             <label>OS</label>
             <select id="fOs">
               <option value="">Any</option>
-              ${availOs.map(v => `<option value="${esc(v)}" ${filterOs===v?'selected':''}>${esc(v)}</option>`).join('')}
+              ${availOs.map(v => `<option value="${esc(v)}" ${filterOs===v?'selected':''}>${OS_LABEL[v]||esc(v)}</option>`).join('')}
             </select>` : '';
           const ratingSel = availRatings.length > 0 ? `
             <label>Rating</label>
