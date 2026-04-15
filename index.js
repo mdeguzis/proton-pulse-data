@@ -44,3 +44,34 @@
     }
   });
 })();
+
+// ── Google Auth chip ──────────────────────────────────────────────────────
+(function initGoogleAuth() {
+  const loginBtn  = document.getElementById('google-login-btn');
+  const userMenu  = document.getElementById('google-user-menu');
+  const avatarEl  = document.getElementById('google-avatar');
+  const nameEl    = document.getElementById('google-username');
+  const menuBtn   = document.getElementById('google-menu-btn');
+  const dropdown  = document.getElementById('google-dropdown');
+  const logoutBtn = document.getElementById('google-logout-btn');
+
+  SupaAuth.onStateChange(({ user }) => {
+    if (user) {
+      loginBtn.hidden    = true;
+      userMenu.hidden    = false;
+      avatarEl.src       = user.user_metadata?.avatar_url || '';
+      avatarEl.alt       = user.user_metadata?.name || user.email || '';
+      nameEl.textContent = user.user_metadata?.name || user.email || '';
+    } else {
+      loginBtn.hidden = false;
+      userMenu.hidden = true;
+      if (dropdown) dropdown.hidden = true;
+    }
+  });
+
+  loginBtn?.addEventListener('click', () => SupaAuth.loginWithGoogle());
+  logoutBtn?.addEventListener('click', () => { dropdown.hidden = true; SupaAuth.logout(); });
+  menuBtn?.addEventListener('click', e => { e.stopPropagation(); dropdown.hidden = !dropdown.hidden; });
+  document.addEventListener('click', () => { if (dropdown) dropdown.hidden = true; });
+  dropdown?.addEventListener('click', e => e.stopPropagation());
+})();
