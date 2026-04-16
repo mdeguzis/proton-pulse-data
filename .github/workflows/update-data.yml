@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       pages_only:
-        description: "Republish GitHub Pages shell files only (app.html/app.js/app.css/index.html/index.js/index.css/site.css) without running the data pipeline"
+        description: "Republish GitHub Pages shell files plus static assets without running the data pipeline"
         required: false
         default: false
         type: boolean
@@ -271,12 +271,16 @@ jobs:
           git show main:profile.css > profile.css 2>/dev/null || true
           git show main:supabase-client.js > supabase-client.js 2>/dev/null || true
           git show main:gh-gist.js > gh-gist.js 2>/dev/null || true
+          mkdir -p assets
+          git show main:assets/steam-logo.png > assets/steam-logo.png 2>/dev/null || true
+          git show main:assets/steam-logo-glyph.png > assets/steam-logo-glyph.png 2>/dev/null || true
+          git show main:assets/steam-login-button-preview.html > assets/steam-login-button-preview.html 2>/dev/null || true
           git show main:privacy.html > privacy.html 2>/dev/null || true
           git show main:terms.html > terms.html 2>/dev/null || true
           git show main:googled7b1eda3148e723a.html > googled7b1eda3148e723a.html 2>/dev/null || true
           curl -sL https://raw.githubusercontent.com/mdeguzis/decky-proton-pulse/main/src/data/scoring-info.json -o scoring-info.json
           curl -sL https://raw.githubusercontent.com/mdeguzis/decky-proton-pulse/main/src/data/form-schema.json -o form-schema.json
-          git add data/ data-index.html coverage.html search-index.json app.html app.js app.css index.html index.js index.css site.css auth.html auth.js auth.css profile.html profile.js profile.css supabase-client.js gh-gist.js privacy.html terms.html googled7b1eda3148e723a.html scoring-info.json form-schema.json
+          git add data/ data-index.html coverage.html search-index.json app.html app.js app.css index.html index.js index.css site.css auth.html auth.js auth.css profile.html profile.js profile.css supabase-client.js gh-gist.js assets/ privacy.html terms.html googled7b1eda3148e723a.html scoring-info.json form-schema.json
           git commit -m "Deploy: $(date +%F)"
           git push origin gh-pages-new:gh-pages --force
 
@@ -318,12 +322,16 @@ jobs:
           cp ../repo/profile.css ./profile.css
           cp ../repo/supabase-client.js ./supabase-client.js
           cp ../repo/gh-gist.js ./gh-gist.js
+          mkdir -p ./assets
+          cp ../repo/assets/steam-logo.png ./assets/steam-logo.png
+          cp ../repo/assets/steam-logo-glyph.png ./assets/steam-logo-glyph.png
+          cp ../repo/assets/steam-login-button-preview.html ./assets/steam-login-button-preview.html
           cp ../repo/privacy.html ./privacy.html
           cp ../repo/terms.html ./terms.html
           cp ../repo/googled7b1eda3148e723a.html ./googled7b1eda3148e723a.html
           curl -sL https://raw.githubusercontent.com/mdeguzis/decky-proton-pulse/main/src/data/scoring-info.json -o ./scoring-info.json
           curl -sL https://raw.githubusercontent.com/mdeguzis/decky-proton-pulse/main/src/data/form-schema.json -o ./form-schema.json
-          git add app.html app.js app.css index.html index.js index.css site.css auth.html auth.js auth.css profile.html profile.js profile.css supabase-client.js gh-gist.js privacy.html terms.html googled7b1eda3148e723a.html scoring-info.json form-schema.json
+          git add app.html app.js app.css index.html index.js index.css site.css auth.html auth.js auth.css profile.html profile.js profile.css supabase-client.js gh-gist.js assets/ privacy.html terms.html googled7b1eda3148e723a.html scoring-info.json form-schema.json
           if git diff --cached --quiet; then
             echo "No shell changes to publish."
             exit 0
@@ -483,12 +491,16 @@ jobs:
           git show main:profile.css > profile.css 2>/dev/null || true
           git show main:supabase-client.js > supabase-client.js 2>/dev/null || true
           git show main:gh-gist.js > gh-gist.js 2>/dev/null || true
+          mkdir -p assets
+          git show main:assets/steam-logo.png > assets/steam-logo.png 2>/dev/null || true
+          git show main:assets/steam-logo-glyph.png > assets/steam-logo-glyph.png 2>/dev/null || true
+          git show main:assets/steam-login-button-preview.html > assets/steam-login-button-preview.html 2>/dev/null || true
           git show main:privacy.html > privacy.html 2>/dev/null || true
           git show main:terms.html > terms.html 2>/dev/null || true
           git show main:googled7b1eda3148e723a.html > googled7b1eda3148e723a.html 2>/dev/null || true
           curl -sL https://raw.githubusercontent.com/mdeguzis/decky-proton-pulse/main/src/data/scoring-info.json -o scoring-info.json
           curl -sL https://raw.githubusercontent.com/mdeguzis/decky-proton-pulse/main/src/data/form-schema.json -o form-schema.json
-          git add data/ data-index.html coverage.html search-index.json app.html app.js app.css index.html index.js index.css site.css auth.html auth.js auth.css profile.html profile.js profile.css supabase-client.js gh-gist.js privacy.html terms.html googled7b1eda3148e723a.html scoring-info.json form-schema.json
+          git add data/ data-index.html coverage.html search-index.json app.html app.js app.css index.html index.js index.css site.css auth.html auth.js auth.css profile.html profile.js profile.css supabase-client.js gh-gist.js assets/ privacy.html terms.html googled7b1eda3148e723a.html scoring-info.json form-schema.json
           git commit -m "Targeted backfill: ${{ inputs.backfill_app_ids }}"
           git push origin gh-pages-new:gh-pages --force
 
@@ -673,12 +685,16 @@ jobs:
           git show main:profile.css > profile.css 2>/dev/null || true
           git show main:supabase-client.js > supabase-client.js 2>/dev/null || true
           git show main:gh-gist.js > gh-gist.js 2>/dev/null || true
+          mkdir -p assets
+          git show main:assets/steam-logo.png > assets/steam-logo.png 2>/dev/null || true
+          git show main:assets/steam-logo-glyph.png > assets/steam-logo-glyph.png 2>/dev/null || true
+          git show main:assets/steam-login-button-preview.html > assets/steam-login-button-preview.html 2>/dev/null || true
           git show main:privacy.html > privacy.html 2>/dev/null || true
           git show main:terms.html > terms.html 2>/dev/null || true
           git show main:googled7b1eda3148e723a.html > googled7b1eda3148e723a.html 2>/dev/null || true
           curl -sL https://raw.githubusercontent.com/mdeguzis/decky-proton-pulse/main/src/data/scoring-info.json -o scoring-info.json
           curl -sL https://raw.githubusercontent.com/mdeguzis/decky-proton-pulse/main/src/data/form-schema.json -o form-schema.json
-          git add data/ data-index.html coverage.html search-index.json app.html app.js app.css index.html index.js index.css site.css auth.html auth.js auth.css profile.html profile.js profile.css supabase-client.js gh-gist.js privacy.html terms.html googled7b1eda3148e723a.html scoring-info.json form-schema.json
+          git add data/ data-index.html coverage.html search-index.json app.html app.js app.css index.html index.js index.css site.css auth.html auth.js auth.css profile.html profile.js profile.css supabase-client.js gh-gist.js assets/ privacy.html terms.html googled7b1eda3148e723a.html scoring-info.json form-schema.json
           git commit -m "Coverage backfill: ${{ inputs.coverage_backfill_issue_type }}"
           git push origin gh-pages-new:gh-pages --force
 
