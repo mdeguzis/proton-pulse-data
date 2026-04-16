@@ -377,6 +377,7 @@ code {
   align-items: center;
   gap: 7px;
   position: relative;
+  cursor: pointer;
 }
 .gh-avatar {
   border-radius: 50%;
@@ -399,7 +400,7 @@ code {
   color: var(--muted);
   cursor: pointer;
   font-size: 0.9rem;
-  padding: 0 2px;
+  padding: 10px 8px;
   line-height: 1;
   transition: color .1s;
 }

@@ -71,7 +71,10 @@
 
   loginBtn?.addEventListener('click', () => SupaAuth.loginWithGoogle());
   logoutBtn?.addEventListener('click', () => { dropdown.classList.remove('open'); SupaAuth.logout(); });
-  menuBtn?.addEventListener('click', () => { dropdown.classList.toggle('open'); });
+  userMenu?.addEventListener('click', e => {
+    if (dropdown.contains(e.target)) return;
+    dropdown.classList.toggle('open');
+  });
 
   const chip = document.getElementById('gh-auth-chip');
   document.addEventListener('click', e => {

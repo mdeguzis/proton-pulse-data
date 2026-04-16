@@ -1204,7 +1204,8 @@ window.addEventListener('resize', () => {
     SupaAuth.logout();
   });
 
-  menuBtn?.addEventListener('click', () => {
+  userMenu?.addEventListener('click', e => {
+    if (dropdown.contains(e.target)) return;
     dropdown.classList.toggle('open');
   });
 
