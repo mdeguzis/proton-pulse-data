@@ -1192,7 +1192,7 @@ window.addEventListener('resize', () => {
   });
 })();
 
-// ── Google Auth (Supabase) ────────────────────────────────────────────────
+// ── Steam Auth (Supabase) ─────────────────────────────────────────────────
 
 (function initGoogleAuth() {
   const loginBtn  = document.getElementById('google-login-btn');
@@ -1217,7 +1217,9 @@ window.addEventListener('resize', () => {
     }
   });
 
-  loginBtn.addEventListener('click', () => SupaAuth.loginWithSteam());
+  loginBtn.addEventListener('click', () => {
+    window.location.href = SupaAuth.buildLoginPageUrl(window.location.href);
+  });
 
   logoutBtn?.addEventListener('click', () => {
     dropdown.classList.remove('open');

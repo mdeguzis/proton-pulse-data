@@ -356,21 +356,73 @@ code {
 }
 
 .gh-login-btn {
-  display: flex;
+  --steam-btn-bg-top: #233246;
+  --steam-btn-bg-bottom: #1b2636;
+  --steam-btn-border: rgba(255, 255, 255, 0.08);
+  --steam-btn-shadow: rgba(0, 0, 0, 0.28);
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  background: rgba(74,159,208,0.1);
-  border: 1px solid rgba(74,159,208,0.35);
-  color: var(--accent);
-  font-size: 0.76rem;
-  font-weight: 600;
+  gap: 12px;
+  background: linear-gradient(180deg, var(--steam-btn-bg-top), var(--steam-btn-bg-bottom));
+  border: 1px solid var(--steam-btn-border);
+  border-radius: 14px;
+  color: #f6f8fb;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 10px 24px var(--steam-btn-shadow);
+  font-size: 0.9rem;
+  font-weight: 800;
   font-family: inherit;
-  padding: 5px 10px;
+  letter-spacing: -0.02em;
+  padding: 8px 14px;
   cursor: pointer;
-  transition: background .12s, border-color .12s;
+  transition: transform .12s, box-shadow .12s, border-color .12s, filter .12s;
   white-space: nowrap;
 }
-.gh-login-btn:hover { background: rgba(74,159,208,0.2); border-color: var(--accent); }
+.gh-login-btn:hover {
+  border-color: rgba(255, 255, 255, 0.18);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 14px 28px rgba(0, 0, 0, 0.34);
+  filter: brightness(1.03);
+  transform: translateY(-1px);
+}
+
+.gh-login-btn:focus-visible {
+  outline: 2px solid rgba(86, 170, 216, 0.75);
+  outline-offset: 2px;
+}
+
+.gh-login-btn:disabled {
+  opacity: 0.7;
+  cursor: wait;
+  transform: none;
+}
+
+.gh-login-btn__badge {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(222, 229, 238, 0.9));
+  color: #182433;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  flex-shrink: 0;
+}
+
+.gh-login-btn__icon {
+  width: 19px;
+  height: 19px;
+  display: block;
+}
+
+.gh-login-btn__label {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+}
 
 .gh-user-menu {
   display: flex;

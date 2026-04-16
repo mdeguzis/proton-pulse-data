@@ -15,6 +15,13 @@ const STEAM_OPENID_URL = 'https://steamcommunity.com/openid/login';
 const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const SupaAuth = (() => {
+  function buildLoginPageUrl(redirectTo) {
+    const loginUrl = new URL('auth.html', window.location.href);
+    const target = redirectTo || window.location.href;
+    loginUrl.searchParams.set('returnTo', target);
+    return loginUrl.toString();
+  }
+
   /**
    * Consume access_token + refresh_token from the URL hash after the Steam
    * OpenID callback redirects back to the site.
@@ -99,5 +106,5 @@ const SupaAuth = (() => {
     };
   }
 
-  return { getSession, loginWithSteam, logout, onStateChange, authHeaders };
+  return { buildLoginPageUrl, getSession, loginWithSteam, logout, onStateChange, authHeaders };
 })();

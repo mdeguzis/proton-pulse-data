@@ -1,0 +1,129 @@
+.auth-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 32px 16px;
+  background:
+    radial-gradient(circle at top, rgba(86, 170, 216, 0.12), transparent 32%),
+    linear-gradient(180deg, #18202a 0%, #151a20 100%);
+}
+
+.auth-card {
+  width: min(100%, 760px);
+  padding: 32px;
+  background: linear-gradient(180deg, rgba(28, 33, 40, 0.98), rgba(21, 26, 32, 0.99));
+  border: 1px solid rgba(82, 96, 119, 0.7);
+  box-shadow: 0 22px 54px rgba(0, 0, 0, 0.45);
+}
+
+.auth-home-link {
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: 18px;
+  color: var(--strong);
+  font-size: 0.86rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.auth-home-link:hover {
+  color: var(--strong);
+  text-decoration: none;
+}
+
+.auth-eyebrow {
+  margin-bottom: 10px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.auth-title {
+  margin-bottom: 14px;
+  color: var(--strong);
+  font-size: clamp(2rem, 5vw, 3rem);
+  line-height: 1.02;
+  letter-spacing: -0.05em;
+}
+
+.auth-copy {
+  max-width: 58ch;
+  margin-bottom: 22px;
+  color: var(--text);
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
+.auth-panel {
+  margin-bottom: 16px;
+  padding: 20px 22px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(82, 96, 119, 0.6);
+}
+
+.auth-panel--warning {
+  background: rgba(86, 170, 216, 0.05);
+  border-color: rgba(86, 170, 216, 0.26);
+}
+
+.auth-panel h2 {
+  margin-bottom: 12px;
+  color: var(--strong);
+  font-size: 1.05rem;
+  letter-spacing: -0.02em;
+}
+
+.auth-panel p + p {
+  margin-top: 10px;
+}
+
+.auth-list {
+  margin-left: 18px;
+  color: var(--text);
+}
+
+.auth-list li + li {
+  margin-top: 8px;
+}
+
+.auth-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  margin-top: 26px;
+}
+
+.gh-login-btn--hero {
+  min-width: min(100%, 420px);
+  justify-content: center;
+  padding: 18px 28px;
+  font-size: 1.1rem;
+}
+
+.auth-secondary-link {
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.auth-secondary-link:hover {
+  color: var(--text);
+}
+
+@media (max-width: 640px) {
+  .auth-card {
+    padding: 24px 20px;
+  }
+
+  .auth-actions {
+    align-items: stretch;
+  }
+
+  .gh-login-btn--hero {
+    width: 100%;
+    min-width: 0;
+  }
+}

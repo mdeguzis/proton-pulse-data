@@ -17,10 +17,12 @@
   <a class="topbar-link topbar-desktop-only" href="https://github.com/mdeguzis/proton-pulse-data" target="_blank" rel="noopener">GitHub</a>
   <div class="gh-auth-chip" id="gh-auth-chip">
     <button class="gh-login-btn" id="google-login-btn" title="Sign in with Steam">
-      <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
-        <path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.21 11.38l3.08-6.37A3.5 3.5 0 0 1 12 10.5a3.5 3.5 0 0 1 3.5 3.5 3.5 3.5 0 0 1-3.5 3.5 3.5 3.5 0 0 1-3.26-2.24L2.66 17.8A12 12 0 0 0 12 24c6.63 0 12-5.37 12-12S18.63 0 12 0zm-1.26 15.17a2.25 2.25 0 0 0 2.5-2.24A2.25 2.25 0 0 0 11 10.68l2.3.95a1.65 1.65 0 0 1-.8 3.1 1.65 1.65 0 0 1-1.65-1.65l.01-.08-1.12-.83z"/>
-      </svg>
-      <span id="google-login-label">Sign in</span>
+      <span class="gh-login-btn__badge" aria-hidden="true">
+        <svg class="gh-login-btn__icon" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M11.979 0C5.365 0 0 5.365 0 11.979c0 5.302 3.445 9.8 8.22 11.387l1.97-3.264a2.934 2.934 0 0 1-.02-.339 3.592 3.592 0 0 1 6.139-2.54l3.168 1.282A11.983 11.983 0 0 0 11.979 0Zm6.896 18.48a4.744 4.744 0 0 0-4.738 4.744c0 .26.02.516.062.764a12.018 12.018 0 0 0 7.903-6.934 4.715 4.715 0 0 0-3.227 1.426Zm0 1.582a3.162 3.162 0 1 1-.004 6.324 3.162 3.162 0 0 1 .004-6.324Zm-7.127.404 1.41 2.33a12.049 12.049 0 0 0 4.084.711l.057-.001a4.75 4.75 0 0 1 4.737-4.607h-.105l-3.538-1.432a3.596 3.596 0 0 1-7.09.808 3.64 3.64 0 0 1 .445-1.748l-3.464-2.4A12.024 12.024 0 0 0 11.748 20.466Zm2.018-9.989a2.433 2.433 0 1 1 0 4.866 2.433 2.433 0 0 1 0-4.866Z"/>
+        </svg>
+      </span>
+      <span class="gh-login-btn__label" id="google-login-label">Login with Steam</span>
     </button>
     <div class="gh-user-menu" id="google-user-menu" hidden>
       <img class="gh-avatar" id="google-avatar" src="" alt="" width="22" height="22">
@@ -80,11 +82,13 @@
     <div id="profile-signed-out" hidden>
       <div class="profile-unsigned">
         <p>You're not signed in.</p>
-        <button class="profile-google-btn" id="profile-login-btn">
-          <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
-            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.21 11.38l3.08-6.37A3.5 3.5 0 0 1 12 10.5a3.5 3.5 0 0 1 3.5 3.5 3.5 3.5 0 0 1-3.5 3.5 3.5 3.5 0 0 1-3.26-2.24L2.66 17.8A12 12 0 0 0 12 24c6.63 0 12-5.37 12-12S18.63 0 12 0zm-1.26 15.17a2.25 2.25 0 0 0 2.5-2.24A2.25 2.25 0 0 0 11 10.68l2.3.95a1.65 1.65 0 0 1-.8 3.1 1.65 1.65 0 0 1-1.65-1.65l.01-.08-1.12-.83z"/>
-          </svg>
-          Sign in with Steam
+        <button class="gh-login-btn profile-google-btn" id="profile-login-btn" title="Sign in with Steam">
+          <span class="gh-login-btn__badge" aria-hidden="true">
+            <svg class="gh-login-btn__icon" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M11.979 0C5.365 0 0 5.365 0 11.979c0 5.302 3.445 9.8 8.22 11.387l1.97-3.264a2.934 2.934 0 0 1-.02-.339 3.592 3.592 0 0 1 6.139-2.54l3.168 1.282A11.983 11.983 0 0 0 11.979 0Zm6.896 18.48a4.744 4.744 0 0 0-4.738 4.744c0 .26.02.516.062.764a12.018 12.018 0 0 0 7.903-6.934 4.715 4.715 0 0 0-3.227 1.426Zm0 1.582a3.162 3.162 0 1 1-.004 6.324 3.162 3.162 0 0 1 .004-6.324Zm-7.127.404 1.41 2.33a12.049 12.049 0 0 0 4.084.711l.057-.001a4.75 4.75 0 0 1 4.737-4.607h-.105l-3.538-1.432a3.596 3.596 0 0 1-7.09.808 3.64 3.64 0 0 1 .445-1.748l-3.464-2.4A12.024 12.024 0 0 0 11.748 20.466Zm2.018-9.989a2.433 2.433 0 1 1 0 4.866 2.433 2.433 0 0 1 0-4.866Z"/>
+            </svg>
+          </span>
+          <span class="gh-login-btn__label">Login with Steam</span>
         </button>
       </div>
     </div>

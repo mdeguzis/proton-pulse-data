@@ -47,7 +47,7 @@
   });
 })();
 
-// ── Google Auth chip ──────────────────────────────────────────────────────
+// ── Steam Auth chip ───────────────────────────────────────────────────────
 (function initGoogleAuth() {
   const loginBtn  = document.getElementById('google-login-btn');
   const userMenu  = document.getElementById('google-user-menu');
@@ -71,7 +71,9 @@
     }
   });
 
-  loginBtn?.addEventListener('click', () => SupaAuth.loginWithSteam());
+  loginBtn?.addEventListener('click', () => {
+    window.location.href = SupaAuth.buildLoginPageUrl(window.location.href);
+  });
   logoutBtn?.addEventListener('click', () => { dropdown.classList.remove('open'); SupaAuth.logout(); });
   userMenu?.addEventListener('click', e => {
     if (dropdown.contains(e.target)) return;
