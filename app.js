@@ -1204,11 +1204,13 @@ window.addEventListener('resize', () => {
     SupaAuth.logout();
   });
 
-  menuBtn?.addEventListener('click', e => {
-    e.stopPropagation();
+  menuBtn?.addEventListener('click', () => {
     dropdown.hidden = !dropdown.hidden;
   });
 
-  document.addEventListener('click', () => { if (dropdown) dropdown.hidden = true; });
-  dropdown?.addEventListener('click', e => e.stopPropagation());
+  const chip = document.getElementById('gh-auth-chip');
+  document.addEventListener('click', e => {
+    if (chip && chip.contains(e.target)) return;
+    if (dropdown) dropdown.hidden = true;
+  });
 })();
