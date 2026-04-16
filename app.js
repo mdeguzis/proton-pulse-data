@@ -655,6 +655,9 @@ function renderConfigCard(c, idx) {
       <div class="config-meta">
         ${utcStamp(c.timestamp)} | Source: ${sourceLabel}
         <button class="cfg-dl-btn" data-cfg-idx="${idx}" title="Download as JSON">JSON</button>
+        ${c.clientId && c.clientId === getWebClientId()
+          ? `<button class="cfg-dl-btn delete-cfg-btn" data-voter-id="${esc(c.clientId)}" data-app-id="${c.appId}" style="color:#c85050;border-color:#c85050" title="Delete your config">Delete</button>`
+          : ''}
       </div>
     </div>`;
 }
@@ -1013,6 +1016,23 @@ async function renderGamePage(appId) {
           method: 'DELETE',
           headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}`, 'x-client-id': clientId },
         });
+        if (r.ok) { b.textContent = 'Deleted'; setTimeout(render, 1000); }
+        else { b.textContent = 'Failed'; }
+      });
+    });
+
+    // Delete plugin config (user_proton_configs) — shown when voter_id matches this device's client ID
+    el.querySelectorAll('.delete-cfg-btn').forEach(b => {
+      b.addEventListener('click', async e => {
+        e.stopPropagation();
+        if (!confirm('Delete your Proton config for this game?')) return;
+        const voterId  = b.dataset.voterId;
+        const cfgAppId = b.dataset.appId;
+        const r = await fetch(
+          `${SB_URL}/user_proton_configs?voter_id=eq.${voterId}&app_id=eq.${cfgAppId}`,
+          { method: 'DELETE', headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}`, 'x-client-id': voterId } }
+        );
+        console.log('[delete-cfg]', r.status, voterId, cfgAppId);
         if (r.ok) { b.textContent = 'Deleted'; setTimeout(render, 1000); }
         else { b.textContent = 'Failed'; }
       });
