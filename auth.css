@@ -161,6 +161,11 @@
   font-size: 1.08rem;
 }
 
+.gh-login-btn--hero .gh-login-btn__icon {
+  width: 40px;
+  height: 40px;
+}
+
 .auth-secondary-link {
   color: var(--muted);
   font-size: 0.9rem;
