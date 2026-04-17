@@ -21,6 +21,32 @@
   max-width: 600px;
 }
 
+/* community stats bar */
+.community-stats {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+.cs-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.cs-num {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--accent);
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+.cs-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--muted);
+}
+
 /* quick-action row */
 .quick-actions {
   display: flex;

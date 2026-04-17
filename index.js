@@ -1,4 +1,4 @@
-// ── Sidebar + search ─────────────────────────────────────────────────────
+// Sidebar + search
 (function() {
   var toggle  = document.getElementById('sidebar-toggle');
   var sidebar = document.getElementById('sidebar');
@@ -21,23 +21,12 @@
     a.addEventListener('click', closeSidebar);
   });
 
-  // -- Search (same as app.html) --
-  var STEAM_IMG = function(id) {
-    return 'https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/' + id + '/header.jpg';
-  };
-  function esc(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
-
-  var searchTimer = null;
-  var searchInput   = document.getElementById('search');
-  var searchResults = document.getElementById('search-results');
-
-  // Search: navigate to data-index with filter query (avoids CORS issues
-  // with Steam storesearch API on GitHub Pages)
+  // Search: navigate to app.html (avoids CORS issues with Steam storesearch API on GitHub Pages)
+  var searchInput = document.getElementById('search');
   searchInput.addEventListener('keydown', function(e) {
     if (e.key === 'Enter') {
       var q = searchInput.value.trim();
       if (!q) return;
-      // Numeric = go directly to game page; text = grouped search results
       if (/^\d+$/.test(q)) {
         window.location.href = 'app.html#/app/' + q;
       } else {
@@ -47,13 +36,27 @@
   });
 })();
 
-// ── Steam Auth chip ───────────────────────────────────────────────────────
-(function initGoogleAuth() {
+// Pulse report count
+(async function loadPulseStats() {
+  const SB = 'https://ilsgdshkaocrmibwdezk.supabase.co/rest/v1';
+  const KEY = 'sb_publishable_3Oqhm4JneafJNQw9BuUaxw_L9qZa-5V';
+  try {
+    const resp = await fetch(`${SB}/user_configs?select=count`, {
+      headers: { apikey: KEY, Prefer: 'count=exact' }
+    });
+    const data = await resp.json();
+    const count = data[0]?.count ?? 0;
+    const el = document.getElementById('pulse-report-count');
+    if (el) el.textContent = Number(count).toLocaleString();
+  } catch (_) {}
+})();
+
+// Steam auth chip
+(function initSteamAuth() {
   const loginBtn  = document.getElementById('google-login-btn');
   const userMenu  = document.getElementById('google-user-menu');
   const avatarEl  = document.getElementById('google-avatar');
   const nameEl    = document.getElementById('google-username');
-  const menuBtn   = document.getElementById('google-menu-btn');
   const dropdown  = document.getElementById('google-dropdown');
   const logoutBtn = document.getElementById('google-logout-btn');
 
