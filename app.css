@@ -413,6 +413,13 @@
   font-style: italic;
   font-weight: 400;
 }
+.config-id-line {
+  font-size: 0.68rem;
+  font-family: monospace;
+  color: var(--muted);
+  margin-top: 2px;
+  letter-spacing: 0.03em;
+}
 .config-row {
   display: flex;
   align-items: flex-start;

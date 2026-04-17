@@ -641,7 +641,10 @@ function renderConfigCard(c, idx) {
   return `
     <div class="config-card">
       <div class="config-head">
-        <div class="config-name${unnamed ? ' config-name--unnamed' : ''}">${unnamed ? 'Unnamed Config' : esc(c.profileName)}</div>
+        <div>
+          <div class="config-name${unnamed ? ' config-name--unnamed' : ''}">${unnamed ? 'Unnamed Config' : esc(c.profileName)}</div>
+          ${configId ? `<div class="config-id-line" title="${esc(c.clientId)}">${esc(configId)}</div>` : ''}
+        </div>
         <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap">
           <span class="source-badge pulse">
             <img src="https://raw.githubusercontent.com/mdeguzis/decky-proton-pulse/main/assets/logo.png" alt="">Pulse
@@ -651,7 +654,6 @@ function renderConfigCard(c, idx) {
             : '<span class="source-badge steam-game">Steam</span>'}
         </div>
       </div>
-      ${configId ? `<div class="config-row"><span class="config-lbl">Config ID</span><span class="config-val" style="font-family:monospace;font-size:0.8em;color:var(--muted)" title="${esc(c.clientId)}">${esc(configId)}</span></div>` : ''}
       ${isPlugin && c.pluginVersion ? `<div class="config-row"><span class="config-lbl">Plugin Version</span><span class="config-val">${esc(c.pluginVersion)}</span></div>` : ''}
       <div class="config-row">
         <span class="config-lbl">Proton</span>
