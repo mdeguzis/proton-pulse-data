@@ -68,6 +68,8 @@ async function loadFormSchema() {
 }
 
 async function submitReport(appId, title, form) {
+  const session = await SupaAuth.getSession();
+  if (!session) return { ok: false, error: 'Sign in with Steam to submit a report.' };
   const body = {
     client_id: getWebClientId(),
     app_id: appId,
@@ -93,7 +95,7 @@ async function submitReport(appId, title, form) {
     method: 'POST',
     headers: {
       apikey: SB_KEY,
-      Authorization: `Bearer ${SB_KEY}`,
+      Authorization: `Bearer ${session.access_token}`,
       'Content-Type': 'application/json',
       Prefer: 'resolution=merge-duplicates,return=minimal',
     },
@@ -971,6 +973,11 @@ async function renderGamePage(appId) {
       if (tip?.classList.contains('open')) await populateScoringTooltip(el);
     });
     el.querySelector('#submit-report-btn')?.addEventListener('click', async () => {
+      const session = await SupaAuth.getSession();
+      if (!session) {
+        window.location.href = SupaAuth.buildLoginPageUrl(window.location.href);
+        return;
+      }
       const panel = el.querySelector('#submit-form-panel');
       panel?.classList.toggle('open');
       if (panel?.classList.contains('open')) {
