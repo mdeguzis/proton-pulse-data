@@ -184,6 +184,32 @@
         </div>
       </div>
 
+      <!-- Server-side systems uploaded from the Decky plugin -->
+      <div class="profile-section">
+        <div class="profile-section-title" style="display:flex;justify-content:space-between;align-items:center">
+          <span>Your systems</span>
+          <button type="button" class="profile-refresh-btn" id="systems-refresh-btn">Refresh</button>
+        </div>
+        <div class="profile-field">
+          <div id="systems-empty" class="profile-field-hint" hidden>
+            Open Pulse on your Steam Deck and press <strong>Upload to Pulse</strong> in the plugin settings. Your systems will show up here.
+          </div>
+          <div id="systems-loading" class="profile-field-hint">Loading your systems...</div>
+          <table class="profile-systems-table" id="systems-table" hidden>
+            <thead>
+              <tr>
+                <th>Label</th>
+                <th>Updated</th>
+                <th class="col-default">Default</th>
+                <th class="col-delete"></th>
+              </tr>
+            </thead>
+            <tbody id="systems-tbody"></tbody>
+          </table>
+          <div id="systems-status" class="profile-field-hint" style="margin-top:6px"></div>
+        </div>
+      </div>
+
       <!-- Actual hardware spec, used to auto-fill the submit-a-report form on the web app -->
       <div class="profile-section">
         <div class="profile-section-title">My hardware</div>
