@@ -617,7 +617,7 @@ a.card:hover { text-decoration: none; }
   min-width: 72px;
   flex-shrink: 0;
 }
-.card-rating-row { display: flex; align-items: center; gap: 6px; margin-top: 5px; }
+.card-rating-row { display: flex; align-items: center; gap: 6px; margin-top: 4px; justify-content: flex-end; }
 .card .rating {
   padding: 3px 8px;
   font-weight: 800;
