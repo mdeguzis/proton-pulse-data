@@ -247,6 +247,33 @@
   flex-shrink: 0;
   margin-top: 2px;
 }
+.pulse-tier-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 2px;
+}
+.pulse-tier-label {
+  font-size: 0.58rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+  font-weight: 700;
+}
+.pulse-tier-value {
+  display: inline-block;
+  padding: 3px 9px;
+  font-weight: 800;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.pulse-tier-count {
+  font-size: 0.56rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
 .info-btn {
   background: none;
   border: none;

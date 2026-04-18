@@ -563,6 +563,25 @@ function tierFromReports(reports) {
   return 'pending';
 }
 
+function pulseTierFromReports(nativeReports) {
+  if (!nativeReports.length) return { tier: 'pending', count: 0, confidence: 'none' };
+  const SCORE = { platinum: 1.0, gold: 0.8, silver: 0.6, bronze: 0.4, borked: 0.0 };
+  const now = Date.now() / 1000;
+  let wSum = 0, wTotal = 0;
+  for (const r of nativeReports) {
+    const days = (now - (r.timestamp || 0)) / 86400;
+    const recency = days < 30 ? 1.0 : days < 90 ? 0.85 : days < 180 ? 0.65 : days < 365 ? 0.40 : 0.15;
+    const s = SCORE[r.rating] ?? 0.5;
+    wSum += s * recency;
+    wTotal += recency;
+  }
+  const avg = wTotal > 0 ? wSum / wTotal : 0;
+  const tier = avg >= 0.85 ? 'platinum' : avg >= 0.65 ? 'gold' : avg >= 0.40 ? 'silver' : avg >= 0.15 ? 'bronze' : 'borked';
+  const count = nativeReports.length;
+  const confidence = count >= 5 ? 'high' : count >= 2 ? 'medium' : 'low';
+  return { tier, count, confidence };
+}
+
 function daysAgo(ts) {
   const d = Math.round((Date.now() / 1000 - ts) / 86400);
   return d < 1 ? 'today' : d === 1 ? '1 day ago' : `${d} days ago`;
@@ -891,6 +910,7 @@ async function renderGamePage(appId) {
 
   const title = reports[0]?.title || configs[0]?.appName || `App ${appId}`;
   const tier  = tierFromReports(reports);
+  const pulseTier = pulseTierFromReports(nativeReports);
   document.title = `${title} - Proton Pulse`;
 
   let sortMode = 'recent';
@@ -961,7 +981,13 @@ async function renderGamePage(appId) {
           </div>
         </div>
         <button class="info-btn" id="rating-info-btn" title="What does this rating mean?"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="11" fill="#3b82f6"/><text x="12" y="17" text-anchor="middle" font-size="15" font-weight="700" fill="#fff" font-family="serif">i</text></svg></button>
-        <span class="tier-badge" style="background:${rc};color:${rt}">${tier}</span>
+        ${pulseTier.count > 0 ? `
+        <div class="pulse-tier-badge">
+          <span class="pulse-tier-label">Pulse</span>
+          <span class="pulse-tier-value" style="background:${RATING_COLORS[pulseTier.tier]||'#3a4a5a'};color:${RATING_TEXT[pulseTier.tier]||'#c8d4e0'}">${pulseTier.tier}</span>
+          <span class="pulse-tier-count" title="${pulseTier.confidence} confidence">${pulseTier.count} report${pulseTier.count !== 1 ? 's' : ''}</span>
+        </div>` : ''}
+        <span class="tier-badge" style="background:${rc};color:${rt}" title="ProtonDB community rating">${tier}</span>
         <button class="submit-report-btn" id="submit-report-btn">Submit Report</button>
         <div class="info-tooltip" id="rating-info-tip">
           <div class="info-tooltip-inner" id="rating-info-content">Loading...</div>
