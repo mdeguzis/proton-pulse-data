@@ -516,10 +516,23 @@ async function castVote(appId, rKey, vote, upBtn, dnBtn) {
   const up = parseInt(upCount.textContent) || 0;
   const dn = parseInt(dnCount.textContent) || 0;
 
-  if ((vote === 1 && wasUp) || (vote === -1 && wasDn)) return;
+  const isUndo = (vote === 1 && wasUp) || (vote === -1 && wasDn);
 
   upBtn.classList.remove('active');
   dnBtn.classList.remove('active');
+
+  if (isUndo) {
+    if (vote === 1) upCount.textContent = Math.max(0, up - 1);
+    else dnCount.textContent = Math.max(0, dn - 1);
+    try {
+      await fetch(`${SB_URL}/report_votes?voter_id=eq.${voterId}&app_id=eq.${String(appId)}&report_key=eq.${encodeURIComponent(rKey)}`, {
+        method: 'DELETE',
+        headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}`, Prefer: 'return=minimal' },
+      });
+    } catch { /* silently fail */ }
+    return;
+  }
+
   if (vote === 1) {
     upBtn.classList.add('active');
     upCount.textContent = up + 1;
