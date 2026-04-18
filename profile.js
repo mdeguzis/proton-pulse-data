@@ -20,6 +20,90 @@ const MYHW_KEYS = {
   kernel:     'proton-pulse:myhw:kernel',
 };
 
+// -- Supabase user_systems helpers --
+// Keep these next to MYHW_KEYS so everything hardware-related is grouped.
+// SUPABASE_URL and SUPABASE_ANON_KEY come from supabase-client.js (loaded
+// before this file on profile.html). The plugin writes rows into the
+// user_systems table whenever it pushes hardware info; the helpers below
+// are what the My Account page uses to list/rename/default/delete them.
+
+function supabaseUserSystemsUrl(query) {
+  return `${SUPABASE_URL}/rest/v1/user_systems${query ? '?' + query : ''}`;
+}
+
+function supabaseHeaders(session, extra) {
+  const h = {
+    apikey: SUPABASE_ANON_KEY,
+    'Content-Type': 'application/json',
+  };
+  // When signed in, use the user's access token so RLS sees them as authed.
+  // Fall back to the anon key for pre-login reads.
+  if (session?.access_token) h.Authorization = `Bearer ${session.access_token}`;
+  else h.Authorization = `Bearer ${SUPABASE_ANON_KEY}`;
+  return Object.assign(h, extra || {});
+}
+
+async function listUserSystems(steamId, session) {
+  const url = supabaseUserSystemsUrl(
+    `steam_id=eq.${encodeURIComponent(steamId)}&order=updated_at.desc`,
+  );
+  const r = await fetch(url, { headers: supabaseHeaders(session) });
+  if (!r.ok) throw new Error(`Lookup failed: HTTP ${r.status}`);
+  return await r.json();
+}
+
+async function setDefaultSystem(steamId, deviceId, session) {
+  // Clear all, then set the chosen one. Two PATCHes; partial unique index
+  // protects against a race if another tab is doing the same thing
+  const base = supabaseUserSystemsUrl(`steam_id=eq.${encodeURIComponent(steamId)}`);
+  const r1 = await fetch(base, {
+    method: 'PATCH',
+    headers: supabaseHeaders(session, { Prefer: 'return=minimal' }),
+    body: JSON.stringify({ is_default: false }),
+  });
+  if (!r1.ok) throw new Error(`Clear default failed: HTTP ${r1.status}`);
+  const specific = supabaseUserSystemsUrl(
+    `steam_id=eq.${encodeURIComponent(steamId)}&device_id=eq.${encodeURIComponent(deviceId)}`,
+  );
+  const r2 = await fetch(specific, {
+    method: 'PATCH',
+    headers: supabaseHeaders(session, { Prefer: 'return=minimal' }),
+    body: JSON.stringify({ is_default: true }),
+  });
+  if (!r2.ok) throw new Error(`Set default failed: HTTP ${r2.status}`);
+}
+
+async function updateSystemLabel(steamId, deviceId, label, session) {
+  const url = supabaseUserSystemsUrl(
+    `steam_id=eq.${encodeURIComponent(steamId)}&device_id=eq.${encodeURIComponent(deviceId)}`,
+  );
+  const r = await fetch(url, {
+    method: 'PATCH',
+    headers: supabaseHeaders(session, { Prefer: 'return=minimal' }),
+    body: JSON.stringify({ label }),
+  });
+  if (!r.ok) throw new Error(`Update label failed: HTTP ${r.status}`);
+}
+
+async function deleteSystem(steamId, deviceId, session) {
+  const url = supabaseUserSystemsUrl(
+    `steam_id=eq.${encodeURIComponent(steamId)}&device_id=eq.${encodeURIComponent(deviceId)}`,
+  );
+  const r = await fetch(url, {
+    method: 'DELETE',
+    headers: supabaseHeaders(session, { Prefer: 'return=minimal' }),
+  });
+  if (!r.ok) throw new Error(`Delete failed: HTTP ${r.status}`);
+}
+
+function getSteamIdFromSession(session) {
+  // Steam openid sub is like "https://steamcommunity.com/openid/id/76561198000000000".
+  // The Supabase edge function stores it under user_metadata.steam_id (preferred) or
+  // provider_id depending on flow. Check both.
+  const meta = session?.user?.user_metadata || {};
+  return meta.steam_id || meta.provider_id || meta.sub || null;
+}
+
 function getShowUsername() {
   return localStorage.getItem(SHOW_USERNAME_KEY) === 'true';
 }
