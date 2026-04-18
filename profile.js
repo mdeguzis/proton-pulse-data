@@ -358,6 +358,187 @@ function inferGpuVendor(gpuString) {
     flashStatus('Cleared', true);
   });
 
+  // ── Your systems (server-side) ────────────────────────────────────────────
+  // This is Block 1 on the page, the list of systems the plugin has uploaded
+  // into Supabase. Users can rename, mark one as default, or delete. Deletes
+  // are soft in the sense that the plugin will just re-create the row next
+  // time it pushes hardware info.
+  const systemsTable   = document.getElementById('systems-table');
+  const systemsTbody   = document.getElementById('systems-tbody');
+  const systemsEmpty   = document.getElementById('systems-empty');
+  const systemsLoading = document.getElementById('systems-loading');
+  const systemsStatus  = document.getElementById('systems-status');
+  const systemsRefresh = document.getElementById('systems-refresh-btn');
+
+  // Last list of rows we rendered. Used so the default-toggle handler can
+  // grab the sysinfo_text off the row it just starred without a re-fetch
+  let systemsCache = [];
+
+  function escapeHtml(s) {
+    return (s || '').toString().replace(/[&<>"']/g, c => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+    })[c]);
+  }
+
+  function formatSystemUpdated(ts) {
+    try { return new Date(ts).toLocaleString(); } catch { return ts || '-'; }
+  }
+
+  function renderSystems(rows) {
+    systemsCache = rows || [];
+    systemsLoading.hidden = true;
+    if (!rows || rows.length === 0) {
+      systemsTable.hidden = true;
+      systemsEmpty.hidden = false;
+      return;
+    }
+    systemsEmpty.hidden = true;
+    systemsTable.hidden = false;
+
+    // Build rows from the cached list. Label is user-editable so it goes
+    // through escapeHtml as the value= attribute
+    systemsTbody.innerHTML = rows.map(r => `
+      <tr data-device-id="${escapeHtml(r.device_id)}">
+        <td>
+          <input type="text" class="profile-systems-label-input"
+            data-role="label" value="${escapeHtml(r.label || 'Unnamed')}" maxlength="80">
+        </td>
+        <td>${escapeHtml(formatSystemUpdated(r.updated_at))}</td>
+        <td class="col-default">
+          <button type="button" class="profile-systems-star ${r.is_default ? 'active' : ''}"
+            data-role="default" title="Set as default">${r.is_default ? '*' : 'o'}</button>
+        </td>
+        <td class="col-delete">
+          <button type="button" class="profile-systems-trash" data-role="delete" title="Delete">x</button>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  function showSystemsStatus(msg, ok) {
+    if (!systemsStatus) return;
+    systemsStatus.textContent = msg;
+    systemsStatus.style.color = ok ? 'var(--green)' : 'var(--red)';
+    setTimeout(() => { systemsStatus.textContent = ''; }, 2500);
+  }
+
+  async function refreshSystems() {
+    const s = await SupaAuth.getSession();
+    const steamId = getSteamIdFromSession(s);
+    if (!steamId) {
+      systemsLoading.hidden = true;
+      systemsTable.hidden = true;
+      systemsEmpty.hidden = false;
+      systemsEmpty.textContent = 'Sign in with Steam to see your uploaded systems.';
+      return;
+    }
+    systemsLoading.hidden = false;
+    try {
+      const rows = await listUserSystems(steamId, s);
+      renderSystems(rows);
+    } catch (e) {
+      systemsLoading.hidden = true;
+      showSystemsStatus(e.message || 'Failed to load systems', false);
+    }
+  }
+
+  // Ask the user if they want to copy the default system's parsed sysinfo
+  // into the Block 2 inputs. Only fires when they opt in via confirm()
+  function askReplaceLocalFrom(row) {
+    const parsed = parseSteamSystemInfo(row.sysinfo_text || '');
+    if (Object.keys(parsed).length === 0) return;
+    const label = row.label || 'this system';
+    const ok = window.confirm(`Replace your local pre-fill values with "${label}"?`);
+    if (!ok) return;
+    for (const [field, val] of Object.entries(parsed)) {
+      const el = myhwInputs[field];
+      if (!el) continue;
+      el.value = val;
+      saveMyHwField(field, val);
+    }
+    flashStatus('Local values updated from default system', true);
+  }
+
+  async function handleSystemsClick(ev) {
+    const tr  = ev.target.closest('tr[data-device-id]');
+    const btn = ev.target.closest('button[data-role]');
+    if (!tr || !btn) return;
+    const deviceId = tr.dataset.deviceId;
+    const s = await SupaAuth.getSession();
+    const steamId = getSteamIdFromSession(s);
+    if (!steamId) return;
+
+    try {
+      if (btn.dataset.role === 'default') {
+        await setDefaultSystem(steamId, deviceId, s);
+        await refreshSystems();
+        const row = systemsCache.find(r => r.device_id === deviceId);
+        if (row) askReplaceLocalFrom(row);
+      } else if (btn.dataset.role === 'delete') {
+        if (!window.confirm('Delete this system? The plugin will re-create it next time you upload.')) return;
+        await deleteSystem(steamId, deviceId, s);
+        await refreshSystems();
+      }
+    } catch (e) {
+      showSystemsStatus(e.message || 'Action failed', false);
+    }
+  }
+
+  // Label saves on blur. Using focusout so it bubbles through the table
+  async function handleSystemsLabelBlur(ev) {
+    const input = ev.target.closest('input[data-role="label"]');
+    if (!input) return;
+    const tr = input.closest('tr[data-device-id]');
+    const deviceId = tr?.dataset.deviceId;
+    if (!deviceId) return;
+    const s = await SupaAuth.getSession();
+    const steamId = getSteamIdFromSession(s);
+    if (!steamId) return;
+    try {
+      await updateSystemLabel(steamId, deviceId, input.value.trim() || 'Unnamed', s);
+      showSystemsStatus('Saved', true);
+    } catch (e) {
+      showSystemsStatus(e.message || 'Save failed', false);
+    }
+  }
+
+  systemsTable?.addEventListener('click', handleSystemsClick);
+  systemsTable?.addEventListener('focusout', handleSystemsLabelBlur);
+  systemsRefresh?.addEventListener('click', () => { void refreshSystems(); });
+
+  // Initial fetch so the table populates on page load
+  void refreshSystems();
+
+  // First-load convenience: if the user has nothing in Block 2 locally and
+  // they've got a default system uploaded, copy its parsed sysinfo into the
+  // inputs. Never clobbers existing local values
+  async function autoFillFromDefaultIfEmpty() {
+    const anyLocal = Object.values(MYHW_KEYS).some(k => localStorage.getItem(k));
+    if (anyLocal) return;
+    const s = await SupaAuth.getSession();
+    const steamId = getSteamIdFromSession(s);
+    if (!steamId) return;
+    try {
+      const rows = await listUserSystems(steamId, s);
+      const def = rows.find(r => r.is_default);
+      if (!def) return;
+      const parsed = parseSteamSystemInfo(def.sysinfo_text || '');
+      for (const [field, val] of Object.entries(parsed)) {
+        const el = myhwInputs[field];
+        if (!el) continue;
+        el.value = val;
+        saveMyHwField(field, val);
+      }
+      if (Object.keys(parsed).length > 0) {
+        flashStatus(`Loaded hardware from "${def.label || 'your system'}"`, true);
+      }
+    } catch {
+      // non-fatal, just leave Block 2 empty
+    }
+  }
+
+  void autoFillFromDefaultIfEmpty();
+
   // ── Topbar auth chip ──────────────────────────────────────────────────────
   (function() {
     const loginBtn  = document.getElementById('google-login-btn');
