@@ -8,22 +8,22 @@ It is used by the [decky-proton-pulse](https://github.com/mdeguzis/decky-proton-
 ## Endpoints
 
 ```
-GET https://mdeguzis.github.io/proton-pulse-data/data/{appId}/index.json
-GET https://mdeguzis.github.io/proton-pulse-data/data/{appId}/{year}.json
-GET https://mdeguzis.github.io/proton-pulse-data/data/{appId}/latest.json
-GET https://mdeguzis.github.io/proton-pulse-data/
-GET https://mdeguzis.github.io/proton-pulse-data/data-index.html
-GET https://mdeguzis.github.io/proton-pulse-data/app.html?appid={appId}
+GET https://www.proton-pulse.com/data/{appId}/index.json
+GET https://www.proton-pulse.com/data/{appId}/{year}.json
+GET https://www.proton-pulse.com/data/{appId}/latest.json
+GET https://www.proton-pulse.com/
+GET https://www.proton-pulse.com/data-index.html
+GET https://www.proton-pulse.com/app.html?appid={appId}
 ```
 
 ## Web app
 
 Static pages deployed to GitHub Pages alongside the data files:
 
-**[Home](https://mdeguzis.github.io/proton-pulse-data/) (`index.html`) — Splash/landing page**
+**[Home](https://www.proton-pulse.com/) (`index.html`) — Splash/landing page**
 Project landing page with links to all tools and repos.
 
-**[Game Search App](https://mdeguzis.github.io/proton-pulse-data/app.html) (`app.html`) — Game page**
+**[Game Search App](https://www.proton-pulse.com/app.html) (`app.html`) — Game page**
 Per-game report viewer. Pass an `appid` query parameter (e.g. `app.html?appid=730`) to load community reports for that game. Features include:
 - Report cards with extended fields (CPU, GPU, kernel, Proton version, OS, RAM, notes) — always visible, no tap required
 - Hardware filters to narrow results by GPU, OS, and rating
@@ -31,10 +31,10 @@ Per-game report viewer. Pass an `appid` query parameter (e.g. `app.html?appid=73
 - Pulse config cards showing saved launch option profiles per game
 - Mobile-friendly layout with a collapsible left-side hamburger menu
 
-**[Data Index](https://mdeguzis.github.io/proton-pulse-data/data-index.html) (`data-index.html`) — Coverage dashboard**
+**[Data Index](https://www.proton-pulse.com/data-index.html) (`data-index.html`) — Coverage dashboard**
 Lists all games with ProtonDB data available in this mirror, along with Steam catalog coverage stats.
 
-**[Coverage Report](https://mdeguzis.github.io/proton-pulse-data/coverage.html) (`coverage.html`)**
+**[Coverage Report](https://www.proton-pulse.com/coverage.html) (`coverage.html`)**
 Steam catalog coverage statistics.
 
 ## Data format

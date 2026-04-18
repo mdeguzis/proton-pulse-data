@@ -6,15 +6,15 @@ Google OAuth setup guide for Proton Pulse Data (GitHub Pages + Supabase)
 
 | Key | Value |
 |-----|-------|
-| Site URL | `https://mdeguzis.github.io/proton-pulse-data/` |
+| Site URL | `https://www.proton-pulse.com/` |
 | Supabase project ref | `ilsgdshkaocrmibwdezk` |
 | Supabase project name | `decky-proton-pulse` |
 | Supabase REST URL | `https://ilsgdshkaocrmibwdezk.supabase.co/rest/v1` |
 | Supabase dashboard | `https://supabase.com/dashboard/project/ilsgdshkaocrmibwdezk` |
 | Google Cloud project | `decky-proton-pulse` |
 | Google Auth Platform | `https://console.cloud.google.com/auth` (select decky-proton-pulse project) |
-| Privacy policy URL | `https://mdeguzis.github.io/proton-pulse-data/privacy.html` |
-| Terms of service URL | `https://mdeguzis.github.io/proton-pulse-data/terms.html` |
+| Privacy policy URL | `https://www.proton-pulse.com/privacy.html` |
+| Terms of service URL | `https://www.proton-pulse.com/terms.html` |
 
 ---
 
@@ -34,9 +34,12 @@ needed for a static GitHub Pages site.
 4. Application type: **Web application**
 5. Set these **Authorized JavaScript origins**:
    ```
+   https://www.proton-pulse.com
    https://mdeguzis.github.io
    http://localhost
    ```
+   (keeping `mdeguzis.github.io` while the old URL still redirects, drop once
+   the custom domain has fully propagated)
 6. Set these **Authorized redirect URIs**:
    ```
    https://ilsgdshkaocrmibwdezk.supabase.co/auth/v1/callback
@@ -51,11 +54,11 @@ needed for a static GitHub Pages site.
 2. Find **Google** and toggle it on
 3. Paste your **Client ID** and **Client Secret**
 4. Under Auth -> URL Configuration set:
-   - **Site URL**: `https://mdeguzis.github.io/proton-pulse-data`
+   - **Site URL**: `https://www.proton-pulse.com`
    - **Redirect URLs** (add both):
      ```
-     https://mdeguzis.github.io/proton-pulse-data/app.html
-     https://mdeguzis.github.io/proton-pulse-data/index.html
+     https://www.proton-pulse.com/app.html
+     https://www.proton-pulse.com/index.html
      ```
 5. Save
 
@@ -79,9 +82,9 @@ Google Cloud Console -> **Google Auth Platform** -> **Branding**
 | App name | `Proton Pulse` |
 | User support email | `mdeguzis@gmail.com` |
 | App logo | Proton Pulse logo (from `decky-proton-pulse/assets/logo.png`) |
-| Application home page | `https://mdeguzis.github.io/proton-pulse-data/` |
-| Application privacy policy link | `https://mdeguzis.github.io/proton-pulse-data/privacy.html` |
-| Application terms of service link | `https://mdeguzis.github.io/proton-pulse-data/terms.html` |
+| Application home page | `https://www.proton-pulse.com/` |
+| Application privacy policy link | `https://www.proton-pulse.com/privacy.html` |
+| Application terms of service link | `https://www.proton-pulse.com/terms.html` |
 | Developer contact email | `mdeguzis@gmail.com` |
 
 ### Authorized domains
@@ -90,7 +93,7 @@ All of these need to be listed:
 
 - `github.com`
 - `github.io`
-- `mdeguzis.github.io`
+- `www.proton-pulse.com`
 - `ilsgdshkaocrmibwdezk.supabase.co`
 
 ### Known limitation: Supabase domain in consent screen
@@ -122,12 +125,12 @@ This is done through Google Search Console, not the Cloud Console.
 
 1. Go to https://search.google.com/search-console/
 2. Click **Add property**
-3. Choose **URL prefix** and enter `https://mdeguzis.github.io/proton-pulse-data/`
+3. Choose **URL prefix** and enter `https://www.proton-pulse.com/`
 4. Select the **HTML file** verification method
 5. Download the verification file (e.g. `googled7b1eda3148e723a.html`)
 6. Add it to the repo root and deploy it to gh-pages (add to all deploy steps
    in `update-data.yml`, same pattern as privacy.html/terms.html)
-7. Once the file is live at `https://mdeguzis.github.io/proton-pulse-data/googled7b1eda3148e723a.html`,
+7. Once the file is live at `https://www.proton-pulse.com/googled7b1eda3148e723a.html`,
    go back to Search Console and click **Verify**
 8. Don't remove the file after verification -- Google re-checks periodically
 
@@ -147,7 +150,7 @@ Platform branding verification.
 Before submitting:
 - Domain ownership verified in Google Search Console (step 4)
 - App name, logo, support email filled in (Branding page)
-- Application home page set to `https://mdeguzis.github.io/proton-pulse-data/`
+- Application home page set to `https://www.proton-pulse.com/`
   (must be on a domain you own, not github.com)
 - Home page must visibly link to the privacy policy (added to site footer)
 - Privacy policy and Terms of service URLs must be live and reachable
@@ -446,10 +449,10 @@ isn't in the workflow's deploy steps. See "GitHub Pages deployment" above.
 
 - [x] Google Cloud project created (`decky-proton-pulse`)
 - [x] OAuth 2.0 Client ID created (Web application type)
-- [x] Authorized JavaScript origin: `https://mdeguzis.github.io`
+- [x] Authorized JavaScript origin: `https://www.proton-pulse.com`
 - [x] Authorized redirect URI: `https://ilsgdshkaocrmibwdezk.supabase.co/auth/v1/callback`
 - [x] Supabase -> Auth -> Providers -> Google enabled with Client ID + Secret
-- [x] Supabase Site URL set to `https://mdeguzis.github.io/proton-pulse-data`
+- [x] Supabase Site URL set to `https://www.proton-pulse.com`
 - [x] Redirect URLs added in Supabase Auth settings
 - [x] `@supabase/supabase-js` CDN tag added to HTML files
 - [x] `supabase-client.js` created and loaded before app.js
@@ -462,7 +465,7 @@ isn't in the workflow's deploy steps. See "GitHub Pages deployment" above.
 - [x] Deploy workflow updated to include privacy.html + terms.html
 - [x] Privacy/terms links added to site footer (index.html, app.html, profile.html)
 - [x] Application home page changed to GitHub Pages URL (not github.com repo)
-- [x] Google Search Console property added for `mdeguzis.github.io/proton-pulse-data/`
+- [x] Google Search Console property added for `www.proton-pulse.com/` (old `mdeguzis.github.io/proton-pulse-data/` property can be removed once the custom domain has fully propagated)
 - [x] Search Console HTML verification file added (`googled7b1eda3148e723a.html`)
 - [x] Verification file added to all four workflow deploy steps
 - [ ] Commit, push, and deploy (pages_only) so new files are live

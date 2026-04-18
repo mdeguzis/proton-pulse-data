@@ -1,11 +1,16 @@
-const CDN    = 'https://mdeguzis.github.io/proton-pulse-data/data';
 const SB_URL = 'https://ilsgdshkaocrmibwdezk.supabase.co/rest/v1';
 const SB_KEY = 'sb_publishable_3Oqhm4JneafJNQw9BuUaxw_L9qZa-5V';
 const STEAM_IMG = id => `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${id}/header.jpg`;
+// On github.io project page the URL is /proton-pulse-data/..., on the custom
+// domain (www.proton-pulse.com) it serves from root. Keep SITE_BASE empty on
+// the custom domain so links don't get a bogus prefix.
 const SITE_BASE = (() => {
   const parts = window.location.pathname.split('/').filter(Boolean);
-  return parts.length ? `/${parts[0]}` : '';
+  return parts[0] === 'proton-pulse-data' ? '/proton-pulse-data' : '';
 })();
+// Pull data files from the same origin the page is loaded from, so both URLs
+// keep working during the custom-domain transition.
+const CDN = `${window.location.origin}${SITE_BASE}/data`;
 const dataFilesHref = appId => `${SITE_BASE}/data/${appId}/`;
 // Steam app IDs are sequentially assigned and currently top out ~3 million.
 // Non-Steam shortcut IDs are CRC32-derived and can be any 32-bit value.

@@ -9,7 +9,7 @@
  *   STEAM_API_KEY        — Steam Web API key (https://steamcommunity.com/dev/apikey)
  *   SUPABASE_URL         — automatically injected by Supabase
  *   SUPABASE_SERVICE_ROLE_KEY — automatically injected by Supabase
- *   SITE_URL             — e.g. https://mdeguzis.github.io/proton-pulse-data
+ *   SITE_URL             — e.g. https://www.proton-pulse.com
  */
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -21,7 +21,7 @@ Deno.serve(async (req: Request) => {
   const url = new URL(req.url);
   const params = url.searchParams;
 
-  const siteUrl = Deno.env.get("SITE_URL") ?? "https://mdeguzis.github.io/proton-pulse-data";
+  const siteUrl = Deno.env.get("SITE_URL") ?? "https://www.proton-pulse.com";
   const siteOrigin = new URL(siteUrl).origin;
 
   // ── 1. Verify the OpenID assertion with Steam ────────────────────────────

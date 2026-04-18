@@ -23,11 +23,14 @@
  *   - The worker only forwards calls to https://github.com/login/oauth/access_token.
  */
 
-const ALLOWED_ORIGIN = 'https://mdeguzis.github.io';
+// Both origins are supported during the custom-domain rollout. The old
+// github.io URL still redirects to the custom domain, but worker requests
+// come from whichever origin the browser actually loaded.
+const ALLOWED_ORIGINS = ['https://www.proton-pulse.com', 'https://mdeguzis.github.io'];
 const GH_TOKEN_URL   = 'https://github.com/login/oauth/access_token';
 
 function corsHeaders(origin) {
-  const allowed = origin === ALLOWED_ORIGIN ? origin : ALLOWED_ORIGIN;
+  const allowed = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
   return {
     'Access-Control-Allow-Origin':  allowed,
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
