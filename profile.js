@@ -3,7 +3,7 @@
 const SHOW_USERNAME_KEY = 'proton-pulse:show-username-on-reports';
 
 function getShowUsername() {
-  return localStorage.getItem(SHOW_USERNAME_KEY) !== 'false';
+  return localStorage.getItem(SHOW_USERNAME_KEY) === 'true';
 }
 
 function setShowUsername(val) {
