@@ -614,8 +614,10 @@ function tierFromReports(reports) {
   return 'pending';
 }
 
-function pulseTierFromReports(nativeReports) {
-  if (!nativeReports.length) return { tier: 'pending', count: 0, confidence: 'none' };
+function pulseTierFromReports(nativeReports, protonDbCount = 0) {
+  if (!nativeReports.length) {
+    return { tier: 'pending', count: 0, confidence: 'none', confidenceNote: protonDbCount > 0 ? 'No Pulse reports yet' : 'No Pulse data yet' };
+  }
   const SCORE = { platinum: 1.0, gold: 0.8, silver: 0.6, bronze: 0.4, borked: 0.0 };
   const now = Date.now() / 1000;
   let wSum = 0, wTotal = 0;
@@ -629,8 +631,12 @@ function pulseTierFromReports(nativeReports) {
   const avg = wTotal > 0 ? wSum / wTotal : 0;
   const tier = avg >= 0.85 ? 'platinum' : avg >= 0.65 ? 'gold' : avg >= 0.40 ? 'silver' : avg >= 0.15 ? 'bronze' : 'borked';
   const count = nativeReports.length;
-  const confidence = count >= 5 ? 'high' : count >= 2 ? 'medium' : 'low';
-  return { tier, count, confidence };
+  const weightedEvidence = count + (protonDbCount * 0.2);
+  const confidence = weightedEvidence >= 6 ? 'high' : weightedEvidence >= 3 ? 'medium' : 'low';
+  const confidenceNote = protonDbCount > 0
+    ? `${confidence} confidence (${count} Pulse + ${protonDbCount} ProtonDB reports weighted)`
+    : `${confidence} confidence (${count} Pulse report${count !== 1 ? 's' : ''})`;
+  return { tier, count, confidence, confidenceNote };
 }
 
 function daysAgo(ts) {
@@ -961,7 +967,7 @@ async function renderGamePage(appId) {
 
   const title = reports[0]?.title || configs[0]?.appName || `App ${appId}`;
   const protonDbTier = tierFromReports(cdn);
-  const pulseTier = pulseTierFromReports(nativeReports);
+  const pulseTier = pulseTierFromReports(nativeReports, cdn.length);
   document.title = `${title} - Proton Pulse`;
 
   let sortMode = 'recent';
@@ -1037,7 +1043,7 @@ async function renderGamePage(appId) {
           <span class="source-summary-kicker">Pulse</span>
           <span class="source-summary-value" style="background:${pulseTileColor};color:${pulseTileText}">${pulseTileValue}</span>
           <span class="source-summary-meta">${pulseTileSummary}</span>
-          <span class="source-summary-note">${pulseHasReports ? `${pulseTier.confidence} confidence` : (pulseHasConfigs ? 'Saved configs available' : 'Waiting for reports')}</span>
+          <span class="source-summary-note">${pulseHasReports ? pulseTier.confidenceNote : (pulseHasConfigs ? 'Community-submitted configs available' : 'Waiting for Pulse reports')}</span>
         </button>
         <button class="source-summary-tile source-summary-tile-protondb" type="button" data-target="reports-summary" title="Jump to ProtonDB community reports">
           <span class="source-summary-kicker">ProtonDB</span>
@@ -1060,16 +1066,21 @@ async function renderGamePage(appId) {
 
     el.innerHTML = `
       <div class="game-header">
-        <img src="${STEAM_IMG(appId)}" onerror="this.style.display='none'" alt="">
-        <div class="game-header-info">
-          <div class="game-title">${esc(title)}</div>
-          <div class="game-meta">
-            App ${appId}
-            &nbsp;/&nbsp; <strong>${cdn.length}</strong> ProtonDB report${cdn.length !== 1 ? 's' : ''}
-            ${nativeReports.length ? `&nbsp;/&nbsp; <strong>${nativeReports.length}</strong> Pulse report${nativeReports.length !== 1 ? 's' : ''}` : ''}
-            &nbsp;/&nbsp; <strong>${configs.length}</strong> Pulse config${configs.length !== 1 ? 's' : ''}
+        <div class="game-header-main">
+          <img src="${STEAM_IMG(appId)}" onerror="this.style.display='none'" alt="">
+          <div class="game-header-info">
+            <div class="game-title">${esc(title)}</div>
+            <div class="game-meta">
+              App ${appId}
+              &nbsp;/&nbsp; <strong>${cdn.length}</strong> ProtonDB report${cdn.length !== 1 ? 's' : ''}
+              ${nativeReports.length ? `&nbsp;/&nbsp; <strong>${nativeReports.length}</strong> Pulse report${nativeReports.length !== 1 ? 's' : ''}` : ''}
+              &nbsp;/&nbsp; <strong>${configs.length}</strong> Pulse config${configs.length !== 1 ? 's' : ''}
+            </div>
+            <div class="game-header-summary">
+              Browse the combined community view for this game across ProtonDB reports, Pulse compatibility reports, and shared Pulse configs.
+            </div>
+            ${myStatusBadge}
           </div>
-          ${myStatusBadge}
         </div>
         <div class="game-header-side">
           ${sourceTiles}
@@ -1102,8 +1113,8 @@ async function renderGamePage(appId) {
         const visibleCfgs = filteredConfigs();
         return `
           <div class="configs-section-head" id="pulse-summary" style="border:1px solid var(--border);border-bottom:none;padding:8px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-            <span class="configs-section-title">Proton Pulse Configs</span>
-            <span class="configs-section-count">${configs.length} saved</span>
+            <span class="configs-section-title">Community Pulse Configs</span>
+            <span class="configs-section-count">${configs.length} shared by Proton Pulse users</span>
             <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
               ${cfgVersions.length > 1 ? `
               <select id="fCfgProton" style="background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:3px 7px;font-size:0.72rem;font-family:inherit">
@@ -1130,7 +1141,10 @@ async function renderGamePage(appId) {
         </div>`}
 
       <div class="reports-section-head" id="reports-summary">
-        <span class="reports-section-title">Community Reports</span>
+        <div class="reports-section-copy">
+          <span class="reports-section-title">Community Reports</span>
+          <span class="reports-section-subtitle">Combined compatibility reports from ProtonDB and Proton Pulse contributors</span>
+        </div>
         <div class="sort-bar">
           <button class="${sortMode==='recent'?'active':''}" data-sort="recent">Recent</button>
           <button class="${sortMode==='votes'?'active':''}" data-sort="votes">Top Voted</button>

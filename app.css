@@ -210,18 +210,25 @@
 
 /* game page */
 .game-header {
-  display: flex;
-  align-items: flex-start;
-  gap: 16px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.95fr);
+  align-items: stretch;
+  gap: 22px;
   padding: 20px;
   background: var(--s1);
   border: 1px solid var(--border);
   border-left: 3px solid var(--accent);
   margin-bottom: 16px;
-  flex-wrap: wrap;
+}
+.game-header-main {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-width: 0;
 }
 .game-header img {
-  height: 64px;
+  width: 178px;
+  height: 84px;
   flex-shrink: 0;
   object-fit: cover;
   border: 1px solid var(--border);
@@ -231,12 +238,11 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  width: min(100%, 360px);
-  margin-left: auto;
+  min-width: 0;
 }
 .game-header-actions {
   display: flex;
-  justify-content: flex-end;
+  justify-content: flex-start;
   gap: 10px;
   align-items: center;
   flex-wrap: wrap;
@@ -251,6 +257,13 @@
 }
 .game-meta { font-size: 0.8rem; color: var(--muted); }
 .game-meta strong { color: var(--text); }
+.game-header-summary {
+  margin-top: 10px;
+  max-width: 58ch;
+  font-size: 0.82rem;
+  color: #9fb4c9;
+  line-height: 1.5;
+}
 
 /* "Your report" chip, shown on the game page when the signed-in
    client id matches a row in user_configs (a published compatibility report) */
@@ -290,13 +303,14 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
+  width: 100%;
 }
 .source-summary-tile {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 7px;
-  min-height: 112px;
+  min-height: 136px;
   padding: 12px 14px;
   border: 1px solid var(--border2);
   background: linear-gradient(180deg, rgba(39, 49, 63, 0.98), rgba(28, 35, 46, 0.98));
@@ -494,16 +508,16 @@
   border-left: 3px solid var(--accent);
 }
 .configs-section-title {
-  font-size: 0.72rem;
+  font-size: 0.88rem;
   text-transform: uppercase;
   letter-spacing: 0.12em;
   color: var(--accent);
   font-weight: 700;
 }
 .configs-section-count {
-  font-size: 0.72rem;
+  font-size: 0.74rem;
   color: var(--muted);
-  font-family: var(--mono);
+  line-height: 1.4;
 }
 .configs-list { display: flex; flex-direction: column; }
 .config-card {
@@ -609,12 +623,21 @@
   gap: 12px;
   margin-bottom: 10px;
 }
+.reports-section-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
 .reports-section-title {
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: var(--muted);
+  font-size: 1.08rem;
+  letter-spacing: 0.02em;
+  color: var(--strong);
   font-weight: 700;
+}
+.reports-section-subtitle {
+  font-size: 0.76rem;
+  color: var(--muted);
+  line-height: 1.45;
 }
 
 /* sort bar */
@@ -1040,11 +1063,17 @@ a.card:hover { text-decoration: none; }
     width: min(92vw, 420px);
     max-width: calc(100vw - 20px);
   }
-  .game-header { flex-direction: column; }
+  .game-header {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .game-header-main {
+    flex-direction: column;
+    align-items: flex-start;
+  }
   .game-header img { height: auto; width: 100%; max-width: 240px; }
   .game-header-side {
     width: 100%;
-    margin-left: 0;
   }
   .source-summary-grid {
     grid-template-columns: 1fr;
