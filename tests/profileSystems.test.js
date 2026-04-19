@@ -35,6 +35,8 @@ ctx.__escapeHtml            = escapeHtml;
 ctx.__formatSystemUpdated   = formatSystemUpdated;
 ctx.__fetchMyUserConfigs    = fetchMyUserConfigs;
 ctx.__inferGpuVendor        = inferGpuVendor;
+ctx.__inferSystemLabel      = inferSystemLabel;
+ctx.__isGenericSystemLabel  = isGenericSystemLabel;
 `;
 
 // Baseline fetch result so the init IIFE inside profile.js doesn't blow up
@@ -280,6 +282,29 @@ describe('deleteSystem', () => {
     await expect(
       ctx.__deleteSystem(steamId, deviceId, { access_token: 'tok' })
     ).rejects.toThrow('Delete failed: HTTP 404');
+  });
+});
+
+describe('system label inference', () => {
+  test('treats Unknown as a generic label', async () => {
+    const { ctx } = makeCtx({ access_token: 'tok' });
+    await flush();
+    expect(ctx.__isGenericSystemLabel('Unknown')).toBe(true);
+    expect(ctx.__isGenericSystemLabel('Living Room Deck')).toBe(false);
+  });
+
+  test('infers Steam Deck for VanGogh / SteamOS uploads', async () => {
+    const { ctx } = makeCtx({ access_token: 'tok' });
+    await flush();
+    expect(ctx.__inferSystemLabel({
+      sysinfo_text: `
+CPU Brand: AMD Custom APU 0405
+Operating System Version:
+  SteamOS 3.6
+Driver: AMD VanGogh [AMD Custom GPU 0405]
+RAM: 14564 Mb
+      `,
+    })).toBe('Steam Deck');
   });
 });
 

@@ -111,6 +111,23 @@
   margin-top: 6px;
   line-height: 1.5;
 }
+.profile-prefill-source {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid rgba(74,159,208,0.28);
+  background: rgba(74,159,208,0.08);
+}
+.profile-prefill-source-title {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--strong);
+  margin-bottom: 6px;
+}
+.profile-prefill-source-body {
+  font-size: 0.76rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
 .profile-select {
   background: var(--card-bg);
   border: 1px solid rgba(255,255,255,0.12);
@@ -247,6 +264,7 @@
 @media (max-width: 640px) {
   .profile-card { flex-direction: column; align-items: flex-start; }
   .profile-uid { word-break: break-all; }
+  .profile-systems-details-grid { grid-template-columns: 1fr; }
 }
 
 .profile-refresh-btn {
@@ -324,6 +342,30 @@
   border-color: var(--border2);
   outline: none;
 }
+.profile-systems-label-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+}
+.profile-systems-summary {
+  font-size: 0.72rem;
+  color: var(--muted);
+  line-height: 1.45;
+}
+.profile-systems-view-btn {
+  padding: 2px 8px;
+  background: none;
+  border: 1px solid var(--border2);
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-family: inherit;
+  cursor: pointer;
+}
+.profile-systems-view-btn:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
 .profile-systems-trash {
   background: none;
   border: none;
@@ -376,6 +418,41 @@
 }
 .profile-systems-default-toggle input:checked ~ .profile-systems-default-text {
   color: #e6c160;
+}
+.profile-systems-details-row td {
+  padding-top: 0;
+  background: rgba(255,255,255,0.02);
+}
+.profile-systems-details-card {
+  padding: 12px 0 14px;
+}
+.profile-systems-details-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 16px;
+}
+.profile-systems-detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.profile-systems-detail-label {
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+.profile-systems-detail-value {
+  font-size: 0.78rem;
+  color: var(--text);
+  line-height: 1.4;
+  word-break: break-word;
+}
+.profile-systems-detail-note {
+  margin-top: 10px;
+  font-size: 0.72rem;
+  color: var(--muted);
+  line-height: 1.5;
 }
 
 /* -- My uploaded configs table -- */

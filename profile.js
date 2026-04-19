@@ -19,6 +19,7 @@ const MYHW_KEYS = {
   osVersion:  'proton-pulse:myhw:os-version',
   kernel:     'proton-pulse:myhw:kernel',
 };
+const MYHW_SOURCE_META_KEY = 'proton-pulse:myhw:source-meta';
 
 // -- Supabase user_systems helpers --
 // Keep these next to MYHW_KEYS so everything hardware-related is grouped.
@@ -191,6 +192,58 @@ function inferGpuVendor(gpuString) {
   return '';
 }
 
+function parseUploadedSystem(row) {
+  const parsed = parseSteamSystemInfo(row?.sysinfo_text || '');
+  if (parsed.gpu && !parsed.gpuVendor) {
+    parsed.gpuVendor = inferGpuVendor(parsed.gpu);
+  }
+  return parsed;
+}
+
+function isGenericSystemLabel(label) {
+  const s = (label || '').toString().trim().toLowerCase();
+  return !s || s === 'unknown' || s === 'unnamed' || s === 'system' || s === 'uploaded system';
+}
+
+function inferSystemLabel(rowOrParsed) {
+  const parsed = rowOrParsed?.sysinfo_text !== undefined ? parseUploadedSystem(rowOrParsed) : (rowOrParsed || {});
+  const combined = [parsed.cpu, parsed.gpu, parsed.os, parsed.kernel].filter(Boolean).join(' ').toLowerCase();
+  if (/steam\s*deck|steamos|vangogh|amd custom apu 0405/.test(combined)) return 'Steam Deck';
+
+  const vendor = parsed.gpuVendor || inferGpuVendor(parsed.gpu || '');
+  const vendorLabel = { nvidia: 'NVIDIA', amd: 'AMD', intel: 'Intel' }[vendor] || '';
+  const osBase = (parsed.os || '').trim().split(/\s+/)[0];
+
+  if (vendorLabel && osBase) return `${vendorLabel} ${osBase} system`;
+  if (/ryzen/i.test(parsed.cpu || '')) return 'AMD Ryzen system';
+  if (/intel/i.test(parsed.cpu || '')) return 'Intel system';
+  if (vendorLabel) return `${vendorLabel} system`;
+  if (osBase) return `${osBase} system`;
+  return 'Uploaded system';
+}
+
+function summarizeSystem(parsed) {
+  const bits = [parsed.os, parsed.cpu || parsed.gpu, parsed.ram].filter(Boolean);
+  return bits.length ? bits.join(' • ') : 'No parsed hardware summary available yet.';
+}
+
+function getMyHwSourceMeta() {
+  try {
+    const raw = localStorage.getItem(MYHW_SOURCE_META_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function setMyHwSourceMeta(meta) {
+  if (!meta) {
+    localStorage.removeItem(MYHW_SOURCE_META_KEY);
+    return;
+  }
+  localStorage.setItem(MYHW_SOURCE_META_KEY, JSON.stringify(meta));
+}
+
 // Small helpers pulled out of the page-init IIFE so they can be unit-tested.
 // escapeHtml prevents XSS when we drop user-supplied label/device_id into an
 // innerHTML template. Keep the char set in sync with the five HTML-unsafe chars
@@ -277,11 +330,14 @@ async function fetchMyUserConfigs(clientId, session) {
   const myhwParseBtn   = document.getElementById('myhw-parse-btn');
   const myhwClearBtn   = document.getElementById('myhw-clear-btn');
   const myhwStatus     = document.getElementById('myhw-parse-status');
+  const myhwSourceTitle = document.getElementById('myhw-source-title');
+  const myhwSourceBody  = document.getElementById('myhw-source-body');
   const myhwTabButtons = Array.from(document.querySelectorAll('.profile-tab-btn[data-pane]'));
   const myhwTabPanels  = {
     systems: document.getElementById('myhw-pane-systems'),
     local: document.getElementById('myhw-pane-local'),
   };
+  let suppressMyHwSourceTracking = false;
 
   function setMyHardwarePane(name) {
     myhwTabButtons.forEach((btn) => {
@@ -317,6 +373,67 @@ async function fetchMyUserConfigs(clientId, session) {
     setTimeout(() => { myhwStatus.textContent = ''; }, 2500);
   }
 
+  function renderMyHwSource() {
+    if (!myhwSourceTitle || !myhwSourceBody) return;
+    const meta = getMyHwSourceMeta();
+    const anyLocal = Object.values(MYHW_KEYS).some((k) => localStorage.getItem(k));
+    if (!meta) {
+      myhwSourceTitle.textContent = anyLocal ? 'Manual browser values' : 'No source selected yet';
+      myhwSourceBody.textContent = anyLocal
+        ? 'These values were entered directly in this browser and will pre-fill the web submit form.'
+        : 'Save values here manually, paste Steam System Information, or set a default uploaded system above.';
+      return;
+    }
+    if (meta.type === 'uploaded-default') {
+      myhwSourceTitle.textContent = `Default uploaded system: ${meta.label || 'Uploaded system'}`;
+      myhwSourceBody.textContent = 'The Web prefill values below were copied from your default uploaded system and are used to pre-fill the submit-a-report form until you edit them.';
+      return;
+    }
+    if (meta.type === 'customized') {
+      myhwSourceTitle.textContent = `Customized browser copy${meta.originLabel ? ` of ${meta.originLabel}` : ''}`;
+      myhwSourceBody.textContent = 'These values started from another source, then were edited in this browser. The edited values below now control web form prefill.';
+      return;
+    }
+    if (meta.type === 'steam-paste') {
+      myhwSourceTitle.textContent = 'Pasted Steam System Information';
+      myhwSourceBody.textContent = 'These values were parsed from the Steam System Information text you pasted here and now pre-fill the web submit form.';
+      return;
+    }
+    myhwSourceTitle.textContent = 'Manual browser values';
+    myhwSourceBody.textContent = 'These values were entered directly in this browser and will pre-fill the web submit form.';
+  }
+
+  function setLocalHardwareFromParsed(parsed, sourceMeta) {
+    suppressMyHwSourceTracking = true;
+    try {
+      for (const [field, val] of Object.entries(parsed)) {
+        const el = myhwInputs[field];
+        if (!el) continue;
+        el.value = val;
+        saveMyHwField(field, val);
+      }
+      setMyHwSourceMeta(sourceMeta);
+      renderMyHwSource();
+    } finally {
+      suppressMyHwSourceTracking = false;
+    }
+  }
+
+  function markLocalHardwareEdited() {
+    if (suppressMyHwSourceTracking) return;
+    const prev = getMyHwSourceMeta();
+    if (!prev) {
+      setMyHwSourceMeta({ type: 'manual' });
+    } else if (prev.type === 'uploaded-default' || prev.type === 'steam-paste') {
+      setMyHwSourceMeta({
+        type: 'customized',
+        originType: prev.type,
+        originLabel: prev.label || '',
+      });
+    }
+    renderMyHwSource();
+  }
+
   function showUser(user) {
     const name    = user.user_metadata?.full_name || user.user_metadata?.name || '';
     const email   = user.email || '';
@@ -340,6 +457,7 @@ async function fetchMyUserConfigs(clientId, session) {
     if (hwGpuSelect) hwGpuSelect.value = localStorage.getItem(HW_GPU_KEY) || '';
     if (hwOsInput)   hwOsInput.value   = localStorage.getItem(HW_OS_KEY)  || '';
     loadMyHardware();
+    renderMyHwSource();
 
     signedOut.hidden = true;
     signedIn.hidden  = false;
@@ -401,7 +519,10 @@ async function fetchMyUserConfigs(clientId, session) {
 
   // Save each My-hardware field as it changes
   for (const [field, el] of Object.entries(myhwInputs)) {
-    el?.addEventListener('change', () => saveMyHwField(field, el.value));
+    el?.addEventListener('change', () => {
+      saveMyHwField(field, el.value);
+      markLocalHardwareEdited();
+    });
   }
   myhwTabButtons.forEach((btn) => {
     btn.addEventListener('click', () => setMyHardwarePane(btn.dataset.pane));
@@ -425,9 +546,11 @@ async function fetchMyUserConfigs(clientId, session) {
     for (const [field, val] of Object.entries(parsed)) {
       const el = myhwInputs[field];
       if (!el) continue;
-      el.value = val;
-      saveMyHwField(field, val);
       filled++;
+    }
+
+    if (filled > 0) {
+      setLocalHardwareFromParsed(parsed, { type: 'steam-paste' });
     }
 
     if (filled === 0) flashStatus('Nothing recognized, check the format', false);
@@ -436,12 +559,16 @@ async function fetchMyUserConfigs(clientId, session) {
 
   // Wipe everything in My hardware including the paste area
   myhwClearBtn?.addEventListener('click', () => {
+    suppressMyHwSourceTracking = true;
     for (const [field, el] of Object.entries(myhwInputs)) {
       if (!el) continue;
       el.value = '';
       localStorage.removeItem(MYHW_KEYS[field]);
     }
     if (myhwPasteArea) myhwPasteArea.value = '';
+    setMyHwSourceMeta(null);
+    renderMyHwSource();
+    suppressMyHwSourceTracking = false;
     flashStatus('Cleared', true);
   });
 
@@ -474,11 +601,29 @@ async function fetchMyUserConfigs(clientId, session) {
 
     // Build rows from the cached list. Label is user-editable so it goes
     // through escapeHtml as the value= attribute
-    systemsTbody.innerHTML = rows.map(r => `
+    systemsTbody.innerHTML = rows.map(r => {
+      const parsed = parseUploadedSystem(r);
+      const displayLabel = isGenericSystemLabel(r.label) ? inferSystemLabel(r) : (r.label || 'Uploaded system');
+      const summary = summarizeSystem(parsed);
+      const detailRows = [
+        ['CPU', parsed.cpu],
+        ['GPU', parsed.gpu],
+        ['GPU vendor', parsed.gpuVendor ? ({ nvidia: 'NVIDIA', amd: 'AMD', intel: 'Intel' }[parsed.gpuVendor] || parsed.gpuVendor) : ''],
+        ['GPU driver', parsed.gpuDriver],
+        ['RAM', parsed.ram],
+        ['VRAM', parsed.vramMb ? `${parsed.vramMb} MB` : ''],
+        ['OS', [parsed.os, parsed.osVersion].filter(Boolean).join(' ')],
+        ['Kernel', parsed.kernel],
+      ].filter(([, value]) => value);
+      return `
       <tr data-device-id="${escapeHtml(r.device_id)}">
         <td>
-          <input type="text" class="profile-systems-label-input"
-            data-role="label" value="${escapeHtml(r.label || 'Unnamed')}" maxlength="80">
+          <div class="profile-systems-label-stack">
+            <input type="text" class="profile-systems-label-input"
+              data-role="label" value="${escapeHtml(displayLabel)}" maxlength="80">
+            <div class="profile-systems-summary">${escapeHtml(summary)}</div>
+            <button type="button" class="profile-systems-view-btn" data-role="toggle-details" aria-expanded="false">View hardware</button>
+          </div>
         </td>
         <td>${escapeHtml(formatSystemUpdated(r.updated_at))}</td>
         <td class="col-default">
@@ -492,7 +637,25 @@ async function fetchMyUserConfigs(clientId, session) {
           <button type="button" class="profile-systems-trash" data-role="delete" title="Delete">x</button>
         </td>
       </tr>
-    `).join('');
+      <tr class="profile-systems-details-row" data-details-for="${escapeHtml(r.device_id)}" hidden>
+        <td colspan="4">
+          <div class="profile-systems-details-card">
+            <div class="profile-systems-details-grid">
+              ${detailRows.map(([label, value]) => `
+                <div class="profile-systems-detail-item">
+                  <span class="profile-systems-detail-label">${escapeHtml(label)}</span>
+                  <span class="profile-systems-detail-value">${escapeHtml(value)}</span>
+                </div>`).join('')}
+            </div>
+            <div class="profile-systems-detail-note">
+              ${r.is_default
+                ? 'This default uploaded system currently seeds the Web prefill tab and submit form until you edit those values locally.'
+                : 'Mark this as default to use it as the starting source for the Web prefill tab and submit form.'}
+            </div>
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
   }
 
   function showSystemsStatus(msg, ok) {
@@ -514,7 +677,17 @@ async function fetchMyUserConfigs(clientId, session) {
     }
     systemsLoading.hidden = false;
     try {
-      const rows = await listUserSystems(steamId, s);
+      let rows = await listUserSystems(steamId, s);
+      const genericRows = rows.filter((row) => isGenericSystemLabel(row.label));
+      if (genericRows.length) {
+        await Promise.allSettled(genericRows.map((row) => {
+          const nextLabel = inferSystemLabel(row);
+          return updateSystemLabel(steamId, row.device_id, nextLabel, s);
+        }));
+        rows = rows.map((row) => isGenericSystemLabel(row.label)
+          ? { ...row, label: inferSystemLabel(row) }
+          : row);
+      }
       renderSystems(rows);
     } catch (e) {
       systemsLoading.hidden = true;
@@ -527,35 +700,50 @@ async function fetchMyUserConfigs(clientId, session) {
   function askReplaceLocalFrom(row) {
     const parsed = parseSteamSystemInfo(row.sysinfo_text || '');
     if (Object.keys(parsed).length === 0) return;
-    const label = row.label || 'this system';
+    const label = isGenericSystemLabel(row.label) ? inferSystemLabel(row) : (row.label || 'this system');
     const ok = window.confirm(`Replace your local pre-fill values with "${label}"?`);
     if (!ok) return;
-    for (const [field, val] of Object.entries(parsed)) {
-      const el = myhwInputs[field];
-      if (!el) continue;
-      el.value = val;
-      saveMyHwField(field, val);
+    if (parsed.gpu && !parsed.gpuVendor) {
+      const v = inferGpuVendor(parsed.gpu);
+      if (v) parsed.gpuVendor = v;
     }
+    setLocalHardwareFromParsed(parsed, {
+      type: 'uploaded-default',
+      label,
+      deviceId: row.device_id,
+    });
     flashStatus('Local values updated from default system', true);
   }
 
   async function handleSystemsClick(ev) {
     const tr  = ev.target.closest('tr[data-device-id]');
     const btn = ev.target.closest('button[data-role]');
-    if (!tr || !btn) return;
+    const defToggle = ev.target.closest('input[data-role="default"]');
+    if (!tr || (!btn && !defToggle)) return;
     const deviceId = tr.dataset.deviceId;
     const s = await SupaAuth.getSession();
     const steamId = getSteamIdFromSession(s);
     if (!steamId) return;
 
     try {
-      if (btn.dataset.role === 'default') {
+      if (defToggle) {
         await setDefaultSystem(steamId, deviceId, s);
         await refreshSystems();
         const row = systemsCache.find(r => r.device_id === deviceId);
         if (row) askReplaceLocalFrom(row);
         setMyHardwarePane('local');
-      } else if (btn.dataset.role === 'delete') {
+        return;
+      }
+      if (btn.dataset.role === 'toggle-details') {
+        const detailRow = Array.from(systemsTbody?.querySelectorAll('tr[data-details-for]') || [])
+          .find((row) => row.getAttribute('data-details-for') === deviceId);
+        const expanded = btn.getAttribute('aria-expanded') === 'true';
+        btn.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+        btn.textContent = expanded ? 'View hardware' : 'Hide hardware';
+        if (detailRow) detailRow.hidden = expanded;
+        return;
+      }
+      if (btn.dataset.role === 'delete') {
         if (!window.confirm('Delete this system? The plugin will re-create it next time you upload.')) return;
         await deleteSystem(steamId, deviceId, s);
         await refreshSystems();
@@ -576,7 +764,10 @@ async function fetchMyUserConfigs(clientId, session) {
     const steamId = getSteamIdFromSession(s);
     if (!steamId) return;
     try {
-      await updateSystemLabel(steamId, deviceId, input.value.trim() || 'Unnamed', s);
+      const currentRow = systemsCache.find((row) => row.device_id === deviceId);
+      const nextLabel = input.value.trim() || inferSystemLabel(currentRow || {});
+      input.value = nextLabel;
+      await updateSystemLabel(steamId, deviceId, nextLabel, s);
       showSystemsStatus('Saved', true);
     } catch (e) {
       showSystemsStatus(e.message || 'Save failed', false);
@@ -603,15 +794,15 @@ async function fetchMyUserConfigs(clientId, session) {
       const rows = await listUserSystems(steamId, s);
       const def = rows.find(r => r.is_default);
       if (!def) return;
-      const parsed = parseSteamSystemInfo(def.sysinfo_text || '');
-      for (const [field, val] of Object.entries(parsed)) {
-        const el = myhwInputs[field];
-        if (!el) continue;
-        el.value = val;
-        saveMyHwField(field, val);
-      }
+      const parsed = parseUploadedSystem(def);
+      const label = isGenericSystemLabel(def.label) ? inferSystemLabel(def) : (def.label || 'your system');
+      setLocalHardwareFromParsed(parsed, {
+        type: 'uploaded-default',
+        label,
+        deviceId: def.device_id,
+      });
       if (Object.keys(parsed).length > 0) {
-        flashStatus(`Loaded hardware from "${def.label || 'your system'}"`, true);
+        flashStatus(`Loaded hardware from "${label}"`, true);
       }
     } catch {
       // non-fatal, just leave Block 2 empty
