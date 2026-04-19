@@ -5,9 +5,11 @@ GITHUB_WORKFLOW ?= update-data.yml
 BACKFILL_APP_IDS ?=
 COVERAGE_BACKFILL_ISSUE_TYPE ?=
 COVERAGE_BACKFILL_LIMIT ?= 0
+WATCH_INTERVAL ?= 10
+WATCH_ALL_WORKFLOWS ?= true
 
 .PHONY: help setup install-pg test lint lint-py lint-pylint lint-sh test-py init-submodules fetch-steam-catalog backup-supabase install-docker \
-	gh-run gh-pages-only gh-backfill-apps gh-coverage-backfill gh-check
+	gh-run gh-pages-only gh-backfill-apps gh-coverage-backfill gh-run-watch gh-check
 
 help:
 	@echo "Usage: make <target>"
@@ -31,6 +33,9 @@ help:
 	@echo "                      Usage: make gh-backfill-apps BACKFILL_APP_IDS=1145350,2358720"
 	@echo "  gh-coverage-backfill Trigger coverage-based backfill"
 	@echo "                      Usage: make gh-coverage-backfill COVERAGE_BACKFILL_ISSUE_TYPE=no-titles COVERAGE_BACKFILL_LIMIT=50"
+	@echo "  gh-run-watch        Poll active GitHub Actions runs until they finish"
+	@echo "                      Optional: WATCH_INTERVAL=5 make gh-run-watch"
+	@echo "                      Optional: WATCH_ALL_WORKFLOWS=false make gh-run-watch"
 
 init-submodules:
 	git submodule update --init --recursive
@@ -120,3 +125,47 @@ gh-coverage-backfill: gh-check
 		--field coverage_backfill_issue_type="$(COVERAGE_BACKFILL_ISSUE_TYPE)" \
 		--field coverage_backfill_limit="$(COVERAGE_BACKFILL_LIMIT)"
 	@echo "Triggered $(GITHUB_WORKFLOW) with coverage_backfill_issue_type=$(COVERAGE_BACKFILL_ISSUE_TYPE) coverage_backfill_limit=$(COVERAGE_BACKFILL_LIMIT)"
+
+gh-run-watch: gh-check
+	@while true; do \
+		clear; \
+		if [ "$(WATCH_ALL_WORKFLOWS)" = "true" ]; then \
+			WORKFLOW_LABEL="all workflows"; \
+			WORKFLOW_ARGS=""; \
+		else \
+			WORKFLOW_LABEL="$(GITHUB_WORKFLOW)"; \
+			WORKFLOW_ARGS="--workflow $(GITHUB_WORKFLOW)"; \
+		fi; \
+		echo "========================================"; \
+		echo "GitHub Actions Watch"; \
+		echo "========================================"; \
+		echo "$$WORKFLOW_LABEL"; \
+		echo "$$(date '+%Y-%m-%d %H:%M:%S')"; \
+		echo ""; \
+		ACTIVE_RUNS="$$(gh run list $$WORKFLOW_ARGS --limit 20 --json databaseId,workflowName,status,displayTitle,headBranch,event,startedAt --jq '.[] | select(.status != "completed") | "#\(.databaseId) | \(.workflowName // "-")\nstatus: \(.status) | event: \(.event) | branch: \(.headBranch // "-")\nstarted: \(.startedAt // "-")\ntitle: \(.displayTitle)\n"')"; \
+		COMPLETED_RUNS="$$(gh run list $$WORKFLOW_ARGS --limit 3 --json databaseId,workflowName,status,conclusion,displayTitle,headBranch,event,updatedAt --jq '.[] | select(.status == "completed") | "#\(.databaseId) | \(.workflowName // "-")\nresult: \(.conclusion // "-") | event: \(.event) | branch: \(.headBranch // "-")\nupdated: \(.updatedAt // "-")\ntitle: \(.displayTitle)\n"')"; \
+		echo "========================================"; \
+		echo "Active Runs"; \
+		echo "========================================"; \
+		if [ -n "$$ACTIVE_RUNS" ]; then \
+			printf "%s\n" "$$ACTIVE_RUNS"; \
+		else \
+			echo "No active runs found."; \
+		fi; \
+		echo ""; \
+		echo "========================================"; \
+		echo "Last 3 Completed Runs"; \
+		echo "========================================"; \
+		if [ -n "$$COMPLETED_RUNS" ]; then \
+			printf "%s\n" "$$COMPLETED_RUNS"; \
+		else \
+			echo "No completed runs found."; \
+		fi; \
+		echo ""; \
+		if [ -z "$$ACTIVE_RUNS" ]; then \
+			echo "No active runs remain. Exiting."; \
+			break; \
+		fi; \
+		echo "Refreshing in $(WATCH_INTERVAL)s. Press Ctrl+C to stop."; \
+		sleep $(WATCH_INTERVAL); \
+	done
