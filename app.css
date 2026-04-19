@@ -244,8 +244,16 @@
   display: flex;
   justify-content: flex-start;
   gap: 10px;
-  align-items: center;
+  align-items: stretch;
   flex-wrap: wrap;
+}
+/* Submit Report stretches to fill the remaining width so the row lines up with
+   the Pulse/ProtonDB tile grid above it instead of leaving dead space next to
+   a small pill of a button */
+.game-header-actions .submit-report-btn {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: center;
 }
 .game-title {
   font-size: 1.4rem;

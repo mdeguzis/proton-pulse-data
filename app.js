@@ -312,10 +312,15 @@ async function renderHomePage() {
   const el = document.getElementById('content');
   el.innerHTML = '<div class="state-box">Loading Proton Pulse configs...</div>';
   try {
-    const r = await fetch(
-      `${SB_URL}/user_proton_configs?select=id,voter_id,app_id,app_name,config,updated_at&order=updated_at.desc`,
-      { headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` } }
-    );
+    // Kick off the search index load in parallel so we can mark cards that
+    // also have ProtonDB data without blocking on the configs fetch
+    const [r] = await Promise.all([
+      fetch(
+        `${SB_URL}/user_proton_configs?select=id,voter_id,app_id,app_name,config,updated_at&order=updated_at.desc`,
+        { headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` } }
+      ),
+      loadSearchIndex(),
+    ]);
     const rows = r.ok
       ? latestPerApp(await r.json()).sort((a, b) => String(b.updated_at || '').localeCompare(String(a.updated_at || '')))
       : [];
@@ -327,6 +332,9 @@ async function renderHomePage() {
         </div>`;
       return;
     }
+    // Build a quick lookup of app IDs that also appear in the ProtonDB search
+    // index so we can tag those cards with both badges
+    const protonDbAppIds = new Set((searchIndex || []).map(([id]) => String(id)));
     el.innerHTML = `
       <p class="section-label" style="margin-bottom:10px">Recent Proton Pulse Configs</p>
       <div class="cards" style="border:1px solid var(--border)">
@@ -339,6 +347,7 @@ async function renderHomePage() {
           const age = d < 1 ? 'today' : d === 1 ? '1 day ago' : `${d} days ago`;
           const hwParts = [proton, profile].filter(Boolean);
           const isNonSteam = cfg.isNonSteam === true || isNonSteamAppId(row.app_id);
+          const hasProtonDb = !isNonSteam && protonDbAppIds.has(String(row.app_id));
           return `
             <a class="card" href="#/app/${row.app_id}" style="text-decoration:none">
               <img src="${STEAM_IMG(row.app_id)}" onerror="this.style.display='none'" alt=""
@@ -352,6 +361,7 @@ async function renderHomePage() {
                 <span class="source-badge pulse">
                   <img src="https://raw.githubusercontent.com/mdeguzis/decky-proton-pulse/main/assets/logo.png" alt="">Pulse
                 </span>
+                ${hasProtonDb ? '<span class="source-badge protondb">ProtonDB</span>' : ''}
                 ${isNonSteam
                   ? '<span class="source-badge non-steam-game">Non-Steam</span>'
                   : '<span class="source-badge steam-game">Steam</span>'}
