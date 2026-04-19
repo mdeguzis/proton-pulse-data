@@ -1018,23 +1018,34 @@ async function renderGamePage(appId) {
     const reps = sorted();
     const protonDbBadgeColor = RATING_COLORS[protonDbTier] || '#3a4a5a';
     const protonDbBadgeText = RATING_TEXT[protonDbTier] || '#c8d4e0';
-    const showPulseHeaderBadge = pulseTier.count > 0 || configs.length > 0;
-    const pulseHeaderCount = pulseTier.count > 0
-      ? `${pulseTier.count} report${pulseTier.count !== 1 ? 's' : ''}`
-      : `${configs.length} config${configs.length !== 1 ? 's' : ''}`;
-    const headerBadge = showPulseHeaderBadge
-      ? `
-        <div class="pulse-tier-badge">
-          <span class="pulse-tier-label">Pulse</span>
-          <span class="pulse-tier-value" style="background:${RATING_COLORS[pulseTier.tier]||'#3a4a5a'};color:${RATING_TEXT[pulseTier.tier]||'#c8d4e0'}">${pulseTier.tier}</span>
-          <span class="pulse-tier-count" title="${pulseTier.confidence} confidence">${pulseHeaderCount}</span>
-        </div>`
-      : (cdn.length > 0 ? `
-        <div class="tier-badge-group">
-          <span class="tier-badge-label">ProtonDB</span>
-          <span class="tier-badge" style="background:${protonDbBadgeColor};color:${protonDbBadgeText}" title="ProtonDB community rating">${protonDbTier}</span>
-          <span class="tier-badge-count">${cdn.length} report${cdn.length !== 1 ? 's' : ''}</span>
-        </div>` : '');
+    const pulseHasReports = nativeReports.length > 0;
+    const pulseHasConfigs = configs.length > 0;
+    const pulseSummaryBits = [];
+    if (pulseHasReports) pulseSummaryBits.push(`${nativeReports.length} report${nativeReports.length !== 1 ? 's' : ''}`);
+    if (pulseHasConfigs) pulseSummaryBits.push(`${configs.length} config${configs.length !== 1 ? 's' : ''}`);
+    const pulseTileValue = pulseHasReports ? pulseTier.tier : (pulseHasConfigs ? 'config' : 'pending');
+    const pulseTileColor = pulseHasReports ? (RATING_COLORS[pulseTier.tier] || '#3a4a5a') : '#2a5a8c';
+    const pulseTileText = pulseHasReports ? (RATING_TEXT[pulseTier.tier] || '#c8d4e0') : '#d7e9fb';
+    const pulseTileSummary = pulseSummaryBits.length ? pulseSummaryBits.join(' / ') : 'No Pulse data yet';
+    const protonDbTileValue = cdn.length > 0 ? protonDbTier : 'pending';
+    const protonDbTileSummary = cdn.length > 0
+      ? `${cdn.length} report${cdn.length !== 1 ? 's' : ''}`
+      : 'No ProtonDB reports';
+    const sourceTiles = `
+      <div class="source-summary-grid">
+        <button class="source-summary-tile source-summary-tile-pulse" type="button" data-target="pulse-summary" title="Jump to Proton Pulse configs and reports">
+          <span class="source-summary-kicker">Pulse</span>
+          <span class="source-summary-value" style="background:${pulseTileColor};color:${pulseTileText}">${pulseTileValue}</span>
+          <span class="source-summary-meta">${pulseTileSummary}</span>
+          <span class="source-summary-note">${pulseHasReports ? `${pulseTier.confidence} confidence` : (pulseHasConfigs ? 'Saved configs available' : 'Waiting for reports')}</span>
+        </button>
+        <button class="source-summary-tile source-summary-tile-protondb" type="button" data-target="reports-summary" title="Jump to ProtonDB community reports">
+          <span class="source-summary-kicker">ProtonDB</span>
+          <span class="source-summary-value" style="background:${protonDbBadgeColor};color:${protonDbBadgeText}">${protonDbTileValue}</span>
+          <span class="source-summary-meta">${protonDbTileSummary}</span>
+          <span class="source-summary-note">Community compatibility rating</span>
+        </button>
+      </div>`;
 
     // Show a banner if the signed-in client already has a public report on this
     // game (matched via client id on user_configs). No draft concept: upload means publish.
@@ -1060,9 +1071,13 @@ async function renderGamePage(appId) {
           </div>
           ${myStatusBadge}
         </div>
-        <button class="info-btn" id="rating-info-btn" title="What does this rating mean?"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="11" fill="#3b82f6"/><text x="12" y="17" text-anchor="middle" font-size="15" font-weight="700" fill="#fff" font-family="serif">i</text></svg></button>
-        ${headerBadge}
-        <button class="submit-report-btn" id="submit-report-btn">Submit Report</button>
+        <div class="game-header-side">
+          ${sourceTiles}
+          <div class="game-header-actions">
+            <button class="info-btn" id="rating-info-btn" title="What does this rating mean?"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="11" fill="#3b82f6"/><text x="12" y="17" text-anchor="middle" font-size="15" font-weight="700" fill="#fff" font-family="serif">i</text></svg></button>
+            <button class="submit-report-btn" id="submit-report-btn">Submit Report</button>
+          </div>
+        </div>
         <div class="info-tooltip" id="rating-info-tip">
           <div class="info-tooltip-inner" id="rating-info-content">Loading...</div>
         </div>
@@ -1086,7 +1101,7 @@ async function renderGamePage(appId) {
         const cfgSources  = [...new Set(configs.map(c => c.source || 'proton-pulse'))].sort();
         const visibleCfgs = filteredConfigs();
         return `
-          <div class="configs-section-head" style="border:1px solid var(--border);border-bottom:none;padding:8px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <div class="configs-section-head" id="pulse-summary" style="border:1px solid var(--border);border-bottom:none;padding:8px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
             <span class="configs-section-title">Proton Pulse Configs</span>
             <span class="configs-section-count">${configs.length} saved</span>
             <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
@@ -1114,7 +1129,7 @@ async function renderGamePage(appId) {
           submit a report above or <a href="https://github.com/mdeguzis/decky-proton-pulse" target="_blank" rel="noopener">add one via the Decky Plugin</a>.
         </div>`}
 
-      <div class="reports-section-head">
+      <div class="reports-section-head" id="reports-summary">
         <span class="reports-section-title">Community Reports</span>
         <div class="sort-bar">
           <button class="${sortMode==='recent'?'active':''}" data-sort="recent">Recent</button>
@@ -1179,6 +1194,13 @@ async function renderGamePage(appId) {
       const tip = el.querySelector('#rating-info-tip');
       tip?.classList.toggle('open');
       if (tip?.classList.contains('open')) await populateScoringTooltip(el);
+    });
+    el.querySelectorAll('.source-summary-tile').forEach((tile) => {
+      tile.addEventListener('click', () => {
+        const targetId = tile.getAttribute('data-target');
+        const target = targetId ? el.querySelector(`#${targetId}`) : null;
+        target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
     });
     el.querySelector('#scoring-info-btn')?.addEventListener('click', async () => {
       const tip = el.querySelector('#rating-info-tip');
