@@ -315,6 +315,35 @@
         </div>
       </div>
 
+      <!-- Linked plugin devices -->
+      <div class="profile-section">
+        <div class="profile-section-title" style="display:flex;justify-content:space-between;align-items:center">
+          <span>Linked plugin devices</span>
+          <button type="button" class="profile-refresh-btn" id="linked-devices-refresh-btn">Refresh</button>
+        </div>
+        <div class="profile-field">
+          <div class="profile-field-hint" style="margin-top:0">
+            Link your Decky plugin device UUID to see its submitted reports under <strong>My uploaded reports</strong>.
+            Copy your UUID from the plugin under Advanced &rarr; Local Data.
+          </div>
+        </div>
+        <div class="profile-field">
+          <div id="linked-devices-loading" class="profile-field-hint">Loading linked devices...</div>
+          <div id="linked-devices-empty" class="profile-field-hint" hidden>No linked devices yet.</div>
+          <div id="linked-devices-list" hidden></div>
+          <div id="linked-devices-status" class="profile-field-hint" style="margin-top:6px"></div>
+        </div>
+        <div class="profile-field">
+          <div class="profile-field-label">Claim a device UUID</div>
+          <div class="profile-field-value" style="gap:8px;flex-wrap:wrap">
+            <input type="text" id="claim-device-input" class="profile-select"
+              placeholder="Paste your plugin UUID here" maxlength="36" style="flex:1;min-width:200px">
+            <button type="button" class="profile-parse-btn" id="claim-device-btn">Claim</button>
+          </div>
+          <div id="claim-device-status" class="profile-field-hint" style="margin-top:6px"></div>
+        </div>
+      </div>
+
       <!-- Public reports submitted to user_configs from either the plugin or the web form -->
       <div class="profile-section">
         <div class="profile-section-title" style="display:flex;justify-content:space-between;align-items:center">

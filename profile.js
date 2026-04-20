@@ -408,6 +408,53 @@ async function fetchMyUserConfigs(clientId, session) {
   return await r.json();
 }
 
+// -- Linked plugin devices helpers --
+function supabaseClaimedIdsUrl(query) {
+  return `${SUPABASE_URL}/rest/v1/claimed_client_ids${query ? '?' + query : ''}`;
+}
+
+async function fetchLinkedDevices(steamId, session) {
+  const url = supabaseClaimedIdsUrl(
+    `steam_id=eq.${encodeURIComponent(steamId)}&order=claimed_at.desc`,
+  );
+  const r = await fetch(url, { headers: supabaseHeaders(session) });
+  if (!r.ok) throw new Error(`Lookup failed: HTTP ${r.status}`);
+  return await r.json();
+}
+
+async function claimDevice(clientId, steamId, session) {
+  const r = await fetch(supabaseClaimedIdsUrl(''), {
+    method: 'POST',
+    headers: supabaseHeaders(session, { Prefer: 'return=minimal' }),
+    body: JSON.stringify({ client_id: clientId, steam_id: steamId }),
+  });
+  if (r.status === 409) throw new Error('This UUID has already been claimed.');
+  if (!r.ok) throw new Error(`Claim failed: HTTP ${r.status}`);
+}
+
+async function unclaimDevice(clientId, steamId, session) {
+  const url = supabaseClaimedIdsUrl(
+    `client_id=eq.${encodeURIComponent(clientId)}&steam_id=eq.${encodeURIComponent(steamId)}`,
+  );
+  const r = await fetch(url, {
+    method: 'DELETE',
+    headers: supabaseHeaders(session, { Prefer: 'return=minimal' }),
+  });
+  if (!r.ok) throw new Error(`Unclaim failed: HTTP ${r.status}`);
+}
+
+async function fetchMyUserConfigsMulti(clientIds, session) {
+  if (!clientIds || clientIds.length === 0) return [];
+  const inList = clientIds.join(',');
+  const url = `${SUPABASE_URL}/rest/v1/user_configs`
+    + `?client_id=in.(${inList})`
+    + `&select=id,app_id,title,proton_version,rating,created_at`
+    + `&order=created_at.desc`;
+  const r = await fetch(url, { headers: supabaseHeaders(session) });
+  if (!r.ok) throw new Error(`Lookup failed: HTTP ${r.status}`);
+  return await r.json();
+}
+
 (async function () {
   const signedIn  = document.getElementById('profile-signed-in');
   const signedOut = document.getElementById('profile-signed-out');
@@ -969,6 +1016,14 @@ async function fetchMyUserConfigs(clientId, session) {
   const myConfigsLoading  = document.getElementById('my-configs-loading');
   const myConfigsStatus   = document.getElementById('my-configs-status');
   const myConfigsRefresh  = document.getElementById('my-configs-refresh-btn');
+  const linkedDevicesList    = document.getElementById('linked-devices-list');
+  const linkedDevicesEmpty   = document.getElementById('linked-devices-empty');
+  const linkedDevicesLoading = document.getElementById('linked-devices-loading');
+  const linkedDevicesStatus  = document.getElementById('linked-devices-status');
+  const linkedDevicesRefresh = document.getElementById('linked-devices-refresh-btn');
+  const claimDeviceInput     = document.getElementById('claim-device-input');
+  const claimDeviceBtn       = document.getElementById('claim-device-btn');
+  const claimDeviceStatus    = document.getElementById('claim-device-status');
 
   function showMyConfigsStatus(msg, ok) {
     if (!myConfigsStatus) return;
@@ -1015,8 +1070,17 @@ async function fetchMyUserConfigs(clientId, session) {
     myConfigsLoading.hidden = false;
     myConfigsEmpty.hidden   = true;
     try {
-      const cid  = getWebClientIdProfile();
-      const rows = await fetchMyUserConfigs(cid, s);
+      const webCid = getWebClientIdProfile();
+      const steamId = getSteamIdFromSession(s);
+      let linkedCids = [];
+      if (steamId) {
+        try {
+          const linked = await fetchLinkedDevices(steamId, s);
+          linkedCids = linked.map(r => r.client_id);
+        } catch { /* non-fatal */ }
+      }
+      const allCids = [webCid, ...linkedCids];
+      const rows = await fetchMyUserConfigsMulti(allCids, s);
       renderMyConfigs(rows);
     } catch (e) {
       myConfigsLoading.hidden = true;
@@ -1027,6 +1091,117 @@ async function fetchMyUserConfigs(clientId, session) {
   myConfigsRefresh?.addEventListener('click', () => { void refreshMyConfigs(); });
 
   void refreshMyConfigs();
+
+  // ── Linked plugin devices ─────────────────────────────────────────────────
+  function renderLinkedDevices(rows) {
+    if (!linkedDevicesLoading || !linkedDevicesEmpty || !linkedDevicesList) return;
+    linkedDevicesLoading.hidden = true;
+    if (!rows || rows.length === 0) {
+      linkedDevicesList.hidden  = true;
+      linkedDevicesEmpty.hidden = false;
+      return;
+    }
+    linkedDevicesEmpty.hidden = true;
+    linkedDevicesList.hidden  = false;
+    linkedDevicesList.innerHTML = `
+      <table class="profile-configs-table">
+        <thead>
+          <tr><th>Device UUID</th><th>Claimed</th><th class="col-action"></th></tr>
+        </thead>
+        <tbody>
+          ${rows.map(row => `
+            <tr data-client-id="${escapeHtml(row.client_id)}">
+              <td><code class="profile-uid" style="font-size:0.78rem">${escapeHtml(row.client_id)}</code></td>
+              <td>${escapeHtml(formatSystemUpdated(row.claimed_at))}</td>
+              <td class="col-action">
+                <button type="button" class="profile-systems-trash" data-role="unclaim" title="Remove">x</button>
+              </td>
+            </tr>`).join('')}
+        </tbody>
+      </table>`;
+  }
+
+  function showLinkedDevicesStatus(msg, ok) {
+    if (!linkedDevicesStatus) return;
+    linkedDevicesStatus.textContent = msg;
+    linkedDevicesStatus.style.color = ok ? 'var(--green)' : 'var(--red)';
+    setTimeout(() => { linkedDevicesStatus.textContent = ''; }, 3000);
+  }
+
+  function showClaimStatus(msg, ok) {
+    if (!claimDeviceStatus) return;
+    claimDeviceStatus.textContent = msg;
+    claimDeviceStatus.style.color = ok ? 'var(--green)' : 'var(--red)';
+    setTimeout(() => { claimDeviceStatus.textContent = ''; }, 3000);
+  }
+
+  async function refreshLinkedDevices() {
+    if (!linkedDevicesLoading) return;
+    const s = await SupaAuth.getSession();
+    const steamId = getSteamIdFromSession(s);
+    if (!steamId) {
+      linkedDevicesLoading.hidden = true;
+      if (linkedDevicesEmpty) {
+        linkedDevicesEmpty.hidden = false;
+        linkedDevicesEmpty.textContent = 'Sign in with Steam to see your linked devices.';
+      }
+      return;
+    }
+    linkedDevicesLoading.hidden = false;
+    if (linkedDevicesEmpty) linkedDevicesEmpty.hidden = true;
+    try {
+      const rows = await fetchLinkedDevices(steamId, s);
+      renderLinkedDevices(rows);
+    } catch (e) {
+      linkedDevicesLoading.hidden = true;
+      showLinkedDevicesStatus(e.message || 'Failed to load linked devices', false);
+    }
+  }
+
+  linkedDevicesRefresh?.addEventListener('click', () => { void refreshLinkedDevices(); });
+
+  linkedDevicesList?.addEventListener('click', async (ev) => {
+    const btn = ev.target.closest('button[data-role="unclaim"]');
+    if (!btn) return;
+    const tr = btn.closest('tr[data-client-id]');
+    if (!tr) return;
+    const clientId = tr.dataset.clientId;
+    if (!window.confirm('Remove this linked device? Reports from it will no longer appear in My uploaded reports.')) return;
+    const s = await SupaAuth.getSession();
+    const steamId = getSteamIdFromSession(s);
+    if (!steamId) return;
+    try {
+      await unclaimDevice(clientId, steamId, s);
+      showClaimStatus('Device unlinked', true);
+      await refreshLinkedDevices();
+      await refreshMyConfigs();
+    } catch (e) {
+      showClaimStatus(e.message || 'Failed to unlink', false);
+    }
+  });
+
+  claimDeviceBtn?.addEventListener('click', async () => {
+    const clientId = (claimDeviceInput?.value || '').trim();
+    if (!clientId) { showClaimStatus('Paste your plugin UUID first', false); return; }
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(clientId)) {
+      showClaimStatus("That doesn't look like a valid UUID", false);
+      return;
+    }
+    const s = await SupaAuth.getSession();
+    const steamId = getSteamIdFromSession(s);
+    if (!steamId) { showClaimStatus('Sign in first', false); return; }
+    try {
+      await claimDevice(clientId, steamId, s);
+      if (claimDeviceInput) claimDeviceInput.value = '';
+      showClaimStatus('Device linked!', true);
+      await refreshLinkedDevices();
+      await refreshMyConfigs();
+    } catch (e) {
+      showClaimStatus(e.message || 'Claim failed', false);
+    }
+  });
+
+  void refreshLinkedDevices();
 
   // ── Topbar auth chip ──────────────────────────────────────────────────────
   (function() {
