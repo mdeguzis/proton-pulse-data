@@ -445,6 +445,17 @@ async function removePluginLink(installationId, session) {
   return await callPluginLinkFunction('plugin-link-remove', session, { installationId });
 }
 
+function getPluginLinkCodeFromLocation(loc = window.location) {
+  const searchCode = new URLSearchParams(loc.search || '').get('pluginLinkCode');
+  if (searchCode) return searchCode;
+
+  const hash = String(loc.hash || '');
+  const hashQueryIndex = hash.indexOf('?');
+  if (hashQueryIndex === -1) return null;
+  const hashQuery = hash.slice(hashQueryIndex + 1);
+  return new URLSearchParams(hashQuery).get('pluginLinkCode');
+}
+
 (async function () {
   const signedIn  = document.getElementById('profile-signed-in');
   const signedOut = document.getElementById('profile-signed-out');
@@ -817,7 +828,7 @@ async function removePluginLink(installationId, session) {
     }
   });
 
-  const linkCodeFromUrl = new URLSearchParams(window.location.search).get('pluginLinkCode');
+  const linkCodeFromUrl = getPluginLinkCodeFromLocation();
   if (linkCodeFromUrl && pluginLinkCodeInput && !pluginLinkCodeInput.value) {
     pluginLinkCodeInput.value = linkCodeFromUrl.toUpperCase();
     if (pluginLinkEntry) pluginLinkEntry.hidden = false;

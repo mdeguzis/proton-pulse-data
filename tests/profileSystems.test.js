@@ -39,6 +39,7 @@ ctx.__fetchMyUserConfigs    = fetchMyUserConfigs;
 ctx.__listLinkedPlugins     = listLinkedPlugins;
 ctx.__completePluginLink    = completePluginLink;
 ctx.__removePluginLink      = removePluginLink;
+ctx.__getPluginLinkCodeFromLocation = getPluginLinkCodeFromLocation;
 ctx.__inferGpuVendor        = inferGpuVendor;
 ctx.__inferSystemLabel      = inferSystemLabel;
 ctx.__isGenericSystemLabel  = isGenericSystemLabel;
@@ -701,5 +702,23 @@ describe('plugin link helpers', () => {
 
     const [, init] = fetchMock.mock.calls[0];
     expect(JSON.parse(init.body)).toEqual({ linkCode: 'ABCD-1234' });
+  });
+
+  test('reads the link code from the normal query string', async () => {
+    const { ctx } = makeCtx({ access_token: 'tok' });
+    await flush();
+    expect(ctx.__getPluginLinkCodeFromLocation({
+      search: '?pluginLinkCode=ABCD-1234',
+      hash: '#linked-plugins-section',
+    })).toBe('ABCD-1234');
+  });
+
+  test('falls back to the hash query when the browser drops the normal search string', async () => {
+    const { ctx } = makeCtx({ access_token: 'tok' });
+    await flush();
+    expect(ctx.__getPluginLinkCodeFromLocation({
+      search: '',
+      hash: '#linked-plugins-section?pluginLinkCode=ABCD-1234',
+    })).toBe('ABCD-1234');
   });
 });
