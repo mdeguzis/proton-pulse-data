@@ -153,6 +153,15 @@
   border: 1px solid rgba(74,159,208,0.28);
   background: rgba(74,159,208,0.08);
 }
+.profile-prefill-source--link {
+  border-color: rgba(122,179,247,0.42);
+  background:
+    linear-gradient(135deg, rgba(74,159,208,0.16), rgba(122,179,247,0.08)),
+    rgba(74,159,208,0.08);
+}
+.profile-link-entry {
+  scroll-margin-top: 90px;
+}
 .profile-prefill-source-title {
   font-size: 0.84rem;
   font-weight: 700;

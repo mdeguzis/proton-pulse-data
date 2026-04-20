@@ -37,6 +37,7 @@ env/
 .coverage
 htmlcov/
 .tox/
+coverage/
 
 # Type checkers
 .mypy_cache/
@@ -62,3 +63,6 @@ docs/superpowers/specs/
 # JavaScript package manager artifacts
 node_modules/
 pnpm-lock.yaml
+
+# Supabase local CLI state
+supabase/.temp/

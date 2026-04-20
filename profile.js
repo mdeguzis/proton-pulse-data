@@ -59,19 +59,19 @@ function supabaseHeaders(session, extra) {
   return Object.assign(h, extra || {});
 }
 
-async function listUserSystems(steamId, session) {
+async function listUserSystems(protonPulseUserId, session) {
   const url = supabaseUserSystemsUrl(
-    `steam_id=eq.${encodeURIComponent(steamId)}&order=updated_at.desc`,
+    `proton_pulse_user_id=eq.${encodeURIComponent(protonPulseUserId)}&order=updated_at.desc`,
   );
   const r = await fetch(url, { headers: supabaseHeaders(session) });
   if (!r.ok) throw new Error(`Lookup failed: HTTP ${r.status}`);
   return await r.json();
 }
 
-async function setDefaultSystem(steamId, deviceId, session) {
+async function setDefaultSystem(protonPulseUserId, deviceId, session) {
   // Clear all, then set the chosen one. Two PATCHes; partial unique index
   // protects against a race if another tab is doing the same thing
-  const base = supabaseUserSystemsUrl(`steam_id=eq.${encodeURIComponent(steamId)}`);
+  const base = supabaseUserSystemsUrl(`proton_pulse_user_id=eq.${encodeURIComponent(protonPulseUserId)}`);
   const r1 = await fetch(base, {
     method: 'PATCH',
     headers: supabaseHeaders(session, { Prefer: 'return=minimal' }),
@@ -79,7 +79,7 @@ async function setDefaultSystem(steamId, deviceId, session) {
   });
   if (!r1.ok) throw new Error(`Clear default failed: HTTP ${r1.status}`);
   const specific = supabaseUserSystemsUrl(
-    `steam_id=eq.${encodeURIComponent(steamId)}&device_id=eq.${encodeURIComponent(deviceId)}`,
+    `proton_pulse_user_id=eq.${encodeURIComponent(protonPulseUserId)}&device_id=eq.${encodeURIComponent(deviceId)}`,
   );
   const r2 = await fetch(specific, {
     method: 'PATCH',
@@ -92,8 +92,8 @@ async function setDefaultSystem(steamId, deviceId, session) {
 // Turn OFF the default flag across every row for this user. We don't target a
 // single device here because "no default" is the desired end state and going
 // row-by-row would risk a brief window where two rows are default at once
-async function clearDefaultSystem(steamId, session) {
-  const base = supabaseUserSystemsUrl(`steam_id=eq.${encodeURIComponent(steamId)}`);
+async function clearDefaultSystem(protonPulseUserId, session) {
+  const base = supabaseUserSystemsUrl(`proton_pulse_user_id=eq.${encodeURIComponent(protonPulseUserId)}`);
   const r = await fetch(base, {
     method: 'PATCH',
     headers: supabaseHeaders(session, { Prefer: 'return=minimal' }),
@@ -102,9 +102,9 @@ async function clearDefaultSystem(steamId, session) {
   if (!r.ok) throw new Error(`Clear default failed: HTTP ${r.status}`);
 }
 
-async function updateSystemLabel(steamId, deviceId, label, session) {
+async function updateSystemLabel(protonPulseUserId, deviceId, label, session) {
   const url = supabaseUserSystemsUrl(
-    `steam_id=eq.${encodeURIComponent(steamId)}&device_id=eq.${encodeURIComponent(deviceId)}`,
+    `proton_pulse_user_id=eq.${encodeURIComponent(protonPulseUserId)}&device_id=eq.${encodeURIComponent(deviceId)}`,
   );
   const r = await fetch(url, {
     method: 'PATCH',
@@ -114,9 +114,9 @@ async function updateSystemLabel(steamId, deviceId, label, session) {
   if (!r.ok) throw new Error(`Update label failed: HTTP ${r.status}`);
 }
 
-async function deleteSystem(steamId, deviceId, session) {
+async function deleteSystem(protonPulseUserId, deviceId, session) {
   const url = supabaseUserSystemsUrl(
-    `steam_id=eq.${encodeURIComponent(steamId)}&device_id=eq.${encodeURIComponent(deviceId)}`,
+    `proton_pulse_user_id=eq.${encodeURIComponent(protonPulseUserId)}&device_id=eq.${encodeURIComponent(deviceId)}`,
   );
   const r = await fetch(url, {
     method: 'DELETE',
@@ -417,51 +417,32 @@ async function fetchMyUserConfigs(protonPulseUserId, clientId, session) {
   return await r.json();
 }
 
-// -- Linked plugin devices helpers --
-function supabaseClaimedIdsUrl(query) {
-  return `${SUPABASE_URL}/rest/v1/claimed_client_ids${query ? '?' + query : ''}`;
+function pluginFunctionUrl(name) {
+  return `${SUPABASE_URL}/functions/v1/${name}`;
 }
 
-async function fetchLinkedDevices(steamId, session) {
-  const url = supabaseClaimedIdsUrl(
-    `steam_id=eq.${encodeURIComponent(steamId)}&order=claimed_at.desc`,
-  );
-  const r = await fetch(url, { headers: supabaseHeaders(session) });
-  if (!r.ok) throw new Error(`Lookup failed: HTTP ${r.status}`);
-  return await r.json();
-}
-
-async function claimDevice(clientId, steamId, session) {
-  const r = await fetch(supabaseClaimedIdsUrl(''), {
+async function callPluginLinkFunction(name, session, body) {
+  const r = await fetch(pluginFunctionUrl(name), {
     method: 'POST',
-    headers: supabaseHeaders(session, { Prefer: 'return=minimal' }),
-    body: JSON.stringify({ client_id: clientId, steam_id: steamId }),
+    headers: supabaseHeaders(session),
+    body: JSON.stringify(body || {}),
   });
-  if (r.status === 409) throw new Error('This UUID has already been claimed.');
-  if (!r.ok) throw new Error(`Claim failed: HTTP ${r.status}`);
+  const text = await r.text();
+  const payload = text ? (() => { try { return JSON.parse(text); } catch { return { error: text }; } })() : {};
+  if (!r.ok) throw new Error(payload.error || payload.message || `HTTP ${r.status}`);
+  return payload;
 }
 
-async function unclaimDevice(clientId, steamId, session) {
-  const url = supabaseClaimedIdsUrl(
-    `client_id=eq.${encodeURIComponent(clientId)}&steam_id=eq.${encodeURIComponent(steamId)}`,
-  );
-  const r = await fetch(url, {
-    method: 'DELETE',
-    headers: supabaseHeaders(session, { Prefer: 'return=minimal' }),
-  });
-  if (!r.ok) throw new Error(`Unclaim failed: HTTP ${r.status}`);
+async function listLinkedPlugins(session) {
+  return await callPluginLinkFunction('plugin-links-list', session, {});
 }
 
-async function fetchMyUserConfigsMulti(clientIds, session) {
-  if (!clientIds || clientIds.length === 0) return [];
-  const inList = clientIds.join(',');
-  const url = `${SUPABASE_URL}/rest/v1/user_configs`
-    + `?client_id=in.(${inList})`
-    + `&select=id,app_id,title,proton_version,rating,created_at`
-    + `&order=created_at.desc`;
-  const r = await fetch(url, { headers: supabaseHeaders(session) });
-  if (!r.ok) throw new Error(`Lookup failed: HTTP ${r.status}`);
-  return await r.json();
+async function completePluginLink(linkCode, session) {
+  return await callPluginLinkFunction('plugin-link-complete', session, { linkCode });
+}
+
+async function removePluginLink(installationId, session) {
+  return await callPluginLinkFunction('plugin-link-remove', session, { installationId });
 }
 
 (async function () {
@@ -476,6 +457,17 @@ async function fetchMyUserConfigsMulti(clientIds, session) {
   const hwGpuSelect    = document.getElementById('hw-gpu-vendor');
   const hwOsInput      = document.getElementById('hw-os');
   const configTypeSelect = document.getElementById('config-type');
+  const pluginLinkCodeInput = document.getElementById('plugin-link-code');
+  const pluginLinkSubmitBtn = document.getElementById('plugin-link-submit-btn');
+  const pluginLinkStatus = document.getElementById('plugin-link-status');
+  const pluginLinkEntry = document.getElementById('plugin-link-entry');
+  const pluginLinkEntryBody = document.getElementById('plugin-link-entry-body');
+  const pluginLinkJumpBtn = document.getElementById('plugin-link-jump-btn');
+  const pluginLinkCopyBtn = document.getElementById('plugin-link-copy-btn');
+  const linkedPluginsSection = document.getElementById('linked-plugins-section');
+  const linkedPluginsLoading = document.getElementById('linked-plugins-loading');
+  const linkedPluginsEmpty = document.getElementById('linked-plugins-empty');
+  const linkedPluginsList = document.getElementById('linked-plugins-list');
 
   // My hardware (spec used to pre-fill the web submit form)
   const myhwInputs = {
@@ -664,17 +656,105 @@ async function fetchMyUserConfigsMulti(clientIds, session) {
     signedOut.hidden = false;
   }
 
+  function showPluginLinkStatus(msg, ok) {
+    if (!pluginLinkStatus) return;
+    pluginLinkStatus.textContent = msg;
+    pluginLinkStatus.style.color = ok ? 'var(--green)' : 'var(--red)';
+    setTimeout(() => {
+      if (pluginLinkStatus.textContent === msg) pluginLinkStatus.textContent = '';
+    }, 3000);
+  }
+
+  function focusPluginLinkArea() {
+    linkedPluginsSection?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    pluginLinkCodeInput?.focus?.();
+    pluginLinkCodeInput?.select?.();
+  }
+
+  function renderLinkedPlugins(rows) {
+    if (!linkedPluginsLoading || !linkedPluginsEmpty || !linkedPluginsList) return;
+    linkedPluginsLoading.hidden = true;
+    if (!rows || rows.length === 0) {
+      linkedPluginsList.hidden = true;
+      linkedPluginsEmpty.hidden = false;
+      linkedPluginsList.innerHTML = '';
+      return;
+    }
+    linkedPluginsEmpty.hidden = true;
+    linkedPluginsList.hidden = false;
+    linkedPluginsList.innerHTML = rows.map((row) => {
+      const installationId = escapeHtml(String(row.installationId || ''));
+      const linkedAt = escapeHtml(formatSystemUpdated(row.linkedAt));
+      const lastSeenAt = escapeHtml(formatSystemUpdated(row.lastSeenAt));
+      return `
+        <div class="profile-prefill-source" style="margin-bottom:10px">
+          <div class="profile-prefill-source-title">${installationId}</div>
+          <div class="profile-prefill-source-body">
+            Linked: ${linkedAt}<br>
+            Last seen: ${lastSeenAt}
+          </div>
+          <div style="margin-top:8px">
+            <button type="button" class="profile-clear-btn linked-plugin-remove-btn" data-installation-id="${installationId}">Unlink</button>
+          </div>
+        </div>`;
+    }).join('');
+    linkedPluginsList.querySelectorAll('.linked-plugin-remove-btn').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const installationId = btn.getAttribute('data-installation-id');
+        if (!installationId) return;
+        try {
+          const s = await SupaAuth.getSession();
+          if (!s?.user) throw new Error('Sign in with Steam first.');
+          await removePluginLink(installationId, s);
+          showPluginLinkStatus('Plugin unlinked.', true);
+          await refreshLinkedPlugins();
+        } catch (e) {
+          showPluginLinkStatus(e.message || 'Failed to unlink plugin.', false);
+        }
+      });
+    });
+  }
+
+  async function refreshLinkedPlugins() {
+    if (!linkedPluginsLoading || !linkedPluginsEmpty || !linkedPluginsList) return;
+    const s = await SupaAuth.getSession();
+    if (!s?.user) {
+      linkedPluginsLoading.hidden = true;
+      linkedPluginsList.hidden = true;
+      linkedPluginsEmpty.hidden = false;
+      linkedPluginsEmpty.textContent = 'Sign in with Steam to manage linked plugins.';
+      return;
+    }
+    linkedPluginsLoading.hidden = false;
+    linkedPluginsEmpty.hidden = true;
+    try {
+      const rows = await listLinkedPlugins(s);
+      renderLinkedPlugins(rows);
+    } catch (e) {
+      linkedPluginsLoading.hidden = true;
+      linkedPluginsList.hidden = true;
+      linkedPluginsEmpty.hidden = false;
+      linkedPluginsEmpty.textContent = e.message || 'Failed to load linked plugins.';
+    }
+  }
+
   // ── Initial state ──────────────────────────────────────────────────────────
   const session = await SupaAuth.getSession();
   if (session?.user) {
     showUser(session.user);
+    void refreshLinkedPlugins();
   } else {
     showSignedOut();
   }
 
   // ── Stay in sync (e.g. sign-out in another tab) ───────────────────────────
   SupaAuth.onStateChange(({ user }) => {
-    if (user) { showUser(user); } else { showSignedOut(); }
+    if (user) {
+      showUser(user);
+      void refreshLinkedPlugins();
+    } else {
+      showSignedOut();
+    }
   });
 
   // ── Actions ───────────────────────────────────────────────────────────────
@@ -717,6 +797,55 @@ async function fetchMyUserConfigsMulti(clientIds, session) {
     const value = configTypeSelect.value || '';
     if (value) localStorage.setItem(CONFIG_TYPE_KEY, value);
     else localStorage.removeItem(CONFIG_TYPE_KEY);
+  });
+
+  pluginLinkSubmitBtn?.addEventListener('click', async () => {
+    const linkCode = (pluginLinkCodeInput?.value || '').trim().toUpperCase();
+    if (!linkCode) {
+      showPluginLinkStatus('Enter a link code first.', false);
+      return;
+    }
+    try {
+      const s = await SupaAuth.getSession();
+      if (!s?.user) throw new Error('Sign in with Steam first.');
+      await completePluginLink(linkCode, s);
+      if (pluginLinkCodeInput) pluginLinkCodeInput.value = '';
+      showPluginLinkStatus('Plugin linked to your Proton Pulse account.', true);
+      await refreshLinkedPlugins();
+    } catch (e) {
+      showPluginLinkStatus(e.message || 'Failed to link plugin.', false);
+    }
+  });
+
+  const linkCodeFromUrl = new URLSearchParams(window.location.search).get('pluginLinkCode');
+  if (linkCodeFromUrl && pluginLinkCodeInput && !pluginLinkCodeInput.value) {
+    pluginLinkCodeInput.value = linkCodeFromUrl.toUpperCase();
+    if (pluginLinkEntry) pluginLinkEntry.hidden = false;
+    if (pluginLinkEntryBody) {
+      pluginLinkEntryBody.innerHTML = `We prefilled the Decky link code <strong>${escapeHtml(linkCodeFromUrl.toUpperCase())}</strong>. Review it below, then press <strong>Link plugin</strong>.`;
+    }
+    if (session?.user) {
+      setTimeout(() => { focusPluginLinkArea(); }, 50);
+      showPluginLinkStatus('Decky link code loaded. Press "Link plugin" to finish linking.', true);
+    }
+  }
+
+  pluginLinkJumpBtn?.addEventListener('click', () => {
+    focusPluginLinkArea();
+  });
+
+  pluginLinkCopyBtn?.addEventListener('click', async () => {
+    const code = (pluginLinkCodeInput?.value || '').trim().toUpperCase();
+    if (!code) {
+      showPluginLinkStatus('No Decky link code is loaded yet.', false);
+      return;
+    }
+    try {
+      await navigator.clipboard?.writeText(code);
+      showPluginLinkStatus('Link code copied.', true);
+    } catch {
+      showPluginLinkStatus('Could not copy the link code.', false);
+    }
   });
 
   // Save each My-hardware field as it changes, and flag it as manually edited
@@ -870,8 +999,8 @@ async function fetchMyUserConfigsMulti(clientIds, session) {
 
   async function refreshSystems() {
     const s = await SupaAuth.getSession();
-    const steamId = getSteamIdFromSession(s);
-    if (!steamId) {
+    const protonPulseUserId = getProtonPulseUserIdFromSession(s);
+    if (!protonPulseUserId) {
       systemsLoading.hidden = true;
       systemsTable.hidden = true;
       systemsEmpty.hidden = false;
@@ -880,12 +1009,12 @@ async function fetchMyUserConfigsMulti(clientIds, session) {
     }
     systemsLoading.hidden = false;
     try {
-      let rows = await listUserSystems(steamId, s);
+      let rows = await listUserSystems(protonPulseUserId, s);
       const genericRows = rows.filter((row) => isGenericSystemLabel(row.label));
       if (genericRows.length) {
         await Promise.allSettled(genericRows.map((row) => {
           const nextLabel = inferSystemLabel(row);
-          return updateSystemLabel(steamId, row.device_id, nextLabel, s);
+          return updateSystemLabel(protonPulseUserId, row.device_id, nextLabel, s);
         }));
         rows = rows.map((row) => isGenericSystemLabel(row.label)
           ? { ...row, label: inferSystemLabel(row) }
@@ -925,8 +1054,8 @@ async function fetchMyUserConfigsMulti(clientIds, session) {
     if (!tr || (!btn && !defToggle)) return;
     const deviceId = tr.dataset.deviceId;
     const s = await SupaAuth.getSession();
-    const steamId = getSteamIdFromSession(s);
-    if (!steamId) return;
+    const protonPulseUserId = getProtonPulseUserIdFromSession(s);
+    if (!protonPulseUserId) return;
 
     try {
       if (defToggle) {
@@ -934,13 +1063,13 @@ async function fetchMyUserConfigsMulti(clientIds, session) {
         // turning the default ON for this system; false = they flipped OFF
         // the only checked toggle and want no default at all
         if (defToggle.checked) {
-          await setDefaultSystem(steamId, deviceId, s);
+          await setDefaultSystem(protonPulseUserId, deviceId, s);
           await refreshSystems();
           const row = systemsCache.find(r => r.device_id === deviceId);
           if (row) askReplaceLocalFrom(row);
           setMyHardwarePane('local');
         } else {
-          await clearDefaultSystem(steamId, s);
+          await clearDefaultSystem(protonPulseUserId, s);
           await refreshSystems();
           flashStatus('Default cleared', true);
         }
@@ -957,7 +1086,7 @@ async function fetchMyUserConfigsMulti(clientIds, session) {
       }
       if (btn.dataset.role === 'delete') {
         if (!window.confirm('Delete this system? The plugin will re-create it next time you upload.')) return;
-        await deleteSystem(steamId, deviceId, s);
+        await deleteSystem(protonPulseUserId, deviceId, s);
         await refreshSystems();
       }
     } catch (e) {
@@ -973,13 +1102,13 @@ async function fetchMyUserConfigsMulti(clientIds, session) {
     const deviceId = tr?.dataset.deviceId;
     if (!deviceId) return;
     const s = await SupaAuth.getSession();
-    const steamId = getSteamIdFromSession(s);
-    if (!steamId) return;
+    const protonPulseUserId = getProtonPulseUserIdFromSession(s);
+    if (!protonPulseUserId) return;
     try {
       const currentRow = systemsCache.find((row) => row.device_id === deviceId);
       const nextLabel = input.value.trim() || inferSystemLabel(currentRow || {});
       input.value = nextLabel;
-      await updateSystemLabel(steamId, deviceId, nextLabel, s);
+      await updateSystemLabel(protonPulseUserId, deviceId, nextLabel, s);
       showSystemsStatus('Saved', true);
     } catch (e) {
       showSystemsStatus(e.message || 'Save failed', false);
@@ -1000,10 +1129,10 @@ async function fetchMyUserConfigsMulti(clientIds, session) {
     const anyLocal = Object.values(MYHW_KEYS).some(k => localStorage.getItem(k));
     if (anyLocal) return;
     const s = await SupaAuth.getSession();
-    const steamId = getSteamIdFromSession(s);
-    if (!steamId) return;
+    const protonPulseUserId = getProtonPulseUserIdFromSession(s);
+    if (!protonPulseUserId) return;
     try {
-      const rows = await listUserSystems(steamId, s);
+      const rows = await listUserSystems(protonPulseUserId, s);
       const def = rows.find(r => r.is_default);
       if (!def) return;
       const parsed = parseUploadedSystem(def);
@@ -1033,14 +1162,6 @@ async function fetchMyUserConfigsMulti(clientIds, session) {
   const myConfigsLoading  = document.getElementById('my-configs-loading');
   const myConfigsStatus   = document.getElementById('my-configs-status');
   const myConfigsRefresh  = document.getElementById('my-configs-refresh-btn');
-  const linkedDevicesList    = document.getElementById('linked-devices-list');
-  const linkedDevicesEmpty   = document.getElementById('linked-devices-empty');
-  const linkedDevicesLoading = document.getElementById('linked-devices-loading');
-  const linkedDevicesStatus  = document.getElementById('linked-devices-status');
-  const linkedDevicesRefresh = document.getElementById('linked-devices-refresh-btn');
-  const claimDeviceInput     = document.getElementById('claim-device-input');
-  const claimDeviceBtn       = document.getElementById('claim-device-btn');
-  const claimDeviceStatus    = document.getElementById('claim-device-status');
 
   function showMyConfigsStatus(msg, ok) {
     if (!myConfigsStatus) return;
@@ -1100,117 +1221,6 @@ async function fetchMyUserConfigsMulti(clientIds, session) {
   myConfigsRefresh?.addEventListener('click', () => { void refreshMyConfigs(); });
 
   void refreshMyConfigs();
-
-  // ── Linked plugin devices ─────────────────────────────────────────────────
-  function renderLinkedDevices(rows) {
-    if (!linkedDevicesLoading || !linkedDevicesEmpty || !linkedDevicesList) return;
-    linkedDevicesLoading.hidden = true;
-    if (!rows || rows.length === 0) {
-      linkedDevicesList.hidden  = true;
-      linkedDevicesEmpty.hidden = false;
-      return;
-    }
-    linkedDevicesEmpty.hidden = true;
-    linkedDevicesList.hidden  = false;
-    linkedDevicesList.innerHTML = `
-      <table class="profile-configs-table">
-        <thead>
-          <tr><th>Device UUID</th><th>Claimed</th><th class="col-action"></th></tr>
-        </thead>
-        <tbody>
-          ${rows.map(row => `
-            <tr data-client-id="${escapeHtml(row.client_id)}">
-              <td><code class="profile-uid" style="font-size:0.78rem">${escapeHtml(row.client_id)}</code></td>
-              <td>${escapeHtml(formatSystemUpdated(row.claimed_at))}</td>
-              <td class="col-action">
-                <button type="button" class="profile-systems-trash" data-role="unclaim" title="Remove">x</button>
-              </td>
-            </tr>`).join('')}
-        </tbody>
-      </table>`;
-  }
-
-  function showLinkedDevicesStatus(msg, ok) {
-    if (!linkedDevicesStatus) return;
-    linkedDevicesStatus.textContent = msg;
-    linkedDevicesStatus.style.color = ok ? 'var(--green)' : 'var(--red)';
-    setTimeout(() => { linkedDevicesStatus.textContent = ''; }, 3000);
-  }
-
-  function showClaimStatus(msg, ok) {
-    if (!claimDeviceStatus) return;
-    claimDeviceStatus.textContent = msg;
-    claimDeviceStatus.style.color = ok ? 'var(--green)' : 'var(--red)';
-    setTimeout(() => { claimDeviceStatus.textContent = ''; }, 3000);
-  }
-
-  async function refreshLinkedDevices() {
-    if (!linkedDevicesLoading) return;
-    const s = await SupaAuth.getSession();
-    const steamId = getSteamIdFromSession(s);
-    if (!steamId) {
-      linkedDevicesLoading.hidden = true;
-      if (linkedDevicesEmpty) {
-        linkedDevicesEmpty.hidden = false;
-        linkedDevicesEmpty.textContent = 'Sign in with Steam to see your linked devices.';
-      }
-      return;
-    }
-    linkedDevicesLoading.hidden = false;
-    if (linkedDevicesEmpty) linkedDevicesEmpty.hidden = true;
-    try {
-      const rows = await fetchLinkedDevices(steamId, s);
-      renderLinkedDevices(rows);
-    } catch (e) {
-      linkedDevicesLoading.hidden = true;
-      showLinkedDevicesStatus(e.message || 'Failed to load linked devices', false);
-    }
-  }
-
-  linkedDevicesRefresh?.addEventListener('click', () => { void refreshLinkedDevices(); });
-
-  linkedDevicesList?.addEventListener('click', async (ev) => {
-    const btn = ev.target.closest('button[data-role="unclaim"]');
-    if (!btn) return;
-    const tr = btn.closest('tr[data-client-id]');
-    if (!tr) return;
-    const clientId = tr.dataset.clientId;
-    if (!window.confirm('Remove this linked device? Reports from it will no longer appear in My uploaded reports.')) return;
-    const s = await SupaAuth.getSession();
-    const steamId = getSteamIdFromSession(s);
-    if (!steamId) return;
-    try {
-      await unclaimDevice(clientId, steamId, s);
-      showClaimStatus('Device unlinked', true);
-      await refreshLinkedDevices();
-      await refreshMyConfigs();
-    } catch (e) {
-      showClaimStatus(e.message || 'Failed to unlink', false);
-    }
-  });
-
-  claimDeviceBtn?.addEventListener('click', async () => {
-    const clientId = (claimDeviceInput?.value || '').trim();
-    if (!clientId) { showClaimStatus('Paste your plugin UUID first', false); return; }
-    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(clientId)) {
-      showClaimStatus("That doesn't look like a valid UUID", false);
-      return;
-    }
-    const s = await SupaAuth.getSession();
-    const steamId = getSteamIdFromSession(s);
-    if (!steamId) { showClaimStatus('Sign in first', false); return; }
-    try {
-      await claimDevice(clientId, steamId, s);
-      if (claimDeviceInput) claimDeviceInput.value = '';
-      showClaimStatus('Device linked!', true);
-      await refreshLinkedDevices();
-      await refreshMyConfigs();
-    } catch (e) {
-      showClaimStatus(e.message || 'Claim failed', false);
-    }
-  });
-
-  void refreshLinkedDevices();
 
   // ── Topbar auth chip ──────────────────────────────────────────────────────
   (function() {

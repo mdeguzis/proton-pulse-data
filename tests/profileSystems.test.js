@@ -36,6 +36,9 @@ ctx.__getProtonPulseUserIdFromSession = getProtonPulseUserIdFromSession;
 ctx.__escapeHtml            = escapeHtml;
 ctx.__formatSystemUpdated   = formatSystemUpdated;
 ctx.__fetchMyUserConfigs    = fetchMyUserConfigs;
+ctx.__listLinkedPlugins     = listLinkedPlugins;
+ctx.__completePluginLink    = completePluginLink;
+ctx.__removePluginLink      = removePluginLink;
 ctx.__inferGpuVendor        = inferGpuVendor;
 ctx.__inferSystemLabel      = inferSystemLabel;
 ctx.__isGenericSystemLabel  = isGenericSystemLabel;
@@ -129,11 +132,11 @@ async function flush() {
   for (let i = 0; i < 5; i++) await new Promise(r => setTimeout(r, 0));
 }
 
-const steamId = '76561198000000000';
+const protonPulseUserId = 'pp-user-123';
 const deviceId = 'dev-abc-123';
 
 describe('listUserSystems', () => {
-  test('GETs with steam_id eq filter and updated_at desc order', async () => {
+  test('GETs with proton_pulse_user_id eq filter and updated_at desc order', async () => {
     const { ctx, fetchMock } = makeCtx({ access_token: 'user_tok' });
     await flush();
     fetchMock.mockClear();
@@ -142,13 +145,13 @@ describe('listUserSystems', () => {
       json: async () => [{ device_id: 'd1', label: 'desk' }],
     });
 
-    const rows = await ctx.__listUserSystems(steamId, { access_token: 'user_tok' });
+    const rows = await ctx.__listUserSystems(protonPulseUserId, { access_token: 'user_tok' });
 
     expect(rows).toEqual([{ device_id: 'd1', label: 'desk' }]);
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe(
-      `${SUPABASE_URL}/rest/v1/user_systems?steam_id=eq.${encodeURIComponent(steamId)}&order=updated_at.desc`,
+      `${SUPABASE_URL}/rest/v1/user_systems?proton_pulse_user_id=eq.${encodeURIComponent(protonPulseUserId)}&order=updated_at.desc`,
     );
     // No method means GET by default
     expect(init.method).toBeUndefined();
@@ -163,7 +166,7 @@ describe('listUserSystems', () => {
     fetchMock.mockResolvedValue({ ok: false, status: 500, json: async () => ({}) });
 
     await expect(
-      ctx.__listUserSystems(steamId, { access_token: 'tok' })
+      ctx.__listUserSystems(protonPulseUserId, { access_token: 'tok' })
     ).rejects.toThrow('Lookup failed: HTTP 500');
   });
 
@@ -173,7 +176,7 @@ describe('listUserSystems', () => {
     fetchMock.mockClear();
     fetchMock.mockResolvedValue({ ok: true, status: 200, json: async () => [] });
 
-    await ctx.__listUserSystems(steamId, null);
+    await ctx.__listUserSystems(protonPulseUserId, null);
 
     const [, init] = fetchMock.mock.calls[0];
     expect(init.headers.Authorization).toBe(`Bearer ${SUPABASE_ANON_KEY}`);
@@ -188,14 +191,14 @@ describe('setDefaultSystem', () => {
     // both PATCHes succeed
     fetchMock.mockResolvedValue({ ok: true, status: 204 });
 
-    await ctx.__setDefaultSystem(steamId, deviceId, { access_token: 'tok' });
+    await ctx.__setDefaultSystem(protonPulseUserId, deviceId, { access_token: 'tok' });
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
 
-    // First call: clear is_default across all rows for this steam_id
+    // First call: clear is_default across all rows for this Proton Pulse user
     const [clearUrl, clearInit] = fetchMock.mock.calls[0];
     expect(clearUrl).toBe(
-      `${SUPABASE_URL}/rest/v1/user_systems?steam_id=eq.${encodeURIComponent(steamId)}`,
+      `${SUPABASE_URL}/rest/v1/user_systems?proton_pulse_user_id=eq.${encodeURIComponent(protonPulseUserId)}`,
     );
     expect(clearInit.method).toBe('PATCH');
     expect(clearInit.headers.Prefer).toBe('return=minimal');
@@ -204,7 +207,7 @@ describe('setDefaultSystem', () => {
     // Second call: flip the chosen one to default
     const [setUrl, setInit] = fetchMock.mock.calls[1];
     expect(setUrl).toBe(
-      `${SUPABASE_URL}/rest/v1/user_systems?steam_id=eq.${encodeURIComponent(steamId)}` +
+      `${SUPABASE_URL}/rest/v1/user_systems?proton_pulse_user_id=eq.${encodeURIComponent(protonPulseUserId)}` +
       `&device_id=eq.${encodeURIComponent(deviceId)}`,
     );
     expect(setInit.method).toBe('PATCH');
@@ -219,7 +222,7 @@ describe('setDefaultSystem', () => {
     fetchMock.mockResolvedValueOnce({ ok: false, status: 403 });
 
     await expect(
-      ctx.__setDefaultSystem(steamId, deviceId, { access_token: 'tok' })
+      ctx.__setDefaultSystem(protonPulseUserId, deviceId, { access_token: 'tok' })
     ).rejects.toThrow('Clear default failed: HTTP 403');
 
     // second PATCH should never fire if the first one blew up
@@ -236,12 +239,12 @@ describe('clearDefaultSystem', () => {
     fetchMock.mockClear();
     fetchMock.mockResolvedValue({ ok: true, status: 204 });
 
-    await ctx.__clearDefaultSystem(steamId, { access_token: 'tok' });
+    await ctx.__clearDefaultSystem(protonPulseUserId, { access_token: 'tok' });
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe(
-      `${SUPABASE_URL}/rest/v1/user_systems?steam_id=eq.${encodeURIComponent(steamId)}`,
+      `${SUPABASE_URL}/rest/v1/user_systems?proton_pulse_user_id=eq.${encodeURIComponent(protonPulseUserId)}`,
     );
     expect(init.method).toBe('PATCH');
     expect(init.headers.Prefer).toBe('return=minimal');
@@ -255,24 +258,24 @@ describe('clearDefaultSystem', () => {
     fetchMock.mockResolvedValue({ ok: false, status: 500 });
 
     await expect(
-      ctx.__clearDefaultSystem(steamId, { access_token: 'tok' })
+      ctx.__clearDefaultSystem(protonPulseUserId, { access_token: 'tok' })
     ).rejects.toThrow('Clear default failed: HTTP 500');
   });
 });
 
 describe('updateSystemLabel', () => {
-  test('PATCHes with label body and steam_id + device_id filter', async () => {
+  test('PATCHes with label body and proton_pulse_user_id + device_id filter', async () => {
     const { ctx, fetchMock } = makeCtx({ access_token: 'tok' });
     await flush();
     fetchMock.mockClear();
     fetchMock.mockResolvedValue({ ok: true, status: 204 });
 
-    await ctx.__updateSystemLabel(steamId, deviceId, 'Living Room Deck', { access_token: 'tok' });
+    await ctx.__updateSystemLabel(protonPulseUserId, deviceId, 'Living Room Deck', { access_token: 'tok' });
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe(
-      `${SUPABASE_URL}/rest/v1/user_systems?steam_id=eq.${encodeURIComponent(steamId)}` +
+      `${SUPABASE_URL}/rest/v1/user_systems?proton_pulse_user_id=eq.${encodeURIComponent(protonPulseUserId)}` +
       `&device_id=eq.${encodeURIComponent(deviceId)}`,
     );
     expect(init.method).toBe('PATCH');
@@ -287,24 +290,24 @@ describe('updateSystemLabel', () => {
     fetchMock.mockResolvedValue({ ok: false, status: 400 });
 
     await expect(
-      ctx.__updateSystemLabel(steamId, deviceId, 'nope', { access_token: 'tok' })
+      ctx.__updateSystemLabel(protonPulseUserId, deviceId, 'nope', { access_token: 'tok' })
     ).rejects.toThrow('Update label failed: HTTP 400');
   });
 });
 
 describe('deleteSystem', () => {
-  test('DELETEs the row matching steam_id + device_id', async () => {
+  test('DELETEs the row matching proton_pulse_user_id + device_id', async () => {
     const { ctx, fetchMock } = makeCtx({ access_token: 'tok' });
     await flush();
     fetchMock.mockClear();
     fetchMock.mockResolvedValue({ ok: true, status: 204 });
 
-    await ctx.__deleteSystem(steamId, deviceId, { access_token: 'tok' });
+    await ctx.__deleteSystem(protonPulseUserId, deviceId, { access_token: 'tok' });
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe(
-      `${SUPABASE_URL}/rest/v1/user_systems?steam_id=eq.${encodeURIComponent(steamId)}` +
+      `${SUPABASE_URL}/rest/v1/user_systems?proton_pulse_user_id=eq.${encodeURIComponent(protonPulseUserId)}` +
       `&device_id=eq.${encodeURIComponent(deviceId)}`,
     );
     expect(init.method).toBe('DELETE');
@@ -320,7 +323,7 @@ describe('deleteSystem', () => {
     fetchMock.mockResolvedValue({ ok: false, status: 404 });
 
     await expect(
-      ctx.__deleteSystem(steamId, deviceId, { access_token: 'tok' })
+      ctx.__deleteSystem(protonPulseUserId, deviceId, { access_token: 'tok' })
     ).rejects.toThrow('Delete failed: HTTP 404');
   });
 });
@@ -638,7 +641,7 @@ describe('inferGpuVendor', () => {
 // signed-in Proton Pulse user id and keep client_id as a legacy fallback.
 
 const clientId = '11111111-2222-3333-4444-555555555555';
-const protonPulseUserId = 'pp-user-123';
+const reportOwnerId = 'pp-user-123';
 
 describe('fetchMyUserConfigs', () => {
   test('GETs user_configs filtered by proton_pulse_user_id with client_id fallback', async () => {
@@ -647,12 +650,12 @@ describe('fetchMyUserConfigs', () => {
     fetchMock.mockClear();
     fetchMock.mockResolvedValue({ ok: true, status: 200, json: async () => [] });
 
-    await ctx.__fetchMyUserConfigs(protonPulseUserId, clientId, { access_token: 'tok' });
+    await ctx.__fetchMyUserConfigs(reportOwnerId, clientId, { access_token: 'tok' });
 
     const [url] = fetchMock.mock.calls[0];
     expect(url).toBe(
       `${SUPABASE_URL}/rest/v1/user_configs`
-      + `?or=(proton_pulse_user_id.eq.${encodeURIComponent(protonPulseUserId)},client_id.eq.${encodeURIComponent(clientId)})`
+      + `?or=(proton_pulse_user_id.eq.${encodeURIComponent(reportOwnerId)},client_id.eq.${encodeURIComponent(clientId)})`
       + `&select=id,app_id,title,proton_version,rating,created_at`
       + `&order=created_at.desc`,
     );
@@ -670,5 +673,33 @@ describe('getProtonPulseUserIdFromSession', () => {
     const { ctx } = makeCtx(null);
     await flush();
     expect(ctx.__getProtonPulseUserIdFromSession(null)).toBeNull();
+  });
+});
+
+describe('plugin link helpers', () => {
+  test('listLinkedPlugins posts to the list edge function with auth headers', async () => {
+    const { ctx, fetchMock } = makeCtx({ access_token: 'tok' });
+    await flush();
+    fetchMock.mockClear();
+    fetchMock.mockResolvedValue({ ok: true, status: 200, text: async () => '[]' });
+
+    await ctx.__listLinkedPlugins({ access_token: 'tok' });
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe(`${SUPABASE_URL}/functions/v1/plugin-links-list`);
+    expect(init.method).toBe('POST');
+    expect(init.headers.Authorization).toBe('Bearer tok');
+  });
+
+  test('completePluginLink sends the link code payload', async () => {
+    const { ctx, fetchMock } = makeCtx({ access_token: 'tok' });
+    await flush();
+    fetchMock.mockClear();
+    fetchMock.mockResolvedValue({ ok: true, status: 200, text: async () => '{}' });
+
+    await ctx.__completePluginLink('ABCD-1234', { access_token: 'tok' });
+
+    const [, init] = fetchMock.mock.calls[0];
+    expect(JSON.parse(init.body)).toEqual({ linkCode: 'ABCD-1234' });
   });
 });

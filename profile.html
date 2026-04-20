@@ -100,6 +100,22 @@
         </div>
       </div>
 
+      <div class="profile-section profile-link-entry" id="plugin-link-entry" hidden>
+        <div class="profile-section-title">Decky Plugin Link</div>
+        <div class="profile-field">
+          <div class="profile-prefill-source profile-prefill-source--link">
+            <div class="profile-prefill-source-title">Finish linking your Decky install</div>
+            <div class="profile-prefill-source-body" id="plugin-link-entry-body">
+              We prefilled the link code from your Steam Deck. Review it below, then press <strong>Link plugin</strong>.
+            </div>
+            <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+              <button type="button" class="profile-refresh-btn" id="plugin-link-jump-btn">Jump to link box</button>
+              <button type="button" class="profile-refresh-btn" id="plugin-link-copy-btn">Copy code</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="profile-section">
         <div class="profile-section-title">Account details</div>
 
@@ -133,6 +149,29 @@
           <div class="profile-field-label">Last sign-in</div>
           <div class="profile-field-value">
             <span id="profile-last-signin"></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="profile-section" id="linked-plugins-section">
+        <div class="profile-section-title">Linked plugins</div>
+
+        <div class="profile-field">
+          <div class="profile-field-label">Link a Decky plugin</div>
+          <div class="profile-field-value" style="gap:8px;align-items:center;flex-wrap:wrap">
+            <input type="text" id="plugin-link-code" class="profile-select" placeholder="Enter link code from Decky" maxlength="32" style="max-width:260px">
+            <button type="button" class="profile-refresh-btn" id="plugin-link-submit-btn">Link plugin</button>
+          </div>
+          <div class="profile-field-hint">Generate a link code in the Decky plugin, then enter it here to connect that install to your Proton Pulse account.</div>
+          <div id="plugin-link-status" class="profile-field-hint" style="margin-top:6px"></div>
+        </div>
+
+        <div class="profile-field">
+          <div class="profile-field-label">Currently linked</div>
+          <div class="profile-field-value" style="display:block">
+            <div id="linked-plugins-loading" class="profile-field-hint">Loading linked plugins...</div>
+            <div id="linked-plugins-empty" class="profile-field-hint" hidden>No linked Decky installs yet.</div>
+            <div id="linked-plugins-list" hidden></div>
           </div>
         </div>
       </div>
@@ -324,35 +363,6 @@
               <input type="text" id="myhw-kernel" class="profile-select" placeholder="e.g. 6.8.0" maxlength="60">
             </div>
           </div>
-        </div>
-      </div>
-
-      <!-- Linked plugin devices -->
-      <div class="profile-section">
-        <div class="profile-section-title" style="display:flex;justify-content:space-between;align-items:center">
-          <span>Linked plugin devices</span>
-          <button type="button" class="profile-refresh-btn" id="linked-devices-refresh-btn">Refresh</button>
-        </div>
-        <div class="profile-field">
-          <div class="profile-field-hint" style="margin-top:0">
-            Link your Decky plugin device UUID to see its submitted reports under <strong>My uploaded reports</strong>.
-            Copy your UUID from the plugin under Advanced &rarr; Local Data.
-          </div>
-        </div>
-        <div class="profile-field">
-          <div id="linked-devices-loading" class="profile-field-hint">Loading linked devices...</div>
-          <div id="linked-devices-empty" class="profile-field-hint" hidden>No linked devices yet.</div>
-          <div id="linked-devices-list" hidden></div>
-          <div id="linked-devices-status" class="profile-field-hint" style="margin-top:6px"></div>
-        </div>
-        <div class="profile-field">
-          <div class="profile-field-label">Claim a device UUID</div>
-          <div class="profile-field-value" style="gap:8px;flex-wrap:wrap">
-            <input type="text" id="claim-device-input" class="profile-select"
-              placeholder="Paste your plugin UUID here" maxlength="36" style="flex:1;min-width:200px">
-            <button type="button" class="profile-parse-btn" id="claim-device-btn">Claim</button>
-          </div>
-          <div id="claim-device-status" class="profile-field-hint" style="margin-top:6px"></div>
         </div>
       </div>
 
