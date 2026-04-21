@@ -36,6 +36,9 @@ ctx.__getProtonPulseUserIdFromSession = getProtonPulseUserIdFromSession;
 ctx.__escapeHtml            = escapeHtml;
 ctx.__formatSystemUpdated   = formatSystemUpdated;
 ctx.__fetchMyUserConfigs    = fetchMyUserConfigs;
+ctx.__fetchMyCloudConfigs   = fetchMyCloudConfigs;
+ctx.__getMyReportBadges     = getMyReportBadges;
+ctx.__mergeMyReportRows     = mergeMyReportRows;
 ctx.__listLinkedPlugins     = listLinkedPlugins;
 ctx.__completePluginLink    = completePluginLink;
 ctx.__removePluginLink      = removePluginLink;
@@ -660,6 +663,97 @@ describe('fetchMyUserConfigs', () => {
       + `&select=id,app_id,title,proton_version,rating,created_at`
       + `&order=created_at.desc`,
     );
+  });
+});
+
+describe('fetchMyCloudConfigs', () => {
+  test('GETs user_proton_configs filtered by proton_pulse_user_id', async () => {
+    const { ctx, fetchMock } = makeCtx({ access_token: 'tok' });
+    await flush();
+    fetchMock.mockClear();
+    fetchMock.mockResolvedValue({ ok: true, status: 200, json: async () => [] });
+
+    await ctx.__fetchMyCloudConfigs(reportOwnerId, { access_token: 'tok' });
+
+    const [url] = fetchMock.mock.calls[0];
+    expect(url).toBe(
+      `${SUPABASE_URL}/rest/v1/user_proton_configs`
+      + `?proton_pulse_user_id=eq.${encodeURIComponent(reportOwnerId)}`
+      + `&select=app_id,app_name,updated_at,config`
+      + `&order=updated_at.desc`,
+    );
+  });
+});
+
+describe('mergeMyReportRows', () => {
+  test('marks published-only rows with just the published badge', async () => {
+    const { ctx } = makeCtx(null);
+    await flush();
+
+    const rows = ctx.__mergeMyReportRows([
+      { app_id: 570, title: 'Dota 2', rating: 'gold', created_at: '2026-04-20T10:00:00Z' },
+    ], []);
+
+    expect(rows).toEqual([
+      expect.objectContaining({
+        app_id: 570,
+        published: true,
+        cloud: false,
+        unpublished: false,
+        rating: 'gold',
+      }),
+    ]);
+    expect(ctx.__getMyReportBadges(rows[0])).toEqual([
+      { label: 'Published', tone: 'published' },
+    ]);
+  });
+
+  test('marks cloud-only rows as cloud and unpublished', async () => {
+    const { ctx } = makeCtx(null);
+    await flush();
+
+    const rows = ctx.__mergeMyReportRows([], [
+      { app_id: 730, app_name: 'Counter-Strike 2', updated_at: '2026-04-20T11:00:00Z', config: { appName: 'Counter-Strike 2' } },
+    ]);
+
+    expect(rows).toEqual([
+      expect.objectContaining({
+        app_id: 730,
+        published: false,
+        cloud: true,
+        unpublished: true,
+      }),
+    ]);
+    expect(ctx.__getMyReportBadges(rows[0])).toEqual([
+      { label: 'Cloud', tone: 'cloud' },
+      { label: 'Unpublished', tone: 'unpublished' },
+    ]);
+  });
+
+  test('marks newer cloud rows as unpublished even when a published report exists', async () => {
+    const { ctx } = makeCtx(null);
+    await flush();
+
+    const rows = ctx.__mergeMyReportRows([
+      { app_id: 1091500, title: 'Cyberpunk 2077', rating: 'platinum', created_at: '2026-04-20T09:00:00Z' },
+    ], [
+      { app_id: 1091500, app_name: 'Cyberpunk 2077', updated_at: '2026-04-20T12:00:00Z', config: { appName: 'Cyberpunk 2077' } },
+    ]);
+
+    expect(rows).toEqual([
+      expect.objectContaining({
+        app_id: 1091500,
+        published: true,
+        cloud: true,
+        unpublished: true,
+        updated_at: '2026-04-20T12:00:00Z',
+      }),
+    ]);
+    expect(ctx.__getMyReportBadges(rows[0])).toEqual([
+      { label: 'Cloud', tone: 'cloud' },
+      { label: 'Published', tone: 'published' },
+      { label: 'Unpublished', tone: 'unpublished' },
+    ]);
   });
 });
 

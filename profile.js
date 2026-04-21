@@ -399,7 +399,7 @@ function getWebClientIdProfile() {
 }
 
 async function fetchMyUserConfigs(protonPulseUserId, clientId, session) {
-  // Your submitted reports, the ones that show up on public game pages
+  // Public Pulse reports that show up on game pages.
   const filters = [];
   if (protonPulseUserId) {
     filters.push(`proton_pulse_user_id.eq.${encodeURIComponent(protonPulseUserId)}`);
@@ -415,6 +415,78 @@ async function fetchMyUserConfigs(protonPulseUserId, clientId, session) {
   const r = await fetch(url, { headers: supabaseHeaders(session) });
   if (!r.ok) throw new Error(`Lookup failed: HTTP ${r.status}`);
   return await r.json();
+}
+
+async function fetchMyCloudConfigs(protonPulseUserId, session) {
+  if (!protonPulseUserId) return [];
+  const url = `${SUPABASE_URL}/rest/v1/user_proton_configs`
+    + `?proton_pulse_user_id=eq.${encodeURIComponent(protonPulseUserId)}`
+    + `&select=app_id,app_name,updated_at,config`
+    + `&order=updated_at.desc`;
+  const r = await fetch(url, { headers: supabaseHeaders(session) });
+  if (!r.ok) throw new Error(`Cloud lookup failed: HTTP ${r.status}`);
+  return await r.json();
+}
+
+function getMyReportBadges(row) {
+  const badges = [];
+  if (row.cloud) badges.push({ label: 'Cloud', tone: 'cloud' });
+  if (row.published) badges.push({ label: 'Published', tone: 'published' });
+  if (row.unpublished) badges.push({ label: 'Unpublished', tone: 'unpublished' });
+  return badges;
+}
+
+function mergeMyReportRows(publishedRows, cloudRows) {
+  const merged = new Map();
+
+  function ensureRow(appId) {
+    if (!merged.has(appId)) {
+      merged.set(appId, {
+        app_id: appId,
+        title: '',
+        rating: '',
+        updated_at: '',
+        published_at: '',
+        cloud_updated_at: '',
+        cloud: false,
+        published: false,
+        unpublished: false,
+      });
+    }
+    return merged.get(appId);
+  }
+
+  for (const row of publishedRows || []) {
+    const mergedRow = ensureRow(row.app_id);
+    mergedRow.title = row.title || mergedRow.title;
+    mergedRow.rating = row.rating || mergedRow.rating;
+    mergedRow.published = true;
+    mergedRow.published_at = row.created_at || mergedRow.published_at;
+    if (!mergedRow.updated_at || new Date(row.created_at || 0).getTime() > new Date(mergedRow.updated_at || 0).getTime()) {
+      mergedRow.updated_at = row.created_at || mergedRow.updated_at;
+    }
+  }
+
+  for (const row of cloudRows || []) {
+    const mergedRow = ensureRow(row.app_id);
+    mergedRow.title = mergedRow.title || row.app_name || row.config?.appName || `App ${row.app_id}`;
+    mergedRow.cloud = true;
+    mergedRow.cloud_updated_at = row.updated_at || mergedRow.cloud_updated_at;
+    if (!mergedRow.updated_at || new Date(row.updated_at || 0).getTime() > new Date(mergedRow.updated_at || 0).getTime()) {
+      mergedRow.updated_at = row.updated_at || mergedRow.updated_at;
+    }
+  }
+
+  for (const row of merged.values()) {
+    row.unpublished = row.cloud && (!row.published || (
+      row.cloud_updated_at
+      && (!row.published_at || new Date(row.cloud_updated_at).getTime() > new Date(row.published_at).getTime())
+    ));
+  }
+
+  return Array.from(merged.values()).sort((a, b) => {
+    return new Date(b.updated_at || 0).getTime() - new Date(a.updated_at || 0).getTime();
+  });
 }
 
 function pluginFunctionUrl(name) {
@@ -1163,10 +1235,9 @@ function getPluginLinkCodeFromLocation(loc = window.location) {
 
   void autoFillFromDefaultIfEmpty();
 
-  // ── My uploaded reports ───────────────────────────────────────────────────
-  // List the user's submitted reports from user_configs. Uploading from the
-  // plugin publishes directly, so there's no draft vs. published split to
-  // represent here, just a flat list of what you've put out there
+  // ── My reports ────────────────────────────────────────────────────────────
+  // Merge publicly published Pulse reports with cloud-synced plugin configs so
+  // the profile can show both "published" and "still only in cloud" states.
   const myConfigsTable    = document.getElementById('my-configs-table');
   const myConfigsTbody    = document.getElementById('my-configs-tbody');
   const myConfigsEmpty    = document.getElementById('my-configs-empty');
@@ -1194,14 +1265,18 @@ function getPluginLinkCodeFromLocation(loc = window.location) {
     myConfigsTbody.innerHTML = rows.map(row => {
       const appLink = `app.html#/app/${encodeURIComponent(row.app_id)}`;
       const name = row.title || `App ${row.app_id}`;
+      const badges = getMyReportBadges(row).map((badge) => (
+        `<span class="profile-configs-badge profile-configs-badge--${escapeHtml(badge.tone)}">${escapeHtml(badge.label)}</span>`
+      )).join('');
       return `
         <tr data-app-id="${escapeHtml(String(row.app_id))}">
           <td>
             <a href="${escapeHtml(appLink)}" class="profile-configs-game-link">${escapeHtml(name)}</a>
             <div class="profile-configs-appid">App ${escapeHtml(String(row.app_id))}</div>
           </td>
-          <td>${escapeHtml(row.rating || '')}</td>
-          <td>${escapeHtml(formatSystemUpdated(row.created_at))}</td>
+          <td>${escapeHtml(row.rating || '—')}</td>
+          <td><div class="profile-configs-status">${badges}</div></td>
+          <td>${escapeHtml(formatSystemUpdated(row.updated_at))}</td>
           <td class="col-action"><a class="profile-configs-view-link" href="${escapeHtml(appLink)}">View</a></td>
         </tr>`;
     }).join('');
@@ -1213,7 +1288,7 @@ function getPluginLinkCodeFromLocation(loc = window.location) {
       myConfigsLoading.hidden = true;
       myConfigsTable.hidden   = true;
       myConfigsEmpty.hidden   = false;
-      myConfigsEmpty.textContent = 'Sign in with Steam to see your uploaded reports.';
+      myConfigsEmpty.textContent = 'Sign in with Steam to see your reports and cloud-synced configs.';
       return;
     }
     myConfigsLoading.hidden = false;
@@ -1221,8 +1296,11 @@ function getPluginLinkCodeFromLocation(loc = window.location) {
     try {
       const protonPulseUserId = getProtonPulseUserIdFromSession(s);
       const cid  = getWebClientIdProfile();
-      const rows = await fetchMyUserConfigs(protonPulseUserId, cid, s);
-      renderMyConfigs(rows);
+      const [publishedRows, cloudRows] = await Promise.all([
+        fetchMyUserConfigs(protonPulseUserId, cid, s),
+        fetchMyCloudConfigs(protonPulseUserId, s),
+      ]);
+      renderMyConfigs(mergeMyReportRows(publishedRows, cloudRows));
     } catch (e) {
       myConfigsLoading.hidden = true;
       showMyConfigsStatus(e.message || 'Failed to load', false);

@@ -366,15 +366,15 @@
         </div>
       </div>
 
-      <!-- Public reports submitted to user_configs from either the plugin or the web form -->
+      <!-- Owned report/config rows from public Pulse reports plus cloud-synced plugin configs -->
       <div class="profile-section">
         <div class="profile-section-title" style="display:flex;justify-content:space-between;align-items:center">
-          <span>My uploaded reports</span>
+          <span>My Reports</span>
           <button type="button" class="profile-refresh-btn" id="my-configs-refresh-btn">Refresh</button>
         </div>
         <div class="profile-field">
           <div id="my-configs-empty" class="profile-field-hint" hidden>
-            Nothing uploaded yet. Open a game in the Decky plugin and press <strong>Upload to Pulse</strong>, or submit a report from a game page.
+            Nothing synced yet. Open a game in the Decky plugin and use <strong>Upload to Pulse</strong> or cloud sync, or submit a report from a game page.
           </div>
           <div id="my-configs-loading" class="profile-field-hint">Loading your reports...</div>
           <table class="profile-configs-table" id="my-configs-table" hidden>
@@ -382,6 +382,7 @@
               <tr>
                 <th>Game</th>
                 <th>Rating</th>
+                <th>Status</th>
                 <th>Updated</th>
                 <th class="col-action"></th>
               </tr>

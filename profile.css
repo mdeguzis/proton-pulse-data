@@ -538,6 +538,38 @@
   color: var(--muted);
   margin-top: 2px;
 }
+.profile-configs-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.profile-configs-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.profile-configs-badge--cloud {
+  color: #9ecbe8;
+  border-color: rgba(74,159,208,0.35);
+  background: rgba(74,159,208,0.1);
+}
+.profile-configs-badge--published {
+  color: #a9d7b6;
+  border-color: rgba(76,175,128,0.35);
+  background: rgba(76,175,128,0.1);
+}
+.profile-configs-badge--unpublished {
+  color: #d4b36a;
+  border-color: rgba(212,168,67,0.4);
+  background: rgba(212,168,67,0.1);
+}
 .profile-configs-view-link {
   font-size: 0.7rem;
   color: var(--muted);
