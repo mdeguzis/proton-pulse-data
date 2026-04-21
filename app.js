@@ -322,7 +322,7 @@ async function renderHomePage() {
     // also have ProtonDB data without blocking on the configs fetch
     const [r] = await Promise.all([
       fetch(
-        `${SB_URL}/user_proton_configs?select=id,voter_id,app_id,app_name,config,updated_at&order=updated_at.desc`,
+        `${SB_URL}/user_proton_configs?is_published=eq.true&select=id,voter_id,app_id,app_name,config,updated_at,is_published&order=updated_at.desc`,
         { headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` } }
       ),
       loadSearchIndex(),
@@ -396,7 +396,8 @@ async function fetchMatchingPulseConfigs(query) {
   if (!q) return [];
   try {
     const url = new URL(`${SB_URL}/user_proton_configs`);
-    url.searchParams.set('select', 'id,voter_id,app_id,app_name,config,updated_at');
+    url.searchParams.set('select', 'id,voter_id,app_id,app_name,config,updated_at,is_published');
+    url.searchParams.set('is_published', 'eq.true');
     url.searchParams.set('order', 'updated_at.desc');
     url.searchParams.set('limit', '60');
     if (/^\d+$/.test(q)) {
@@ -483,7 +484,7 @@ function latestPerClient(rows) {
 async function fetchSupabase(appId) {
   try {
     const r = await fetch(
-      `${SB_URL}/user_proton_configs?app_id=eq.${appId}&select=id,voter_id,app_id,app_name,config,updated_at&order=updated_at.desc`,
+      `${SB_URL}/user_proton_configs?app_id=eq.${appId}&is_published=eq.true&select=id,voter_id,app_id,app_name,config,updated_at,is_published&order=updated_at.desc`,
       { headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` } }
     );
     if (!r.ok) return [];

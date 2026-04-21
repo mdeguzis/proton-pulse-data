@@ -421,11 +421,55 @@ async function fetchMyCloudConfigs(protonPulseUserId, session) {
   if (!protonPulseUserId) return [];
   const url = `${SUPABASE_URL}/rest/v1/user_proton_configs`
     + `?proton_pulse_user_id=eq.${encodeURIComponent(protonPulseUserId)}`
-    + `&select=app_id,app_name,updated_at,config`
+    + `&select=app_id,app_name,updated_at,config,is_published`
     + `&order=updated_at.desc`;
   const r = await fetch(url, { headers: supabaseHeaders(session) });
   if (!r.ok) throw new Error(`Cloud lookup failed: HTTP ${r.status}`);
   return await r.json();
+}
+
+async function publishMyCloudConfig(protonPulseUserId, appId, session) {
+  if (!protonPulseUserId || !appId) throw new Error('Missing report owner');
+  const url = `${SUPABASE_URL}/rest/v1/user_proton_configs`
+    + `?proton_pulse_user_id=eq.${encodeURIComponent(protonPulseUserId)}`
+    + `&app_id=eq.${encodeURIComponent(appId)}`;
+  const r = await fetch(url, {
+    method: 'PATCH',
+    headers: { ...supabaseHeaders(session), Prefer: 'return=minimal' },
+    body: JSON.stringify({ is_published: true }),
+  });
+  if (!r.ok) throw new Error(`Publish failed: HTTP ${r.status}`);
+}
+
+async function deleteMyReportsEverywhere(protonPulseUserId, clientId, appId, session) {
+  const headers = { ...supabaseHeaders(session), Prefer: 'return=minimal' };
+  const deletes = [];
+  if (protonPulseUserId) {
+    deletes.push(fetch(
+      `${SUPABASE_URL}/rest/v1/user_proton_configs`
+        + `?proton_pulse_user_id=eq.${encodeURIComponent(protonPulseUserId)}`
+        + `&app_id=eq.${encodeURIComponent(appId)}`,
+      { method: 'DELETE', headers },
+    ));
+    deletes.push(fetch(
+      `${SUPABASE_URL}/rest/v1/user_configs`
+        + `?proton_pulse_user_id=eq.${encodeURIComponent(protonPulseUserId)}`
+        + `&app_id=eq.${encodeURIComponent(appId)}`,
+      { method: 'DELETE', headers },
+    ));
+  }
+  if (clientId) {
+    deletes.push(fetch(
+      `${SUPABASE_URL}/rest/v1/user_configs`
+        + `?client_id=eq.${encodeURIComponent(clientId)}`
+        + `&app_id=eq.${encodeURIComponent(appId)}`,
+      { method: 'DELETE', headers },
+    ));
+  }
+
+  const results = await Promise.all(deletes);
+  const failed = results.find((r) => !r.ok);
+  if (failed) throw new Error(`Delete failed: HTTP ${failed.status}`);
 }
 
 function getMyReportBadges(row) {
@@ -448,6 +492,7 @@ function mergeMyReportRows(publishedRows, cloudRows) {
         updated_at: '',
         published_at: '',
         cloud_updated_at: '',
+        cloud_published: false,
         cloud: false,
         published: false,
         unpublished: false,
@@ -472,13 +517,15 @@ function mergeMyReportRows(publishedRows, cloudRows) {
     mergedRow.title = mergedRow.title || row.app_name || row.config?.appName || `App ${row.app_id}`;
     mergedRow.cloud = true;
     mergedRow.cloud_updated_at = row.updated_at || mergedRow.cloud_updated_at;
+    mergedRow.cloud_published = Boolean(row.is_published) || mergedRow.cloud_published;
     if (!mergedRow.updated_at || new Date(row.updated_at || 0).getTime() > new Date(mergedRow.updated_at || 0).getTime()) {
       mergedRow.updated_at = row.updated_at || mergedRow.updated_at;
     }
   }
 
   for (const row of merged.values()) {
-    row.unpublished = row.cloud && (!row.published || (
+    row.published = row.published || row.cloud_published;
+    row.unpublished = row.cloud && !row.cloud_published && (!row.published || (
       row.cloud_updated_at
       && (!row.published_at || new Date(row.cloud_updated_at).getTime() > new Date(row.published_at).getTime())
     ));
@@ -1268,6 +1315,13 @@ function getPluginLinkCodeFromLocation(loc = window.location) {
       const badges = getMyReportBadges(row).map((badge) => (
         `<span class="profile-configs-badge profile-configs-badge--${escapeHtml(badge.tone)}">${escapeHtml(badge.label)}</span>`
       )).join('');
+      const actions = [
+        `<a class="profile-configs-view-link" href="${escapeHtml(appLink)}">View</a>`,
+        row.cloud && row.unpublished
+          ? `<button type="button" class="profile-configs-action profile-configs-publish-btn" data-app-id="${escapeHtml(String(row.app_id))}">Publish</button>`
+          : '',
+        `<button type="button" class="profile-configs-action profile-configs-delete-btn" data-app-id="${escapeHtml(String(row.app_id))}">Delete</button>`,
+      ].filter(Boolean).join('');
       return `
         <tr data-app-id="${escapeHtml(String(row.app_id))}">
           <td>
@@ -1277,7 +1331,7 @@ function getPluginLinkCodeFromLocation(loc = window.location) {
           <td>${escapeHtml(row.rating || '—')}</td>
           <td><div class="profile-configs-status">${badges}</div></td>
           <td>${escapeHtml(formatSystemUpdated(row.updated_at))}</td>
-          <td class="col-action"><a class="profile-configs-view-link" href="${escapeHtml(appLink)}">View</a></td>
+          <td class="col-action"><div class="profile-configs-actions">${actions}</div></td>
         </tr>`;
     }).join('');
   }
@@ -1308,6 +1362,36 @@ function getPluginLinkCodeFromLocation(loc = window.location) {
   }
 
   myConfigsRefresh?.addEventListener('click', () => { void refreshMyConfigs(); });
+  myConfigsTbody?.addEventListener('click', (e) => {
+    const target = e.target;
+    if (!(target instanceof HTMLElement)) return;
+    const action = target.closest('.profile-configs-publish-btn, .profile-configs-delete-btn');
+    if (!(action instanceof HTMLElement)) return;
+    const appId = action.dataset.appId;
+    if (!appId) return;
+
+    void (async () => {
+      const s = await SupaAuth.getSession();
+      const protonPulseUserId = getProtonPulseUserIdFromSession(s);
+      const cid = getWebClientIdProfile();
+      if (action.classList.contains('profile-configs-publish-btn')) {
+        action.textContent = 'Publishing...';
+        await publishMyCloudConfig(protonPulseUserId, appId, s);
+        showMyConfigsStatus('Published', true);
+        await refreshMyConfigs();
+        return;
+      }
+
+      if (!window.confirm('Delete this report/config from Proton Pulse?')) return;
+      action.textContent = 'Deleting...';
+      await deleteMyReportsEverywhere(protonPulseUserId, cid, appId, s);
+      showMyConfigsStatus('Deleted', true);
+      await refreshMyConfigs();
+    })().catch((err) => {
+      showMyConfigsStatus(err?.message || 'Action failed', false);
+      void refreshMyConfigs();
+    });
+  });
 
   void refreshMyConfigs();
 

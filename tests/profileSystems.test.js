@@ -37,6 +37,8 @@ ctx.__escapeHtml            = escapeHtml;
 ctx.__formatSystemUpdated   = formatSystemUpdated;
 ctx.__fetchMyUserConfigs    = fetchMyUserConfigs;
 ctx.__fetchMyCloudConfigs   = fetchMyCloudConfigs;
+ctx.__publishMyCloudConfig  = publishMyCloudConfig;
+ctx.__deleteMyReportsEverywhere = deleteMyReportsEverywhere;
 ctx.__getMyReportBadges     = getMyReportBadges;
 ctx.__mergeMyReportRows     = mergeMyReportRows;
 ctx.__listLinkedPlugins     = listLinkedPlugins;
@@ -679,9 +681,58 @@ describe('fetchMyCloudConfigs', () => {
     expect(url).toBe(
       `${SUPABASE_URL}/rest/v1/user_proton_configs`
       + `?proton_pulse_user_id=eq.${encodeURIComponent(reportOwnerId)}`
-      + `&select=app_id,app_name,updated_at,config`
+      + `&select=app_id,app_name,updated_at,config,is_published`
       + `&order=updated_at.desc`,
     );
+  });
+});
+
+describe('publishMyCloudConfig', () => {
+  test('PATCHes the cloud row to public for the signed-in Proton Pulse user', async () => {
+    const { ctx, fetchMock } = makeCtx({ access_token: 'tok' });
+    await flush();
+    fetchMock.mockClear();
+    fetchMock.mockResolvedValue({ ok: true, status: 204, json: async () => [] });
+
+    await ctx.__publishMyCloudConfig(reportOwnerId, '730', { access_token: 'tok' });
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe(
+      `${SUPABASE_URL}/rest/v1/user_proton_configs`
+      + `?proton_pulse_user_id=eq.${encodeURIComponent(reportOwnerId)}`
+      + `&app_id=eq.730`,
+    );
+    expect(init.method).toBe('PATCH');
+    expect(JSON.parse(init.body)).toEqual({ is_published: true });
+  });
+});
+
+describe('deleteMyReportsEverywhere', () => {
+  test('deletes cloud and published report rows owned by the user', async () => {
+    const { ctx, fetchMock } = makeCtx({ access_token: 'tok' });
+    await flush();
+    fetchMock.mockClear();
+    fetchMock.mockResolvedValue({ ok: true, status: 204, json: async () => [] });
+
+    await ctx.__deleteMyReportsEverywhere(reportOwnerId, clientId, '730', { access_token: 'tok' });
+
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      `${SUPABASE_URL}/rest/v1/user_proton_configs`
+      + `?proton_pulse_user_id=eq.${encodeURIComponent(reportOwnerId)}`
+      + `&app_id=eq.730`,
+    );
+    expect(fetchMock.mock.calls[1][0]).toBe(
+      `${SUPABASE_URL}/rest/v1/user_configs`
+      + `?proton_pulse_user_id=eq.${encodeURIComponent(reportOwnerId)}`
+      + `&app_id=eq.730`,
+    );
+    expect(fetchMock.mock.calls[2][0]).toBe(
+      `${SUPABASE_URL}/rest/v1/user_configs`
+      + `?client_id=eq.${encodeURIComponent(clientId)}`
+      + `&app_id=eq.730`,
+    );
+    expect(fetchMock.mock.calls.every(([, init]) => init.method === 'DELETE')).toBe(true);
   });
 });
 
@@ -753,6 +804,28 @@ describe('mergeMyReportRows', () => {
       { label: 'Cloud', tone: 'cloud' },
       { label: 'Published', tone: 'published' },
       { label: 'Unpublished', tone: 'unpublished' },
+    ]);
+  });
+
+  test('marks published cloud rows as cloud and published, not unpublished', async () => {
+    const { ctx } = makeCtx(null);
+    await flush();
+
+    const rows = ctx.__mergeMyReportRows([], [
+      { app_id: 620, app_name: 'Portal 2', updated_at: '2026-04-20T12:00:00Z', is_published: true },
+    ]);
+
+    expect(rows).toEqual([
+      expect.objectContaining({
+        app_id: 620,
+        cloud: true,
+        published: true,
+        unpublished: false,
+      }),
+    ]);
+    expect(ctx.__getMyReportBadges(rows[0])).toEqual([
+      { label: 'Cloud', tone: 'cloud' },
+      { label: 'Published', tone: 'published' },
     ]);
   });
 });

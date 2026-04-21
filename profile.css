@@ -506,6 +506,7 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 0.8rem;
+  table-layout: fixed;
 }
 .profile-configs-table th,
 .profile-configs-table td {
@@ -525,7 +526,7 @@
 .profile-configs-table td.col-action,
 .profile-configs-table th.col-action {
   text-align: right;
-  width: 110px;
+  width: 210px;
 }
 .profile-configs-game-link {
   color: var(--text);
@@ -570,12 +571,68 @@
   border-color: rgba(212,168,67,0.4);
   background: rgba(212,168,67,0.1);
 }
-.profile-configs-view-link {
+.profile-configs-actions {
+  display: inline-flex;
+  justify-content: flex-end;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.profile-configs-view-link,
+.profile-configs-action {
   font-size: 0.7rem;
   color: var(--muted);
   text-decoration: none;
   border: 1px solid var(--border2);
   padding: 3px 10px;
   display: inline-block;
+  background: transparent;
+  font-family: inherit;
+  cursor: pointer;
 }
-.profile-configs-view-link:hover { color: var(--accent); border-color: var(--accent); }
+.profile-configs-view-link:hover,
+.profile-configs-action:hover { color: var(--accent); border-color: var(--accent); }
+.profile-configs-publish-btn {
+  color: #9ecbe8;
+  border-color: rgba(74,159,208,0.45);
+}
+.profile-configs-delete-btn {
+  color: #d76f6f;
+  border-color: rgba(200,80,80,0.45);
+}
+
+@media (max-width: 640px) {
+  .profile-configs-table,
+  .profile-configs-table thead,
+  .profile-configs-table tbody,
+  .profile-configs-table tr,
+  .profile-configs-table th,
+  .profile-configs-table td {
+    display: block;
+    width: 100%;
+  }
+  .profile-configs-table thead { display: none; }
+  .profile-configs-table tr {
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .profile-configs-table tbody tr:last-child { border-bottom: none; }
+  .profile-configs-table td {
+    border-bottom: none;
+    padding: 5px 0;
+  }
+  .profile-configs-table td.col-action,
+  .profile-configs-table th.col-action {
+    width: 100%;
+    text-align: left;
+  }
+  .profile-configs-actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+  }
+  .profile-configs-view-link,
+  .profile-configs-action {
+    text-align: center;
+    padding: 6px 8px;
+  }
+}
