@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createServiceClient, requireRequestUser } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -9,16 +9,11 @@ const corsHeaders = {
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
-  const supabase = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-  );
+  const supabase = createServiceClient();
 
   try {
-    const authHeader = req.headers.get("Authorization") ?? "";
-    const token = authHeader.replace(/^Bearer\s+/i, "");
-    const { data: authData, error: authError } = await supabase.auth.getUser(token);
-    if (authError || !authData.user) {
+    const { user, error: authError } = await requireRequestUser(req);
+    if (authError || !user) {
       return Response.json({ error: "Authentication required" }, { status: 401, headers: corsHeaders });
     }
 
@@ -31,7 +26,7 @@ Deno.serve(async (req: Request) => {
       .from("plugin_links")
       .delete()
       .eq("installation_id", installationId)
-      .eq("linked_user_id", authData.user.id);
+      .eq("linked_user_id", user.id);
     if (error) throw error;
 
     return Response.json({ ok: true }, { headers: corsHeaders });
