@@ -174,6 +174,20 @@ async function populateSubmitForm(el) {
   const opts = (arr, cap) => arr.map(v => `<option value="${esc(v)}">${cap ? v[0].toUpperCase()+v.slice(1) : esc(v)}</option>`).join('');
   container.innerHTML = `
     <h3 style="margin:0 0 12px">Submit a Pulse Report</h3>
+    <details class="scoring-guide">
+      <summary>How Scoring Works</summary>
+      <div class="scoring-guide-body">
+        <div class="scoring-guide-row"><span class="scoring-guide-badge" style="background:#b4c7dc;color:#111">Platinum</span><span class="scoring-guide-rule">Can install, start, and play. No faults. Works out of the box without tinkering.</span></div>
+        <div class="scoring-guide-row"><span class="scoring-guide-badge" style="background:#c8a050;color:#111">Gold</span><span class="scoring-guide-rule">Can install, start, and play. No faults. Works but required tinkering (launch options, config, etc.).</span></div>
+        <div class="scoring-guide-row"><span class="scoring-guide-badge" style="background:#8fa0b0;color:#111">Silver</span><span class="scoring-guide-rule">Can install, start, and play. Exactly 2 faults reported.</span></div>
+        <div class="scoring-guide-row"><span class="scoring-guide-badge" style="background:#b07040;color:#fff">Bronze</span><span class="scoring-guide-rule">Can install, start, and play. 3 or more faults. Significant issues.</span></div>
+        <div class="scoring-guide-row"><span class="scoring-guide-badge" style="background:#c85050;color:#fff">Borked</span><span class="scoring-guide-rule">Cannot install, start, or play -- or overall verdict is No.</span></div>
+        <div class="scoring-guide-section">Fault questions</div>
+        <div class="scoring-guide-note">Each "Yes" to a fault question (performance, graphical, windowing, audio, input, stability, save game, significant bugs) counts as 1 fault. 1 fault = Gold, 2 = Silver, 3+ = Bronze.</div>
+        <div class="scoring-guide-section">Out-of-the-box question</div>
+        <div class="scoring-guide-note">Only shown when verdict is Yes and no faults are reported. Answering Yes elevates Gold to Platinum.</div>
+      </div>
+    </details>
     <form id="submit-report-form" autocomplete="on">
       <div class="sf-row"><label>Rating *</label><select name="rating" required><option value="" disabled selected>-- choose one --</option>${opts(ratings,true)}</select></div>
       <div class="sf-row"><label>Proton Version *</label>
@@ -882,6 +896,54 @@ function configKey(c) {
   return `cfg:${c.configId != null ? c.configId : (c.clientId || '')}`;
 }
 
+const FORM_RESPONSE_LABELS = {
+  canInstall:        'Were you able to install the game?',
+  canStart:          'Were you able to start the game?',
+  canPlay:           'Were you able to begin playing?',
+  performanceFaults: 'Unexpected slowdowns or stutters?',
+  graphicalFaults:   'Graphical glitches or artifacts?',
+  windowingFaults:   'Windowing or display issues?',
+  audioFaults:       'Audio issues?',
+  inputFaults:       'Input or controller issues?',
+  stabilityFaults:   'Crashes or instability?',
+  saveGameFaults:    'Save game issues?',
+  significantBugs:   'Other significant bugs?',
+  onlineMultiplayer: 'Online multiplayer tested?',
+  localMultiplayer:  'Local multiplayer tested?',
+  verdict:           'Overall: would you recommend this to others?',
+  verdictOob:        'Works out of the box without tweaks?',
+};
+
+function renderFormResponses(c) {
+  const r = c.formResponses;
+  if (!r || typeof r !== 'object') return '';
+  const rows = Object.entries(FORM_RESPONSE_LABELS)
+    .map(([key, label]) => {
+      const val = r[key];
+      if (val == null || val === '') return '';
+      const v = String(val).toLowerCase();
+      const badge = v === 'yes'
+        ? '<span class="fr-badge fr-yes">Yes</span>'
+        : v === 'no'
+          ? '<span class="fr-badge fr-no">No</span>'
+          : `<span class="fr-badge">${esc(String(val))}</span>`;
+      return `<div class="config-row fr-row"><span class="config-lbl fr-lbl">${esc(label)}</span>${badge}</div>`;
+    })
+    .filter(Boolean);
+  if (!rows.length) return '';
+  const tinker = Array.isArray(r.tinkeringMethods) && r.tinkeringMethods.length
+    ? `<div class="config-row fr-row"><span class="config-lbl fr-lbl">Tinkering methods</span><span>${r.tinkeringMethods.map(m => `<span class="var-tag">${esc(m)}</span>`).join(' ')}</span></div>`
+    : '';
+  return `
+    <div class="fr-section">
+      <button class="all-details-btn" onclick="this.nextElementSibling.classList.toggle('open');this.textContent=this.nextElementSibling.classList.contains('open')?'Hide Q&amp;A Responses':'Show Q&amp;A Responses'">Show Q&amp;A Responses</button>
+      <div class="all-details-panel">
+        ${rows.join('')}
+        ${tinker}
+      </div>
+    </div>`;
+}
+
 function renderConfigCard(c, idx, votes = {}, userVotes = {}) {
   const ck = configKey(c);
   const cv = votes[ck] || { up: 0, down: 0 };
@@ -931,6 +993,7 @@ function renderConfigCard(c, idx, votes = {}, userVotes = {}) {
         <span class="config-lbl">Env Vars</span>
         <span class="config-vars">${vars.map(([k]) => `<span class="var-tag">${esc(k)}</span>`).join('')}</span>
       </div>` : ''}
+      ${renderFormResponses(c)}
       <div class="config-hw">
         <div class="config-hw-label">Hardware</div>
         <div class="config-row"><span class="config-lbl">GPU</span><span>${cfgNa(esc(c.gpu))}</span></div>

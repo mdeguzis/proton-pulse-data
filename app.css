@@ -834,6 +834,12 @@ a.card:hover { text-decoration: none; }
 .all-details-btn:hover { background: rgba(74,159,208,0.12); color: var(--text); }
 .all-details-panel { display: none; margin-top: 6px; }
 .all-details-panel.open { display: block; }
+.fr-section { margin: 6px 0; }
+.fr-row { align-items: center; }
+.fr-lbl { font-size: 0.72rem; }
+.fr-badge { font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 3px; background: var(--s2); color: var(--muted); }
+.fr-badge.fr-yes { background: rgba(76,175,80,0.15); color: #4caf50; }
+.fr-badge.fr-no  { background: rgba(200,80,80,0.15);  color: #c85050; }
 .card-footer {
   margin-top: 8px;
   display: flex;
@@ -1104,3 +1110,25 @@ a.card:hover { text-decoration: none; }
   .search-result-card { flex-direction: column; }
   .search-result-side { align-items: flex-start; min-width: 0; }
 }
+
+/* -- Scoring guide collapsible -- */
+.scoring-guide { margin: 0 0 14px; border: 1px solid var(--border2); border-radius: 6px; overflow: hidden; }
+.scoring-guide summary {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px; cursor: pointer; font-size: 0.78rem;
+  font-weight: 600; color: var(--accent); background: var(--s1);
+  list-style: none; user-select: none;
+}
+.scoring-guide summary::-webkit-details-marker { display: none; }
+.scoring-guide summary::before { content: '▶'; font-size: 0.6rem; transition: transform .15s; }
+.scoring-guide[open] summary::before { transform: rotate(90deg); }
+.scoring-guide-body { padding: 10px 12px; display: flex; flex-direction: column; gap: 0; background: var(--bg); }
+.scoring-guide-row { display: flex; align-items: flex-start; gap: 10px; padding: 5px 0; border-bottom: 1px solid var(--border); }
+.scoring-guide-row:last-child { border-bottom: none; }
+.scoring-guide-badge {
+  font-size: 0.65rem; font-weight: 700; padding: 2px 6px; border-radius: 3px;
+  text-transform: uppercase; letter-spacing: 0.05em; flex-shrink: 0; margin-top: 2px;
+}
+.scoring-guide-rule { font-size: 0.76rem; color: var(--muted); line-height: 1.5; }
+.scoring-guide-section { font-size: 0.72rem; font-weight: 700; color: var(--accent); margin: 10px 0 4px; }
+.scoring-guide-note { font-size: 0.74rem; color: var(--muted); line-height: 1.6; }
