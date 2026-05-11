@@ -917,6 +917,7 @@ const FORM_RESPONSE_LABELS = {
 
 function renderFormResponses(c) {
   const r = c.formResponses;
+  console.log('[PP] renderFormResponses called, formResponses:', r, 'type:', typeof r);
   if (!r || typeof r !== 'object') return '';
   const rows = Object.entries(FORM_RESPONSE_LABELS)
     .map(([key, label]) => {
