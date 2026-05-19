@@ -469,6 +469,18 @@
 .sf-check-label { display: flex; align-items: center; gap: 6px; color: var(--text); font-size: 0.76rem; cursor: pointer; width: auto; }
 .sf-check-label input[type="checkbox"] { width: auto; flex: none; cursor: pointer; }
 .sf-check-hint { font-size: 0.68rem; color: var(--muted); padding-left: 1px; }
+.sf-hidden { display: none !important; }
+.sf-section-label { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 12px 0 6px; }
+.sf-question { margin-bottom: 10px; }
+.sf-q-label { font-size: 0.8rem; color: var(--text); margin-bottom: 5px; }
+.sf-yn { display: flex; gap: 8px; }
+.sf-yn-btn { display: flex; align-items: center; gap: 5px; font-size: 0.8rem; color: var(--text); cursor: pointer; padding: 4px 12px; border: 1px solid var(--border); border-radius: 4px; user-select: none; }
+.sf-yn-btn:has(input:checked) { border-color: var(--accent); background: rgba(76,175,80,0.12); color: var(--accent); }
+.sf-yn-btn input[type="radio"] { display: none; }
+.sf-tink-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.sf-tink-label { display: flex; align-items: center; gap: 5px; font-size: 0.76rem; color: var(--text); cursor: pointer; padding: 3px 10px; border: 1px solid var(--border); border-radius: 4px; user-select: none; }
+.sf-tink-label:has(input:checked) { border-color: var(--accent); background: rgba(76,175,80,0.12); color: var(--accent); }
+.sf-tink-label input[type="checkbox"] { display: none; }
 .hub-links {
   display: flex;
   flex-wrap: wrap;
