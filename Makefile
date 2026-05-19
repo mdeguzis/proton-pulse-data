@@ -9,11 +9,24 @@ WATCH_INTERVAL ?= 10
 WATCH_ALL_WORKFLOWS ?= true
 
 .PHONY: help setup install-pg test lint lint-py lint-pylint lint-sh test-py init-submodules fetch-steam-catalog backup-supabase install-docker \
-	gh-run gh-pages-only gh-backfill-apps gh-coverage-backfill gh-run-watch gh-check
+	gh-run gh-pages-only gh-backfill-apps gh-coverage-backfill gh-run-watch gh-check build
+
+build:
+	@HASH=$$(md5sum app.js | cut -c1-9); \
+	NEWFILE="app-$${HASH}.js"; \
+	OLD=$$(grep -o 'app-[a-f0-9]*\.js' app.html | head -1); \
+	if [ "$$NEWFILE" = "$$OLD" ]; then \
+		echo "app.html already references $$NEWFILE -- nothing to do."; \
+	else \
+		cp app.js "$$NEWFILE"; \
+		sed -i "s|$$OLD|$$NEWFILE|g" app.html; \
+		echo "Built $$NEWFILE and updated app.html (was $$OLD)."; \
+	fi
 
 help:
 	@echo "Usage: make <target>"
 	@echo ""
+	@echo "  build               Hash app.js, copy to versioned file, update app.html"
 	@echo "  setup               Bootstrap local dev tools and Python dependencies"
 	@echo "  install-pg          Install pg_dump (postgresql) via pkg (Termux/Debian)"
 	@echo "  init-submodules     Initialize and update git submodules"
