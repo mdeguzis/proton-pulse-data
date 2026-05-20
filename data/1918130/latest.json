@@ -1,0 +1,17 @@
+[
+  {
+    "appId": "1918130",
+    "cpu": "AMD Ryzen 7 5800XT 8-Core",
+    "duration": "unreported",
+    "gpu": "NVIDIA GeForce RTX 5070",
+    "gpuDriver": "NVIDIA 595.58.03",
+    "kernel": "7.0.0-1-cachyos",
+    "notes": "sad",
+    "os": "CachyOS",
+    "protonVersion": "10.0-3",
+    "ram": "32 GB",
+    "rating": "borked",
+    "timestamp": 1776842769,
+    "title": "Grim Quest - Old School RPG"
+  }
+]

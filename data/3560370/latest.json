@@ -1,0 +1,17 @@
+[
+  {
+    "appId": "3560370",
+    "cpu": "Intel Core i9-9900K @ 3.60GHz",
+    "duration": "underOneHour",
+    "gpu": "NVIDIA GeForce GTX 1080 Ti",
+    "gpuDriver": "NVIDIA 580.82.09",
+    "kernel": "6.17.4-76061704-generic",
+    "notes": "Game runs perfect after switching to Proton GE",
+    "os": "Pop!_OS 22.04 LTS",
+    "protonVersion": "10.0-3",
+    "ram": "32 GB",
+    "rating": "gold",
+    "timestamp": 1767663547,
+    "title": ""
+  }
+]

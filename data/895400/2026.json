@@ -1,0 +1,17 @@
+[
+  {
+    "appId": "895400",
+    "cpu": "AMD Ryzen 5 5500",
+    "duration": "unreported",
+    "gpu": "AMD Radeon RX 6600 (radeonsi, navi23, ACO, DRM 3.64, 6.19.2-pikaos)",
+    "gpuDriver": "4.6 Mesa 26.0.1 - PikaOS YellowBirb Mesa Stable (git-bf5998be6e)",
+    "kernel": "6.19.2-pikaos",
+    "notes": "",
+    "os": "PikaOS 4",
+    "protonVersion": "10.0-3",
+    "ram": "16 GB",
+    "rating": "borked",
+    "timestamp": 1773156755,
+    "title": ""
+  }
+]

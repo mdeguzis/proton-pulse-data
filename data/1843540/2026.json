@@ -1,0 +1,17 @@
+[
+  {
+    "appId": "1843540",
+    "cpu": "AMD Ryzen 5 5500",
+    "duration": "severalHours",
+    "gpu": "AMD Radeon RX 7600 (radeonsi, navi33, LLVM 19.1.5, DRM 3.57, 6.8.0-51-generic)",
+    "gpuDriver": "4.6 Mesa 24.3.1 (git-c815d651b8)",
+    "kernel": "6.8.0-51-generic",
+    "notes": "",
+    "os": "Freedesktop SDK 24.08 (Flatpak runtime)",
+    "protonVersion": "10.0-3",
+    "ram": "32 GB",
+    "rating": "borked",
+    "timestamp": 1773032899,
+    "title": ""
+  }
+]

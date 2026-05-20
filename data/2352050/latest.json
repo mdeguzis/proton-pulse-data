@@ -1,0 +1,17 @@
+[
+  {
+    "appId": "2352050",
+    "cpu": "12th Gen Intel Core i7-12700K",
+    "duration": "underOneHour",
+    "gpu": "NVIDIA GeForce RTX 5070 Ti",
+    "gpuDriver": "NVIDIA 590.48.01",
+    "kernel": "6.18.9-arch1-2",
+    "notes": "Works out-of-the-box",
+    "os": "Arch Linux",
+    "protonVersion": "10.0-3",
+    "ram": "64 GB",
+    "rating": "gold",
+    "timestamp": 1771196059,
+    "title": "SECTOR ZERO"
+  }
+]

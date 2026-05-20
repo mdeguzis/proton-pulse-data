@@ -1,0 +1,17 @@
+[
+  {
+    "appId": "3523750",
+    "cpu": "Intel Core i5-7600K @ 3.80GHz",
+    "duration": "unreported",
+    "gpu": "NVIDIA GeForce RTX 2070",
+    "gpuDriver": "NVIDIA 570.86.16",
+    "kernel": "6.13.1-zen1-1-zen",
+    "notes": "Borked, demo crashes on startup",
+    "os": "Garuda Linux Bird of Prey",
+    "protonVersion": "10.0-3",
+    "ram": "32 GB",
+    "rating": "borked",
+    "timestamp": 1774664770,
+    "title": "Down with the Ship"
+  }
+]

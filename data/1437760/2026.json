@@ -1,0 +1,17 @@
+[
+  {
+    "appId": "1437760",
+    "cpu": "12th Gen Intel Core i5-12400F",
+    "duration": "unreported",
+    "gpu": "NVIDIA GeForce RTX 3050",
+    "gpuDriver": "NVIDIA 595.71.05",
+    "kernel": "7.0.3-artix1-2",
+    "notes": "",
+    "os": "Artix Linux",
+    "protonVersion": "10.0-3",
+    "ram": "16 GB",
+    "rating": "borked",
+    "timestamp": 1778640980,
+    "title": ""
+  }
+]

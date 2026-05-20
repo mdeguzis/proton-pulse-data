@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Proton Pulse</title>
+<meta name="description" content="ProtonDB community compatibility reports for Steam games -- searchable, filterable, and updated daily.">
+<meta name="color-scheme" content="dark">
+<link rel="stylesheet" href="site.css">
+<link rel="stylesheet" href="index.css">
+</head>
+<body>
+
+<!-- Top bar -->
+<header class="topbar">
+  <button class="topbar-toggle" id="sidebar-toggle" aria-label="Toggle menu"><span class="hamburger"></span></button>
+  <a class="topbar-brand" href="index.html">
+    Proton Pulse
+  </a>
+  <div class="topbar-spacer"></div>
+  <a class="topbar-link topbar-link--button topbar-desktop-only" href="https://github.com/mdeguzis/proton-pulse-data" target="_blank" rel="noopener">GitHub</a>
+  <div class="gh-auth-chip" id="gh-auth-chip">
+    <button class="gh-login-btn" id="google-login-btn" title="Sign in with Steam">
+      <span class="gh-login-btn__badge" aria-hidden="true">
+        <img class="gh-login-btn__icon" src="assets/steam-logo-glyph.png" alt="" aria-hidden="true">
+      </span>
+      <span class="gh-login-btn__label" id="google-login-label">Login with Steam</span>
+    </button>
+    <div class="gh-user-menu" id="google-user-menu" hidden>
+      <img class="gh-avatar" id="google-avatar" src="" alt="" width="22" height="22">
+      <span class="gh-username" id="google-username"></span>
+      <button class="gh-chevron" id="google-menu-btn" aria-label="Account menu">&#8964;</button>
+      <div class="gh-dropdown" id="google-dropdown">
+        <a href="profile.html">Manage account</a>
+        <button id="google-logout-btn" class="gh-logout">Sign out</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- Sidebar -->
+<nav class="sidebar-nav" id="sidebar">
+  <div class="sidebar-brand-block">
+    <div class="sidebar-brand-icon">
+      <img src="https://raw.githubusercontent.com/mdeguzis/decky-proton-pulse/main/assets/logo.png" alt="">
+    </div>
+    <div class="sidebar-brand-copy">
+      <h2>Proton Pulse</h2>
+      <p>Community compatibility data</p>
+    </div>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-label">Search</div>
+    <div class="search-wrap">
+      <input id="search" type="text" placeholder="Game name or app ID..." autocomplete="off">
+      <div style="font-size:0.68rem;color:var(--muted);margin-top:4px">Press Enter to search</div>
+    </div>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-label">Navigate</div>
+    <div class="sidebar-links">
+      <a href="index.html" class="active"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></span> Home</a>
+      <a href="app.html"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg></span> Game Search</a>
+      <a href="data-index.html"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M20 3H4v2h16V3zm-2 4H6v2h12V7zM4 13h16v-2H4v2zm2 4h12v-2H6v2zm-2 4h16v-2H4v2z"/></svg></span> Data Index</a>
+      <a href="coverage.html"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M5 9.2h3V19H5V9.2zM10.6 5h2.8v14h-2.8V5zM16.2 13h2.8v6h-2.8v-6z"/></svg></span> Coverage</a>
+    </div>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-label">External</div>
+    <div class="sidebar-links">
+      <a href="profile.html"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></span> My Account</a>
+      <a href="https://github.com/mdeguzis/decky-proton-pulse" target="_blank" rel="noopener"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M21 6H3c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-10 7H8v3H6v-3H3v-2h3V8h2v3h3v2zm4.5 2c-.83 0-1.5-.67-1.5-1.5S14.67 12 15.5 12s1.5.67 1.5 1.5S16.33 15 15.5 15zm3-3c-.83 0-1.5-.67-1.5-1.5S17.67 10 18.5 10s1.5.67 1.5 1.5S19.33 12 18.5 12z"/></svg></span> Decky Plugin</a>
+      <a href="https://github.com/mdeguzis/proton-pulse-data" target="_blank" rel="noopener"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/></svg></span> GitHub</a>
+      <a href="https://www.protondb.com/" target="_blank" rel="noopener"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/></svg></span> ProtonDB</a>
+    </div>
+  </div>
+
+  <div class="sidebar-section" style="margin-top:auto">
+    <div class="sidebar-label">About</div>
+    <p class="sidebar-note">
+      Mirrors <strong>ProtonDB</strong> community reports and merges them with <strong>Proton Pulse</strong> user configs and live voting data. Updated daily via GitHub Actions.
+    </p>
+  </div>
+
+  <div class="sidebar-contact">
+    <a href="https://github.com/mdeguzis/proton-pulse-data/issues" target="_blank" rel="noopener" class="sidebar-contact-btn">Contact / Feedback</a>
+  </div>
+</nav>
+
+<!-- Mobile overlay -->
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+<!-- Main content -->
+<div class="main-content">
+  <div class="main-inner">
+
+    <div class="welcome-header">
+      <div class="eyebrow">Open Source ProtonDB Mirror</div>
+      <h1 class="welcome-title">Proton Pulse</h1>
+      <p class="welcome-sub">
+        Fully open source ProtonDB compatibility data for Steam games.
+        Searchable reports, filterable configs, and community voting -- all code and data
+        are public on GitHub. Updated daily.
+      </p>
+    </div>
+
+    <!-- Community stats -->
+    <div class="community-stats">
+      <div class="cs-item">
+        <span class="cs-num" id="pulse-report-count">—</span>
+        <span class="cs-label">Pulse Reports</span>
+      </div>
+    </div>
+
+    <!-- Quick actions -->
+    <div class="quick-actions">
+      <a class="qa-link" href="app.html">Search Games</a>
+      <a class="qa-link" href="data-index.html">Browse Data</a>
+      <a class="qa-link" href="https://github.com/mdeguzis/decky-proton-pulse" target="_blank" rel="noopener">Decky Plugin</a>
+    </div>
+
+    <!-- Explore cards -->
+    <div class="section-label">Explore</div>
+    <div class="explore-grid">
+      <a class="explore-item" href="app.html">
+        <div class="ei-title">Game Reports</div>
+        <div class="ei-desc">Look up any Steam game's Proton compatibility reports, hardware configs, and community ratings.</div>
+        <div class="ei-tag">Search</div>
+      </a>
+      <a class="explore-item" href="data-index.html">
+        <div class="ei-title">Data Index</div>
+        <div class="ei-desc">Full list of tracked games with raw JSON report data accessible by app&nbsp;ID.</div>
+        <div class="ei-tag">Browse</div>
+      </a>
+      <a class="explore-item" href="coverage.html">
+        <div class="ei-title">Coverage Report</div>
+        <div class="ei-desc">How much of the Steam catalog has ProtonDB report data in this mirror.</div>
+        <div class="ei-tag">Stats</div>
+      </a>
+      <a class="explore-item" href="https://github.com/mdeguzis/decky-proton-pulse" target="_blank" rel="noopener">
+        <div class="ei-title">Decky Loader Plugin</div>
+        <div class="ei-desc">Steam Deck plugin to view Proton compatibility reports in-game via Decky Loader.</div>
+        <div class="ei-tag">Plugin</div>
+      </a>
+      <a class="explore-item" href="https://github.com/mdeguzis/proton-pulse-data" target="_blank" rel="noopener">
+        <div class="ei-title">Data Repository</div>
+        <div class="ei-desc">GitHub repository for this data mirror -- API endpoints, update schedule, and source code.</div>
+        <div class="ei-tag">Source</div>
+      </a>
+    </div>
+
+    <!-- About -->
+    <div class="section-label">About this project</div>
+    <div class="prose">
+      <p>
+        Proton Pulse is <strong>100% open source</strong>. Unlike ProtonDB itself, all code,
+        data pipelines, and community configs are public on GitHub. Fork it, self-host it,
+        contribute to it.
+      </p>
+      <p>
+        Community reports are fetched daily from ProtonDB and stored as static JSON files --
+        each game gets a <code>latest.json</code> under <code>/data/{appId}/</code>.
+        Users can also submit their own working Proton configurations (version, launch options,
+        environment variables) via the
+        <a href="https://github.com/mdeguzis/decky-proton-pulse" target="_blank" rel="noopener">Decky Plugin</a>,
+        which are stored in Supabase and displayed alongside the ProtonDB reports.
+        Reports can be upvoted or downvoted to surface the most helpful compatibility info.
+      </p>
+      <p>
+        <strong>Project repositories:</strong><br>
+        <a href="https://github.com/mdeguzis/proton-pulse-data">proton-pulse-data</a> -- Data pipeline, static site, and API.<br>
+        <a href="https://github.com/mdeguzis/decky-proton-pulse">decky-proton-pulse</a> -- Decky Loader plugin for Steam Deck.
+      </p>
+    </div>
+
+  </div>
+
+  <footer class="sitefooter">
+    Open source -- built on <a href="https://www.protondb.com/" target="_blank" rel="noopener">ProtonDB</a> community data |
+    <a href="https://github.com/mdeguzis/proton-pulse-data" target="_blank" rel="noopener">Data repo</a> |
+    <a href="https://github.com/mdeguzis/decky-proton-pulse" target="_blank" rel="noopener">Decky plugin repo</a> |
+    Updated daily via GitHub Actions |
+    <a href="privacy.html">Privacy</a> |
+    <a href="terms.html">Terms</a>
+  </footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="supabase-client.js"></script>
+<script src="index.js"></script>
+</body>
+</html>

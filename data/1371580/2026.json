@@ -1,0 +1,17 @@
+[
+  {
+    "appId": "1371580",
+    "cpu": "11th Gen Intel Core i7-11800H @ 2.30GHz",
+    "duration": "unreported",
+    "gpu": "Mesa/X.org llvmpipe (LLVM 14.0.0, 256 bits)",
+    "gpuDriver": "4.5 Mesa 22.2.0",
+    "kernel": "6.0.6-76060006-generic",
+    "notes": "Plays fine on Proton Experimental",
+    "os": "Pop!_OS 22.04 LTS",
+    "protonVersion": "10.0-3",
+    "ram": "16 GB",
+    "rating": "platinum",
+    "timestamp": 1767485264,
+    "title": ""
+  }
+]

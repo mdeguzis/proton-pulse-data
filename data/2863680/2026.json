@@ -1,0 +1,17 @@
+[
+  {
+    "appId": "2863680",
+    "cpu": "AMD Ryzen 5 5500",
+    "duration": "unreported",
+    "gpu": "AMD Radeon RX 550 / 550 (radeonsi, polaris12, ACO, DRM 3.64, 6.17.0-14-generic)",
+    "gpuDriver": "4.6 Mesa 25.2.2 - kisak-mesa PPA",
+    "kernel": "6.17.0-14-generic",
+    "notes": "",
+    "os": "Ubuntu Core 24",
+    "protonVersion": "10.0-3",
+    "ram": "16 GB",
+    "rating": "bronze",
+    "timestamp": 1771965090,
+    "title": "ZERO PARADES: For Dead Spies"
+  }
+]
