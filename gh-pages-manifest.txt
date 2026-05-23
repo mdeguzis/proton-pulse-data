@@ -25,6 +25,7 @@ profile.html
 profile.js
 profile.css
 supabase-client.js
+topbar.js
 gh-gist.js
 assets/steam-logo.png
 assets/steam-logo-glyph.png
