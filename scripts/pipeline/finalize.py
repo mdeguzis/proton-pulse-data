@@ -189,7 +189,12 @@ def generate_index_html(index_keys: set, output_path: Path) -> None:
     .detail-appid { font-family: var(--mono); font-size: 0.78rem; color: var(--accent); letter-spacing: 0.06em; }
     .detail-spacer { flex: 1; }
     .detail-split { display: grid; grid-template-columns: 200px 1fr; gap: 16px; align-items: stretch; min-height: 500px; }
-    @media (max-width: 760px) { .detail-split { grid-template-columns: 1fr; min-height: 0; } }
+    @media (max-width: 760px) {
+      /* minmax(0, 1fr) instead of 1fr so the grid track actually constrains its
+         child -- without it, the year-list defaults to min-width: auto and grows
+         to fit content width, defeating its own overflow-x: auto */
+      .detail-split { grid-template-columns: minmax(0, 1fr); min-height: 0; }
+    }
     .year-list { display: flex; flex-direction: column; gap: 4px; padding: 12px; background: rgba(11,17,22,0.4); border: 1px solid var(--border); }
     .year-list .label { font-family: var(--mono); font-size: 0.66rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.18em; margin-bottom: 6px; }
     .year-list button { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: transparent; border: 1px solid transparent; border-left: 2px solid var(--border2); color: var(--muted); font-family: var(--mono); font-size: 0.86rem; text-align: left; cursor: pointer; }
