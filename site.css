@@ -389,12 +389,14 @@ code {
 }
 .topbar-search-wrap input:focus + .topbar-search-icon { color: var(--accent); }
 
-/* live results dropdown - drops down from the search pill */
+/* live results dropdown - anchored to the right edge of the search pill but
+   extends leftward to show full game titles. Caps at 90vw so narrow viewports
+   stay sane */
 .search-dropdown {
   position: absolute;
   top: calc(100% + 4px);
-  left: 0;
   right: 0;
+  width: min(540px, 90vw);
   z-index: 250;
   background: linear-gradient(180deg, rgba(19, 28, 38, 0.98), rgba(11, 17, 22, 0.98));
   border: 1px solid var(--border2);
