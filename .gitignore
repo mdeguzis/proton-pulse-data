@@ -10,6 +10,7 @@ coverage.html
 coverage-summary.json
 data-index.html
 search-index.json
+stats.json
 
 # Python
 __pycache__/

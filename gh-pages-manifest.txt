@@ -24,6 +24,7 @@ plugin-link.css
 profile.html
 profile.js
 profile.css
+stats.html
 supabase-client.js
 topbar.js
 gh-gist.js

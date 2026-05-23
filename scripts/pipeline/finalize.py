@@ -21,6 +21,7 @@ from .common import LIVE_COUNTS_URL, count_year_bucket_files, fetch_json, flush_
 from .metadata import bootstrap_all_app_metadata, read_app_metadata
 from .pulse import merge_pulse_into_data_dir
 from .state import read_pipeline_state
+from .stats import write_stats_json
 
 
 def log_summary(
@@ -1109,6 +1110,10 @@ def finalize_output(output_dir, skip_probe: bool = False):
         },
         protondb_counts=protondb_counts,
     )
+    # Walk the data tree (post pulse merge) and emit stats.json that powers the
+    # /stats.html page. Tiny output regardless of dataset size since everything
+    # is pre-aggregated. See scripts/pipeline/stats.py
+    write_stats_json(data_output_path, output_path)
     log_summary(state["parsed_count"], data_output_path, output_path, pipeline_start, state["backfilled_keys"])
     flush_steam_title_cache()
     log("Done finalizing output.")

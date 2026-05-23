@@ -24,6 +24,9 @@
     <symbol id="icon-chart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
       <path d="M21 12c0 5-4 9-9 9s-9-4-9-9 4-9 9-9"/><path d="M22 12A10 10 0 0 0 12 2v10z"/>
     </symbol>
+    <symbol id="icon-stats" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/>
+    </symbol>
     <symbol id="icon-github" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
       <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.4 5.4 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/>
       <path d="M9 18c-4.51 2-5-2-7-2"/>
@@ -165,6 +168,10 @@
         <svg class="nav-icon" aria-hidden="true"><use href="#icon-chart"/></svg>
         <span>Coverage</span>
       </a>
+      <a href="stats.html" data-page="stats">
+        <svg class="nav-icon" aria-hidden="true"><use href="#icon-stats"/></svg>
+        <span>Stats</span>
+      </a>
       <a href="https://github.com/mdeguzis/decky-proton-pulse" target="_blank" rel="noopener" title="Decky Loader plugin for Steam Deck">
         <svg class="nav-icon" aria-hidden="true"><use href="#icon-gamepad"/></svg>
         <span>Decky Plugin</span>
@@ -184,6 +191,7 @@
   <a href="app.html" data-page="app"><svg class="nav-icon" aria-hidden="true"><use href="#icon-search"/></svg> Reports</a>
   <a href="data-index.html" data-page="data-index"><svg class="nav-icon" aria-hidden="true"><use href="#icon-database"/></svg> Data</a>
   <a href="coverage.html" data-page="coverage"><svg class="nav-icon" aria-hidden="true"><use href="#icon-chart"/></svg> Coverage</a>
+  <a href="stats.html" data-page="stats"><svg class="nav-icon" aria-hidden="true"><use href="#icon-stats"/></svg> Stats</a>
   <a href="https://github.com/mdeguzis/decky-proton-pulse" target="_blank" rel="noopener"><svg class="nav-icon" aria-hidden="true"><use href="#icon-gamepad"/></svg> Decky Plugin</a>
   <a href="https://github.com/mdeguzis/proton-pulse-data" target="_blank" rel="noopener"><svg class="nav-icon" aria-hidden="true"><use href="#icon-github"/></svg> GitHub</a>
 </div>`;

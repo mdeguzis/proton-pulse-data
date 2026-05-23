@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stats - Proton Pulse</title>
+<meta name="description" content="Aggregate compatibility stats for Steam on Linux: ratings, GPU and CPU breakdowns, OS distribution, Proton version share, and top-reported games. Filter by hardware to drill in.">
+<meta name="color-scheme" content="dark">
+<link rel="stylesheet" href="site.css">
+<style>
+h1 {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  margin-bottom: 0.3em;
+}
+.meta {
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  margin-bottom: 1.4em;
+}
+h2 {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text);
+  margin: 2em 0 0.8em;
+}
+
+/* ── top-line numbers ────────────────────────────────────────────────── */
+.stat-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 28px;
+}
+@media (max-width: 880px) { .stat-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 500px) { .stat-strip { grid-template-columns: 1fr; } }
+.stat-tile {
+  position: relative;
+  background: linear-gradient(180deg, rgba(27,40,56,0.55), rgba(11,17,22,0.45));
+  border: 1px solid var(--border);
+  padding: 16px 18px 18px;
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%);
+}
+.stat-tile::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 32px;
+  height: 1px;
+  background: var(--accent);
+  opacity: 0.7;
+}
+.stat-tile .label {
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--muted);
+}
+.stat-tile .value {
+  font-family: var(--mono);
+  font-size: 1.9rem;
+  font-weight: 600;
+  color: var(--accent-hi);
+  text-shadow: 0 0 14px var(--accent-glow);
+  letter-spacing: -0.02em;
+  margin: 6px 0 2px;
+  line-height: 1;
+}
+.stat-tile .detail {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+/* ── filter chips row ───────────────────────────────────────────────── */
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 14px 0 20px;
+  align-items: center;
+}
+.filter-row .label {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  margin-right: 4px;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  background: rgba(11,17,22,0.55);
+  border: 1px solid var(--border2);
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  font-family: inherit;
+  transition: color .12s, border-color .12s, background .12s, box-shadow .12s;
+}
+.chip:hover { color: var(--text); border-color: var(--accent); }
+.chip.is-active {
+  color: var(--accent-hi);
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  box-shadow: 0 0 16px -6px var(--accent-glow);
+}
+.chip .count {
+  font-size: 0.66rem;
+  opacity: 0.7;
+}
+.filter-status {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+}
+.filter-status a {
+  color: var(--accent);
+  margin-left: 8px;
+  text-decoration: none;
+}
+.filter-status a:hover { text-decoration: underline; }
+
+/* ── chart cards ────────────────────────────────────────────────────── */
+.chart-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+@media (max-width: 880px) { .chart-grid { grid-template-columns: 1fr; } }
+.chart-card {
+  background: linear-gradient(180deg, rgba(27,40,56,0.55), rgba(11,17,22,0.45));
+  border: 1px solid var(--border);
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0; /* let the inner bars actually fit */
+}
+.chart-card h3 {
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--text);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.chart-card h3::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: var(--accent);
+  box-shadow: 0 0 6px var(--accent-glow);
+  flex-shrink: 0;
+}
+
+/* horizontal bar rows */
+.bars { display: flex; flex-direction: column; gap: 6px; }
+.bar-row {
+  display: grid;
+  grid-template-columns: 110px 1fr 60px;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.82rem;
+}
+.bar-row .name {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--text);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bar-row .track {
+  position: relative;
+  height: 14px;
+  background: rgba(11,17,22,0.5);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.bar-row .fill {
+  position: absolute;
+  top: 0; left: 0; bottom: 0;
+  background: linear-gradient(90deg, var(--accent), var(--accent-hi));
+  transition: width .35s ease;
+}
+.bar-row .count {
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  color: var(--muted);
+  text-align: right;
+  letter-spacing: 0.04em;
+}
+
+/* Per-rating colors for the ratings chart */
+.bar-row[data-rating="platinum"] .fill { background: linear-gradient(90deg, #8aa4bf, #b4c7dc); }
+.bar-row[data-rating="gold"]     .fill { background: linear-gradient(90deg, #a07d36, #ffc83d); }
+.bar-row[data-rating="silver"]   .fill { background: linear-gradient(90deg, #7d8590, #c0c8d2); }
+.bar-row[data-rating="bronze"]   .fill { background: linear-gradient(90deg, #875a30, #c08858); }
+.bar-row[data-rating="borked"]   .fill { background: linear-gradient(90deg, #b34646, var(--red)); }
+.bar-row[data-rating="pending"]  .fill { background: linear-gradient(90deg, var(--muted), #8a99ac); }
+
+/* GPU vendor row colors */
+.bar-row[data-key="amd"]     .fill { background: linear-gradient(90deg, #b3252b, #ed1c24); }
+.bar-row[data-key="nvidia"]  .fill { background: linear-gradient(90deg, #4c8b1f, #76b900); }
+.bar-row[data-key="intel"]   .fill { background: linear-gradient(90deg, #00538f, #0071c5); }
+
+/* ── source split (donut via conic gradient) ────────────────────────── */
+.donut-card {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  flex-wrap: wrap;
+}
+.donut {
+  --pulse-pct: 0%;
+  position: relative;
+  width: 130px;
+  height: 130px;
+  border-radius: 50%;
+  background: conic-gradient(
+    var(--green-hi) 0 var(--pulse-pct),
+    var(--accent) var(--pulse-pct) 100%
+  );
+  flex-shrink: 0;
+}
+.donut::after {
+  content: '';
+  position: absolute;
+  inset: 18px;
+  border-radius: 50%;
+  background: var(--bg-bot);
+  border: 1px solid var(--border);
+}
+.donut-legend { flex: 1; min-width: 160px; display: flex; flex-direction: column; gap: 10px; }
+.donut-legend .row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--mono);
+  font-size: 0.84rem;
+}
+.donut-legend .row .swatch {
+  width: 12px; height: 12px;
+  border: 1px solid var(--border);
+}
+.donut-legend .row .swatch.protondb { background: var(--accent); }
+.donut-legend .row .swatch.pulse    { background: var(--green-hi); }
+.donut-legend .row .name { color: var(--text); }
+.donut-legend .row .count { color: var(--muted); margin-left: auto; }
+
+/* ── year sparkline ─────────────────────────────────────────────────── */
+.sparkline-card svg { width: 100%; height: 80px; display: block; }
+.sparkline-card .axis {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+/* ── top games list ─────────────────────────────────────────────────── */
+.topgames {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 6px;
+}
+.topgames a {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: linear-gradient(180deg, rgba(27,40,56,0.4), rgba(11,17,22,0.3));
+  border: 1px solid var(--border);
+  color: var(--text);
+  text-decoration: none;
+  transition: border-color .12s, background .12s;
+}
+.topgames a:hover {
+  border-color: var(--accent);
+  background: linear-gradient(180deg, rgba(102,192,244,0.06), rgba(11,17,22,0.4));
+}
+.topgames .rank {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--muted);
+  min-width: 28px;
+}
+.topgames .title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.topgames .appid {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--accent);
+}
+.topgames .count {
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  color: var(--muted);
+  margin-left: 10px;
+}
+
+.loading-state, .error-state {
+  padding: 60px 24px;
+  text-align: center;
+  font-family: var(--mono);
+  color: var(--muted);
+  letter-spacing: 0.06em;
+}
+</style>
+</head>
+<body>
+<script src="topbar.js"></script>
+
+<div class="main-content"><div class="main-inner">
+
+<h1>Stats</h1>
+<p class="meta" id="stats-meta">// Loading aggregate stats...</p>
+
+<div id="stats-root">
+  <div class="loading-state">Loading stats.json...</div>
+</div>
+
+</div></div>
+
+<script>
+(function () {
+  const root = document.getElementById('stats-root');
+  const metaEl = document.getElementById('stats-meta');
+
+  let stats = null;        // raw stats.json payload
+  let filter = { dim: null, value: null }; // active client-side filter
+
+  // Cosmetic labels for normalized tokens. Falls back to titlecase otherwise.
+  const PRETTY = {
+    amd: 'AMD', nvidia: 'NVIDIA', intel: 'Intel',
+    other: 'Other', unknown: 'Unknown',
+    steamos: 'SteamOS', bazzite: 'Bazzite', arch: 'Arch / derivatives',
+    fedora: 'Fedora / derivatives', ubuntu: 'Ubuntu / derivatives',
+    debian: 'Debian / derivatives', opensuse: 'openSUSE',
+    nixos: 'NixOS', gentoo: 'Gentoo',
+    'ge-proton': 'GE-Proton', 'proton-experimental': 'Proton Experimental',
+    'proton-stable': 'Proton (stable)', 'proton-hotfix': 'Proton Hotfix',
+    native: 'Native',
+    protondb: 'ProtonDB', pulse: 'Pulse',
+    platinum: 'Platinum', gold: 'Gold', silver: 'Silver',
+    bronze: 'Bronze', borked: 'Borked', pending: 'Pending',
+  };
+  function label(token) {
+    return PRETTY[token] || (token.charAt(0).toUpperCase() + token.slice(1));
+  }
+  function fmt(n) { return (n || 0).toLocaleString(); }
+
+  // The cross-tab payload is { dimValue: { rating: count, ... } }.
+  // To pivot to "ratings given dim=value" we just read cross[value].
+  // To pivot the OTHER way ("dim values given rating=X") we sum across.
+  function pivotRatingByDim(cross, dimValue) {
+    return cross[dimValue] || {};
+  }
+  // Sum across rating values to get the dim totals (after filtering by rating)
+  function pivotDimByRating(cross, ratingValue) {
+    const out = {};
+    for (const [dim, bucket] of Object.entries(cross)) {
+      out[dim] = bucket[ratingValue] || 0;
+    }
+    return out;
+  }
+
+  // Reduce stats to the buckets the page renders, applying the active filter
+  // Returns { rating, gpu, cpu, os, source, proton, total } each as { token: count }
+  function applyFilter() {
+    if (!stats) return null;
+
+    // No filter: use the unconditional single-dim counters
+    if (!filter.dim || !filter.value) {
+      return {
+        rating: stats.by_rating || {},
+        gpu:    stats.by_gpu_vendor || {},
+        cpu:    stats.by_cpu_brand || {},
+        os:     stats.by_os_family || {},
+        proton: stats.by_proton_type || {},
+        source: stats.by_source || {},
+        total:  stats.total_reports || 0,
+      };
+    }
+
+    // Filtered: rating still comes from the cross-tab, but other dims we
+    // approximate by zeroing everything except the filtered token. This is
+    // a known limitation -- proper multi-dim filtering needs a facts table.
+    const out = {
+      rating: {}, gpu: {}, cpu: {}, os: {}, proton: {}, source: {},
+      total: 0,
+    };
+    if (filter.dim === 'gpu') {
+      out.rating = pivotRatingByDim(stats.by_rating_x_gpu_vendor || {}, filter.value);
+      out.gpu = { [filter.value]: sum(out.rating) };
+      out.total = sum(out.rating);
+      // No cross-tabs for cpu/os/proton/source by gpu, leave them empty so we
+      // can show a "filter limits this chart" hint
+    } else if (filter.dim === 'cpu') {
+      out.rating = pivotRatingByDim(stats.by_rating_x_cpu_brand || {}, filter.value);
+      out.cpu = { [filter.value]: sum(out.rating) };
+      out.total = sum(out.rating);
+    } else if (filter.dim === 'os') {
+      out.rating = pivotRatingByDim(stats.by_rating_x_os_family || {}, filter.value);
+      out.os = { [filter.value]: sum(out.rating) };
+      out.total = sum(out.rating);
+    } else if (filter.dim === 'source') {
+      out.rating = pivotRatingByDim(stats.by_rating_x_source || {}, filter.value);
+      out.source = { [filter.value]: sum(out.rating) };
+      out.total = sum(out.rating);
+    } else if (filter.dim === 'rating') {
+      // Filter by rating: pivot each cross to get dim counts for this rating
+      out.gpu    = pivotDimByRating(stats.by_rating_x_gpu_vendor || {}, filter.value);
+      out.cpu    = pivotDimByRating(stats.by_rating_x_cpu_brand || {}, filter.value);
+      out.os     = pivotDimByRating(stats.by_rating_x_os_family || {}, filter.value);
+      out.source = pivotDimByRating(stats.by_rating_x_source || {}, filter.value);
+      out.rating = { [filter.value]: stats.by_rating?.[filter.value] || 0 };
+      out.total = out.rating[filter.value];
+    }
+    return out;
+  }
+  function sum(obj) {
+    return Object.values(obj).reduce((a, b) => a + (b || 0), 0);
+  }
+
+  // Render N horizontal bar rows sorted descending by count.
+  // dataAttr is the data-* attribute name (rating, key) for per-row tinting.
+  function renderBars(container, buckets, opts = {}) {
+    const entries = Object.entries(buckets).filter(([k, v]) => v > 0).sort((a, b) => b[1] - a[1]);
+    if (!entries.length) {
+      container.innerHTML = '<div class="loading-state" style="padding:20px">No data for current filter</div>';
+      return;
+    }
+    const max = Math.max(...entries.map(([, v]) => v));
+    const limit = opts.limit || entries.length;
+    container.innerHTML = entries.slice(0, limit).map(([token, count]) => {
+      const pct = max ? (count / max * 100).toFixed(1) : 0;
+      const attrs = opts.attr ? `${opts.attr}="${token}"` : '';
+      const chipDim = opts.filterDim;
+      const onClick = chipDim ? ` data-filter-dim="${chipDim}" data-filter-value="${token}" style="cursor:pointer"` : '';
+      return `<div class="bar-row" ${attrs}${onClick}>
+        <span class="name">${label(token)}</span>
+        <div class="track"><div class="fill" style="width:${pct}%"></div></div>
+        <span class="count">${fmt(count)}</span>
+      </div>`;
+    }).join('');
+  }
+
+  // Build the page skeleton + populate. Re-runs when the filter changes.
+  function renderAll() {
+    const data = applyFilter();
+    if (!data) return;
+
+    // ── Top numbers strip ──
+    const totalReports = stats.total_reports || 0;
+    const totalGames = stats.total_games || 0;
+    const platinum = stats.by_rating?.platinum || 0;
+    const platinumPct = totalReports ? (platinum / totalReports * 100).toFixed(1) : '0';
+    const borked = stats.by_rating?.borked || 0;
+    const borkedPct = totalReports ? (borked / totalReports * 100).toFixed(1) : '0';
+    const pulseCount = stats.by_source?.pulse || 0;
+
+    // Pre-render the layout once, then bind dynamic regions
+    root.innerHTML = `
+      <div class="stat-strip">
+        <div class="stat-tile">
+          <div class="label">Total reports</div>
+          <div class="value">${fmt(totalReports)}</div>
+          <div class="detail">across <strong>${fmt(totalGames)}</strong> games</div>
+        </div>
+        <div class="stat-tile">
+          <div class="label">Platinum rate</div>
+          <div class="value">${platinumPct}<span style="font-size:0.7em;color:var(--muted);margin-left:2px">%</span></div>
+          <div class="detail">${fmt(platinum)} platinum reports</div>
+        </div>
+        <div class="stat-tile">
+          <div class="label">Borked rate</div>
+          <div class="value">${borkedPct}<span style="font-size:0.7em;color:var(--muted);margin-left:2px">%</span></div>
+          <div class="detail">${fmt(borked)} broken reports</div>
+        </div>
+        <div class="stat-tile">
+          <div class="label">Pulse Reports</div>
+          <div class="value">${fmt(pulseCount)}</div>
+          <div class="detail">community-submitted via plugin/web</div>
+        </div>
+      </div>
+
+      <div class="filter-row" id="filter-row">
+        <span class="label">Filter:</span>
+        <button class="chip ${!filter.dim ? 'is-active' : ''}" data-filter-dim="" data-filter-value="">All</button>
+        <button class="chip ${filter.dim==='gpu' && filter.value==='amd' ? 'is-active' : ''}" data-filter-dim="gpu" data-filter-value="amd">AMD GPU</button>
+        <button class="chip ${filter.dim==='gpu' && filter.value==='nvidia' ? 'is-active' : ''}" data-filter-dim="gpu" data-filter-value="nvidia">NVIDIA GPU</button>
+        <button class="chip ${filter.dim==='gpu' && filter.value==='intel' ? 'is-active' : ''}" data-filter-dim="gpu" data-filter-value="intel">Intel GPU</button>
+        <button class="chip ${filter.dim==='cpu' && filter.value==='amd' ? 'is-active' : ''}" data-filter-dim="cpu" data-filter-value="amd">AMD CPU</button>
+        <button class="chip ${filter.dim==='cpu' && filter.value==='intel' ? 'is-active' : ''}" data-filter-dim="cpu" data-filter-value="intel">Intel CPU</button>
+        <button class="chip ${filter.dim==='os' && filter.value==='steamos' ? 'is-active' : ''}" data-filter-dim="os" data-filter-value="steamos">SteamOS</button>
+        <button class="chip ${filter.dim==='os' && filter.value==='arch' ? 'is-active' : ''}" data-filter-dim="os" data-filter-value="arch">Arch</button>
+        <button class="chip ${filter.dim==='source' && filter.value==='pulse' ? 'is-active' : ''}" data-filter-dim="source" data-filter-value="pulse">Pulse only</button>
+        <span class="filter-status" id="filter-status"></span>
+      </div>
+
+      <div class="chart-grid">
+        <div class="chart-card">
+          <h3>Ratings ${filter.dim ? '(filtered)' : ''}</h3>
+          <div class="bars" id="chart-rating"></div>
+        </div>
+
+        <div class="chart-card donut-card">
+          <h3 style="width:100%">Source split</h3>
+          <div class="donut" id="donut" style="--pulse-pct: 0%"></div>
+          <div class="donut-legend" id="donut-legend"></div>
+        </div>
+
+        <div class="chart-card">
+          <h3>GPU vendor</h3>
+          <div class="bars" id="chart-gpu"></div>
+        </div>
+        <div class="chart-card">
+          <h3>CPU brand</h3>
+          <div class="bars" id="chart-cpu"></div>
+        </div>
+
+        <div class="chart-card">
+          <h3>OS family (top 10)</h3>
+          <div class="bars" id="chart-os"></div>
+        </div>
+        <div class="chart-card">
+          <h3>Proton type</h3>
+          <div class="bars" id="chart-proton"></div>
+        </div>
+      </div>
+
+      <h2>Reports over time</h2>
+      <div class="chart-card sparkline-card">
+        <svg id="sparkline" viewBox="0 0 400 80" preserveAspectRatio="none"></svg>
+        <div class="axis" id="sparkline-axis"></div>
+      </div>
+
+      <h2>Top games by report volume</h2>
+      <div class="topgames" id="topgames"></div>
+    `;
+
+    // ── Bind chart contents to data ──
+    renderBars(document.getElementById('chart-rating'),
+      data.rating, { attr: 'data-rating', filterDim: 'rating' });
+    renderBars(document.getElementById('chart-gpu'),
+      data.gpu, { attr: 'data-key', filterDim: 'gpu' });
+    renderBars(document.getElementById('chart-cpu'),
+      data.cpu, { attr: 'data-key', filterDim: 'cpu' });
+    renderBars(document.getElementById('chart-os'),
+      data.os, { limit: 10, filterDim: 'os' });
+    renderBars(document.getElementById('chart-proton'),
+      data.proton, { limit: 10 });
+
+    // Source donut (uses unfiltered split intentionally; filtering by source
+    // would just collapse it to one slice)
+    renderDonut(stats.by_source || {});
+
+    // Year sparkline (also uses unfiltered data since cross-tabs by year
+    // would be a big payload)
+    renderSparkline(stats.by_year || {}, stats.by_year_source || {});
+
+    // Top games (unfiltered)
+    renderTopGames(stats.top_games || []);
+
+    // Update meta line with filter context
+    const status = document.getElementById('filter-status');
+    if (status && filter.dim) {
+      status.innerHTML = `Filtered: <strong>${label(filter.value)}</strong> &middot; ${fmt(data.total)} reports <a href="#" id="clear-filter">clear</a>`;
+      status.querySelector('#clear-filter')?.addEventListener('click', e => {
+        e.preventDefault();
+        filter = { dim: null, value: null };
+        history.replaceState(null, '', location.pathname);
+        renderAll();
+      });
+    }
+
+    // Wire chip clicks (filter row + clickable bar rows)
+    document.querySelectorAll('[data-filter-dim]').forEach(el => {
+      el.addEventListener('click', () => {
+        const dim = el.getAttribute('data-filter-dim');
+        const value = el.getAttribute('data-filter-value');
+        if (!dim || !value) {
+          filter = { dim: null, value: null };
+          history.replaceState(null, '', location.pathname);
+        } else if (filter.dim === dim && filter.value === value) {
+          filter = { dim: null, value: null }; // toggle off
+          history.replaceState(null, '', location.pathname);
+        } else {
+          filter = { dim, value };
+          history.replaceState(null, '', `?dim=${dim}&value=${value}`);
+        }
+        renderAll();
+      });
+    });
+  }
+
+  function renderDonut(bySource) {
+    const protondb = bySource.protondb || 0;
+    const pulse = bySource.pulse || 0;
+    const total = protondb + pulse;
+    const pulsePct = total ? (pulse / total * 100) : 0;
+    const donut = document.getElementById('donut');
+    if (donut) donut.style.setProperty('--pulse-pct', `${pulsePct}%`);
+    const legend = document.getElementById('donut-legend');
+    if (legend) {
+      legend.innerHTML = `
+        <div class="row">
+          <span class="swatch protondb"></span>
+          <span class="name">ProtonDB</span>
+          <span class="count">${fmt(protondb)}</span>
+        </div>
+        <div class="row">
+          <span class="swatch pulse"></span>
+          <span class="name">Pulse</span>
+          <span class="count">${fmt(pulse)}</span>
+        </div>
+      `;
+    }
+  }
+
+  // Two-series sparkline: ProtonDB (bg) + Pulse (overlay accent)
+  function renderSparkline(byYear, byYearSource) {
+    const years = Object.keys(byYear).filter(y => /^\d{4}$/.test(y)).sort();
+    if (years.length < 2) {
+      const svg = document.getElementById('sparkline');
+      if (svg) svg.innerHTML = '<text x="50%" y="50%" text-anchor="middle" fill="var(--muted)" font-family="var(--mono)" font-size="12">not enough year data</text>';
+      return;
+    }
+    const max = Math.max(...years.map(y => byYear[y] || 0));
+    const W = 400, H = 80, pad = 4;
+    const xStep = (W - pad * 2) / (years.length - 1);
+
+    function path(getValue) {
+      return years.map((y, i) => {
+        const x = pad + i * xStep;
+        const v = getValue(y) || 0;
+        const yPos = pad + (H - pad * 2) * (1 - (max ? v / max : 0));
+        return `${i === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${yPos.toFixed(1)}`;
+      }).join(' ');
+    }
+    const totalPath = path(y => byYear[y]);
+    const pulsePath = path(y => byYearSource[y]?.pulse || 0);
+
+    const svg = document.getElementById('sparkline');
+    svg.innerHTML = `
+      <defs>
+        <linearGradient id="sparkFill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#66c0f4" stop-opacity="0.35"/>
+          <stop offset="100%" stop-color="#66c0f4" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <path d="${totalPath} L ${pad + (years.length - 1) * xStep} ${H - pad} L ${pad} ${H - pad} Z" fill="url(#sparkFill)"/>
+      <path d="${totalPath}" stroke="#66c0f4" stroke-width="1.5" fill="none"/>
+      <path d="${pulsePath}" stroke="#beee11" stroke-width="1.5" fill="none" opacity="0.9"/>
+    `;
+    const axis = document.getElementById('sparkline-axis');
+    if (axis) {
+      axis.innerHTML = years.map(y => `<span>${y}</span>`).join('');
+    }
+  }
+
+  function renderTopGames(topGames) {
+    const list = document.getElementById('topgames');
+    if (!list) return;
+    list.innerHTML = topGames.slice(0, 30).map(([appId, title, count], i) => `
+      <a href="data-index.html#/${appId}">
+        <span class="rank">#${i + 1}</span>
+        <span class="title">${(title || appId).replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]))}</span>
+        <span class="appid">${appId}</span>
+        <span class="count">${fmt(count)} reports</span>
+      </a>
+    `).join('');
+  }
+
+  // Restore filter from query string on load
+  const params = new URLSearchParams(location.search);
+  const qDim = params.get('dim');
+  const qVal = params.get('value');
+  if (qDim && qVal) filter = { dim: qDim, value: qVal };
+
+  fetch('stats.json', { cache: 'no-store' })
+    .then(r => r.ok ? r.json() : Promise.reject(r.status))
+    .then(payload => {
+      stats = payload;
+      metaEl.textContent = `// Generated: ${stats.generated_at || 'unknown'} · ${fmt(stats.total_reports)} reports across ${fmt(stats.total_games)} games`;
+      renderAll();
+    })
+    .catch(err => {
+      root.innerHTML = `<div class="error-state">
+        <p>Stats not available (${err}).</p>
+        <p style="margin-top:8px;font-size:0.74rem">stats.json is built by the data pipeline. If you're in local dev,
+        the next deployment will populate it.</p>
+      </div>`;
+      metaEl.textContent = `// stats.json fetch failed`;
+    });
+})();
+</script>
+</body>
+</html>
