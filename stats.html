@@ -175,7 +175,9 @@ h2 {
 .bars { display: flex; flex-direction: column; gap: 6px; }
 .bar-row {
   display: grid;
-  grid-template-columns: 110px 1fr 60px;
+  /* min 140 fits "ARCH / DERIV..." most of the time, grows to max-content
+     when there's room. ellipsis + native title tooltip handles overflow */
+  grid-template-columns: minmax(140px, max-content) 1fr 60px;
   align-items: center;
   gap: 10px;
   font-size: 0.82rem;
@@ -189,6 +191,7 @@ h2 {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  max-width: 240px;
 }
 .bar-row .track {
   position: relative;
@@ -251,22 +254,37 @@ h2 {
   background: var(--bg-bot);
   border: 1px solid var(--border);
 }
-.donut-legend { flex: 1; min-width: 160px; display: flex; flex-direction: column; gap: 10px; }
+.donut-legend { flex: 1; min-width: 160px; display: flex; flex-direction: column; gap: 6px; }
 .donut-legend .row {
   display: flex;
   align-items: center;
   gap: 10px;
+  padding: 6px 8px;
   font-family: var(--mono);
   font-size: 0.84rem;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: border-color .12s, background .12s, color .12s;
+}
+.donut-legend .row:hover {
+  background: rgba(102,192,244,0.06);
+  border-color: var(--border2);
+}
+.donut-legend .row.is-active {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  box-shadow: 0 0 14px -6px var(--accent-glow);
 }
 .donut-legend .row .swatch {
   width: 12px; height: 12px;
   border: 1px solid var(--border);
+  flex-shrink: 0;
 }
 .donut-legend .row .swatch.protondb { background: var(--accent); }
 .donut-legend .row .swatch.pulse    { background: var(--green-hi); }
 .donut-legend .row .name { color: var(--text); }
 .donut-legend .row .count { color: var(--muted); margin-left: auto; }
+.donut-legend .row .pct { color: var(--muted); font-size: 0.72rem; margin-left: 4px; }
 
 /* ── year sparkline ─────────────────────────────────────────────────── */
 .sparkline-card svg { width: 100%; height: 80px; display: block; }
@@ -458,8 +476,11 @@ h2 {
       const attrs = opts.attr ? `${opts.attr}="${token}"` : '';
       const chipDim = opts.filterDim;
       const onClick = chipDim ? ` data-filter-dim="${chipDim}" data-filter-value="${token}" style="cursor:pointer"` : '';
-      return `<div class="bar-row" ${attrs}${onClick}>
-        <span class="name">${label(token)}</span>
+      const niceLabel = label(token);
+      // native title tooltip so the full text shows on hover when ellipsis truncates
+      const rowTitle = `${niceLabel}: ${fmt(count)} reports${chipDim ? ' (click to filter)' : ''}`;
+      return `<div class="bar-row" ${attrs}${onClick} title="${rowTitle}">
+        <span class="name" title="${niceLabel}">${niceLabel}</span>
         <div class="track"><div class="fill" style="width:${pct}%"></div></div>
         <span class="count">${fmt(count)}</span>
       </div>`;
@@ -620,20 +641,26 @@ h2 {
     const pulse = bySource.pulse || 0;
     const total = protondb + pulse;
     const pulsePct = total ? (pulse / total * 100) : 0;
+    const protondbPct = total ? (protondb / total * 100) : 0;
     const donut = document.getElementById('donut');
     if (donut) donut.style.setProperty('--pulse-pct', `${pulsePct}%`);
     const legend = document.getElementById('donut-legend');
     if (legend) {
+      const isFilterProtondb = filter.dim === 'source' && filter.value === 'protondb';
+      const isFilterPulse = filter.dim === 'source' && filter.value === 'pulse';
+      // legend rows act as filter chips for source. clicking a row toggles
+      // the source filter on/off; the global delegated click handler in
+      // renderAll catches the data-filter-* attributes.
       legend.innerHTML = `
-        <div class="row">
+        <div class="row ${isFilterProtondb ? 'is-active' : ''}" data-filter-dim="source" data-filter-value="protondb" title="Click to filter by ProtonDB source">
           <span class="swatch protondb"></span>
           <span class="name">ProtonDB</span>
-          <span class="count">${fmt(protondb)}</span>
+          <span class="count">${fmt(protondb)}<span class="pct"> (${protondbPct.toFixed(1)}%)</span></span>
         </div>
-        <div class="row">
+        <div class="row ${isFilterPulse ? 'is-active' : ''}" data-filter-dim="source" data-filter-value="pulse" title="Click to filter by Pulse source">
           <span class="swatch pulse"></span>
           <span class="name">Pulse</span>
-          <span class="count">${fmt(pulse)}</span>
+          <span class="count">${fmt(pulse)}<span class="pct"> (${pulsePct.toFixed(1)}%)</span></span>
         </div>
       `;
     }
