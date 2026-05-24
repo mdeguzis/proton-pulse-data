@@ -2,7 +2,7 @@
 into the per-game year.json files alongside ProtonDB reports.
 
 Runs as part of the normal pipeline (see finalize.py:finalize_output). The
-source of truth stays Supabase -- this just snapshots the latest state into
+source of truth stays Supabase - this just snapshots the latest state into
 the static JSON so consumers don't have to fetch from two places.
 
 Dedupe key: the Supabase row id. We store it as pulseId on the report so

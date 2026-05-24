@@ -288,7 +288,7 @@
         const id = String(row[0]);
         const title = String(row[1] || '');
         if (asAppId ? id.startsWith(q) : title.toLowerCase().indexOf(ql) !== -1) {
-          // extra columns may not exist on older deployments -- fall back gracefully
+          // extra columns may not exist on older deployments - fall back gracefully
           out.push({
             appId: id,
             title: title,

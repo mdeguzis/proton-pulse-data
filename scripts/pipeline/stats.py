@@ -5,7 +5,7 @@ Powers the /stats.html page with single-dimension breakdowns plus a handful of
 rows. Output is a few KB regardless of dataset size.
 
 The categorical normalizers (GPU vendor, CPU brand, OS family, Proton type)
-are deliberately coarse -- a few well-known buckets plus "other" -- since the
+are deliberately coarse - a few well-known buckets plus "other" - since the
 filters on the stats page need stable values to key off.
 """
 
@@ -118,7 +118,7 @@ _BARE_PROTON_VERSION = re.compile(
 # user-visible cpu/gpu fields in ProtonDB reports.
 _STEAM_DECK_LCD = re.compile(r"\b(amd\s+custom\s+(apu|gpu)\s+0405|vangogh)\b", re.IGNORECASE)
 # OLED uses APU rev 0932 (codename "Sephiroth"). VanGogh is still the GPU
-# codename so VanGogh alone can't distinguish LCD vs OLED -- the 0932 string
+# codename so VanGogh alone can't distinguish LCD vs OLED - the 0932 string
 # is what nails the OLED specifically
 _STEAM_DECK_OLED = re.compile(r"\b(amd\s+custom\s+(apu|gpu)\s+0932|sephiroth)\b", re.IGNORECASE)
 
@@ -127,7 +127,7 @@ def normalize_device_family(report: dict) -> str:
     """Detect Steam Deck (LCD/OLED) and similar handhelds vs generic desktop.
 
     Matches against both CPU and GPU strings since either field may carry the
-    Deck-identifying APU/GPU revision. Conservative -- only flags devices with
+    Deck-identifying APU/GPU revision. Conservative - only flags devices with
     unambiguous fingerprints. Everything else is "desktop".
     """
     cpu = report.get("cpu") or ""
@@ -162,11 +162,11 @@ def normalize_proton_type(report: dict) -> str:
         return "native"
     if "steam linux runtime" in v or "steam-linux-runtime" in v or v == "slr":
         return "steam-linux-runtime"
-    # Bare version numbers like "10.0-3", "9.0-4" -- the most common form in
+    # Bare version numbers like "10.0-3", "9.0-4" - the most common form in
     # ProtonDB reports. Classify as official stable Proton.
     if _BARE_PROTON_VERSION.match(v):
         return "proton-stable"
-    # Anything else that mentions proton -- catch-all for branded variants
+    # Anything else that mentions proton - catch-all for branded variants
     if "proton" in v:
         return "proton-stable"
     return "other"
@@ -259,7 +259,7 @@ def compute_stats(data_output_path: Path) -> dict[str, Any]:
     by_year_rating: dict[str, Counter] = defaultdict(Counter)
 
     # Per-app accumulator. Tracks newest_year so we can identify games that
-    # have not been re-tested recently -- the "worth re-testing" leaderboard
+    # have not been re-tested recently - the "worth re-testing" leaderboard
     # uses this to surface borked games whose latest report is years old.
     per_game: dict[str, dict[str, Any]] = {}
 
@@ -396,7 +396,7 @@ def compute_stats(data_output_path: Path) -> dict[str, Any]:
         "by_year_rating": flatten_cross(by_year_rating),
         # Stale-borked detection: games whose overall verdict is "borked" but the
         # newest report is from 2+ years ago. Proton has improved enough that
-        # those verdicts may no longer hold -- surface them so users can re-test.
+        # those verdicts may no longer hold - surface them so users can re-test.
         "stale_borked_count": stale_borked_count,
         "stale_borked_cutoff_year": stale_cutoff,
         # Top 30 stale-borked games by report volume

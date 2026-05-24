@@ -261,7 +261,7 @@ async function populateSubmitForm(el) {
         <div class="scoring-guide-row"><span class="scoring-guide-badge" style="background:#c8a050;color:#111">Gold</span><span class="scoring-guide-rule">Can install, start, and play. No faults. Works but required tinkering.</span></div>
         <div class="scoring-guide-row"><span class="scoring-guide-badge" style="background:#8fa0b0;color:#111">Silver</span><span class="scoring-guide-rule">Can install, start, and play. Exactly 2 faults.</span></div>
         <div class="scoring-guide-row"><span class="scoring-guide-badge" style="background:#b07040;color:#fff">Bronze</span><span class="scoring-guide-rule">Can install, start, and play. 3+ faults.</span></div>
-        <div class="scoring-guide-row"><span class="scoring-guide-badge" style="background:#c85050;color:#fff">Borked</span><span class="scoring-guide-rule">Cannot install, start, or play -- or overall verdict is No.</span></div>
+        <div class="scoring-guide-row"><span class="scoring-guide-badge" style="background:#c85050;color:#fff">Borked</span><span class="scoring-guide-rule">Cannot install, start, or play - or overall verdict is No.</span></div>
       </div>
     </details>
     <form id="submit-report-form" autocomplete="on">
@@ -347,7 +347,7 @@ async function populateSubmitForm(el) {
     </form>`;
   container.dataset.loaded = '1';
 
-  // -- Form state & progressive question wiring --
+  // - Form state & progressive question wiring --
   const form = container.querySelector('#submit-report-form');
   const state = {
     canInstall: null, canStart: null, canPlay: null,
@@ -427,7 +427,7 @@ async function populateSubmitForm(el) {
     });
   });
 
-  // -- Populate proton datalist: schema defaults + live GE-Proton + official Proton releases
+  // - Populate proton datalist: schema defaults + live GE-Proton + official Proton releases
   const dl = container.querySelector('#proton-versions');
   if (dl) {
     const known = new Set(schema.knownProtonVersions || []);
@@ -447,7 +447,7 @@ async function populateSubmitForm(el) {
     dl.innerHTML = [...known].map(v => '<option value="'+esc(v)+'">').join('');
   }
 }
-// -- Routing ------------------------------------------
+// - Routing ------------------------------------------
 
 async function populateScoringTooltip(el) {
   const container = el.querySelector('#rating-info-content');
@@ -765,7 +765,7 @@ function withTimeout(promise, ms, fallback) {
   ]);
 }
 
-// -- Data fetching ------------------------------------
+// - Data fetching ------------------------------------
 
 async function fetchCdn(appId) {
   try {
@@ -962,7 +962,7 @@ async function castVote(appId, rKey, vote, upBtn, dnBtn) {
   } catch { /* silently fail */ }
 }
 
-// -- Helpers ------------------------------------------
+// - Helpers ------------------------------------------
 
 function fmtDuration(d) {
   switch (d) {
@@ -1070,7 +1070,7 @@ function renderPulseSearchResult(row) {
       <div class="search-result-main">
         <div class="search-result-main-title">${esc(row.appName)}</div>
         <div class="search-result-main-meta">
-          Latest config: ${esc(row.profileName)}${row.protonVersion ? ` · ${esc(row.protonVersion)}` : ''}<br>
+          Latest config: ${esc(row.profileName)}${row.protonVersion ? ` - ${esc(row.protonVersion)}` : ''}<br>
           Updated ${age}
         </div>
       </div>
@@ -1080,17 +1080,31 @@ function renderPulseSearchResult(row) {
     </a>`;
 }
 
-function renderIndexSearchResult([appId, title]) {
+function renderIndexSearchResult(entry) {
+  // search-index entries may be the legacy 2-tuple [appId, title] or the
+  // extended 5-tuple [appId, title, tier, protondbCount, pulseCount].
+  // Destructure defensively so older deploys keep rendering
+  const [appId, title, tier, protondbCount, pulseCount] = entry;
+  // Build a counts subline only when at least one count is present
+  const counts = [];
+  if (protondbCount) counts.push(`${protondbCount} ProtonDB`);
+  if (pulseCount) counts.push(`${pulseCount} Pulse`);
+  const meta = counts.length
+    ? counts.join(' + ') + ' report' + ((protondbCount + pulseCount) === 1 ? '' : 's')
+    : `ProtonDB data indexed for app ${esc(appId)}.`;
+  const tierBadge = tier
+    ? `<span class="tier-badge tier-${esc(tier)}">${esc(tier)}</span>`
+    : '';
   return `
     <a class="search-result-card" href="#/app/${appId}">
       <img src="${STEAM_IMG(appId)}" onerror="this.style.display='none'" alt="">
       <div class="search-result-main">
         <div class="search-result-main-title">${esc(title)}</div>
-        <div class="search-result-main-meta">
-          ProtonDB data indexed for app ${esc(appId)}.
-        </div>
+        <div class="search-result-main-meta">${meta}</div>
       </div>
       <div class="search-result-side">
+        ${tierBadge}
+        ${pulseCount ? '<span class="source-badge pulse"><img src="https://raw.githubusercontent.com/mdeguzis/decky-proton-pulse/main/assets/logo.png" alt="">Pulse</span>' : ''}
         <span class="source-badge protondb">ProtonDB</span>
       </div>
     </a>`;
@@ -1107,7 +1121,7 @@ async function renderSearchPage(query) {
 
   el.innerHTML = `
     <div class="search-summary">
-      Search results for <strong>${esc(q)}</strong> · ${total} grouped hit${total === 1 ? '' : 's'}${pulseResults.length === 0 && indexResults.length > 0 ? ' · Proton Pulse config search may still be catching up' : ''}
+      Search results for <strong>${esc(q)}</strong> - ${total} grouped hit${total === 1 ? '' : 's'}${pulseResults.length === 0 && indexResults.length > 0 ? ' - Proton Pulse config search may still be catching up' : ''}
     </div>
     <div class="search-groups">
       <section class="search-group">
@@ -1132,7 +1146,7 @@ async function renderSearchPage(query) {
     </div>`;
 }
 
-// -- Render: Proton Pulse Configs section ------------
+// - Render: Proton Pulse Configs section ------------
 
 const NA_SPAN = '<span style="color:#4a5f70;font-style:italic">Not available</span>';
 function cfgNa(s) { return s || NA_SPAN; }
@@ -1287,7 +1301,7 @@ function renderConfigsSection(configs) {
     </div>`;
 }
 
-// -- Render: trend summary ----------------------------
+// - Render: trend summary ----------------------------
 
 function trendSummary(reps) {
   if (reps.length < 2) return '';
@@ -1305,7 +1319,7 @@ function trendSummary(reps) {
   return `<div class="trend">Compatibility is <strong style="color:var(--red)">declining</strong> - ${recent.length} recent vs ${older.length} older reports</div>`;
 }
 
-// -- Render: report card ------------------------------
+// - Render: report card ------------------------------
 
 function renderCard(r, votes, userVotes = {}, configPlaytimeTotals = []) {
   const v     = votes[reportKey(r)] || { up: 0, down: 0 };
@@ -1377,7 +1391,7 @@ function renderCard(r, votes, userVotes = {}, configPlaytimeTotals = []) {
     </div>`;
 }
 
-// -- Render: game page --------------------------------
+// - Render: game page --------------------------------
 
 async function renderGamePage(appId) {
   const el = document.getElementById('content');
@@ -1741,7 +1755,7 @@ async function renderGamePage(appId) {
   render();
 }
 
-// -- Search --------------------------------------------
+// - Search --------------------------------------------
 
 const searchInput   = document.getElementById('search');
 const searchResults = document.getElementById('search-results');

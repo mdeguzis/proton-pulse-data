@@ -555,7 +555,7 @@ h2 {
 
     // Filtered: rating still comes from the cross-tab, but other dims we
     // approximate by zeroing everything except the filtered token. This is
-    // a known limitation -- proper multi-dim filtering needs a facts table.
+    // a known limitation - proper multi-dim filtering needs a facts table.
     const out = {
       rating: {}, gpu: {}, cpu: {}, os: {}, proton: {}, source: {}, device: {},
       total: 0,
@@ -755,7 +755,7 @@ h2 {
           <strong>${fmt(stats.stale_borked_count)}</strong> games are rated <span class="retest-borked">borked</span>
           but haven't been re-tested since <strong>${stats.stale_borked_cutoff_year || '—'}</strong> or earlier
         </div>
-        <div class="retest-sub">Proton has come a long way. Many of these probably work now -- if you own one, a fresh report would help.</div>
+        <div class="retest-sub">Proton has come a long way. Many of these probably work now - if you own one, a fresh report would help.</div>
       </div>
       <h2>Worth re-testing</h2>
       <p class="meta">// Top borked games by report volume whose newest report is from ${stats.stale_borked_cutoff_year || '—'} or earlier.</p>
@@ -1133,7 +1133,7 @@ h2 {
 
     if (axis) axis.innerHTML = years.map(y => `<span>${y}</span>`).join('');
 
-    // Legend with click-to-toggle would be nice but skip for now -- always show all 5
+    // Legend with click-to-toggle would be nice but skip for now - always show all 5
     if (legend) {
       legend.innerHTML = tiers.map(t => `
         <span class="legend-item">
@@ -1201,7 +1201,7 @@ h2 {
     .then(([statsPayload, coveragePayload]) => {
       stats = statsPayload;
       coverage = coveragePayload;
-      metaEl.textContent = `// Generated: ${stats.generated_at || 'unknown'} -- ${fmt(stats.total_reports)} reports across ${fmt(stats.total_games)} games`;
+      metaEl.textContent = `// Generated: ${stats.generated_at || 'unknown'} - ${fmt(stats.total_reports)} reports across ${fmt(stats.total_games)} games`;
       renderAll();
     })
     .catch(err => {

@@ -192,7 +192,7 @@ def generate_index_html(index_keys: set, output_path: Path) -> None:
     .detail-split { display: grid; grid-template-columns: 200px 1fr; gap: 16px; align-items: stretch; min-height: 500px; }
     @media (max-width: 760px) {
       /* minmax(0, 1fr) instead of 1fr so the grid track actually constrains its
-         child -- without it, the year-list defaults to min-width: auto and grows
+         child - without it, the year-list defaults to min-width: auto and grows
          to fit content width, defeating its own overflow-x: auto */
       .detail-split { grid-template-columns: minmax(0, 1fr); min-height: 0; }
     }
@@ -298,7 +298,7 @@ def generate_index_html(index_keys: set, output_path: Path) -> None:
         "</div></div>",  # close .main-content / .main-inner
 
         # The behavior script is large enough that splitting it into one string per
-        # line bloats the file -- emit it as a single <script> block instead.
+        # line bloats the file - emit it as a single <script> block instead.
         """<script>
 (function () {
   // ---- Grid view rendering with pagination ----
@@ -549,7 +549,7 @@ def derive_index_keys_from_disk(data_output_path: Path) -> set[tuple[str, str]]:
     the gh-pages merge step brings in 21k+ historical apps that this run
     didn't reprocess, those apps live on disk but aren't in pipeline-state.
     The data-index and search-index generators iterate index_keys, so without
-    this disk-derived merge, they emit only the current-run set -- which is
+    this disk-derived merge, they emit only the current-run set - which is
     how a scheduled run that picked up a single dump update wiped data-index
     down to one entry on prod.
     """

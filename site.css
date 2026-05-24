@@ -526,7 +526,7 @@ code {
 /* legacy classes - kept for pages still using the old single-row topbar styles */
 .topbar-toggle, .hamburger, .topbar-spacer, .topbar-link, .topbar-link--button { display: none !important; }
 
-/* -- Sidebar -- */
+/* - Sidebar - */
 
 .sidebar-nav {
   position: fixed;
@@ -666,7 +666,7 @@ code {
   margin-top: 1px;
 }
 
-/* -- Main content area - no sidebar, fills the width responsively -- */
+/* - Main content area - no sidebar, fills the width responsively - */
 
 .main-content {
   margin-top: var(--topnav-h);
@@ -684,7 +684,7 @@ code {
   padding: 32px var(--content-pad) 56px;
 }
 
-/* -- Footer -- */
+/* - Footer - */
 
 .sitefooter {
   border-top: 1px solid var(--border);
@@ -738,13 +738,26 @@ code {
 }
 .eyebrow::before { content: '// '; opacity: 0.7; }
 
-/* -- Tier badge colors -- */
+/* - Tier badge colors - */
 .tier-platinum { background: #b4c7dc; color: #0a0c10; }
 .tier-gold     { background: #c8a050; color: #0a0c10; }
 .tier-silver   { background: #8fa0b0; color: #0a0c10; }
 .tier-bronze   { background: #b07040; color: #0a0c10; }
 .tier-borked   { background: #c85050; color: #fff; }
 .tier-pending  { background: #3a4a5a; color: var(--muted); }
+
+/* Pill rendering of the per-game overall tier badge - used in search results,
+   the topbar dropdown, and anywhere else we surface a game's consensus rating. */
+.tier-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
 
 /* ============================================================
    RESPONSIVE - horizontal nav collapses to mobile drawer
