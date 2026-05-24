@@ -82,18 +82,39 @@ def normalize_os_family(report: dict) -> str:
     return "other"
 
 
+# Bare version strings ProtonDB reports use: "10.0-3", "9.0-4", "8.0-5",
+# "7.0-6c", "1.9.7" etc. Sometimes with optional "v" prefix or trailing
+# letter suffix. The version-only form is what shows up in the raw archive.
+_BARE_PROTON_VERSION = re.compile(
+    r"^v?\d+(\.\d+){0,2}([\s\-_]\d+)?[a-z]?$"
+)
+
+
 def normalize_proton_type(report: dict) -> str:
-    v = (report.get("protonVersion") or report.get("proton_version") or "").lower()
+    v = (report.get("protonVersion") or report.get("proton_version") or "").lower().strip()
     if not v:
         return "unknown"
-    if "ge-proton" in v or "proton-ge" in v or v.startswith("ge "):
+    # GE-Proton variants: "GE-Proton9-25", "Proton-GE", "GE 9-25"
+    if "ge-proton" in v or "proton-ge" in v or "ge_proton" in v \
+            or v.startswith("ge-") or v.startswith("ge "):
         return "ge-proton"
+    if "tkg" in v:
+        return "proton-tkg"
+    if "next" in v:
+        return "proton-next"
     if "experimental" in v:
         return "proton-experimental"
-    if v in ("native", "no proton") or "native" in v:
-        return "native"
     if "hotfix" in v:
         return "proton-hotfix"
+    if "native" in v or v == "no proton" or "linux native" in v:
+        return "native"
+    if "steam linux runtime" in v or "steam-linux-runtime" in v or v == "slr":
+        return "steam-linux-runtime"
+    # Bare version numbers like "10.0-3", "9.0-4" -- the most common form in
+    # ProtonDB reports. Classify as official stable Proton.
+    if _BARE_PROTON_VERSION.match(v):
+        return "proton-stable"
+    # Anything else that mentions proton -- catch-all for branded variants
     if "proton" in v:
         return "proton-stable"
     return "other"
