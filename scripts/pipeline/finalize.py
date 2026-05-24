@@ -414,7 +414,7 @@ def generate_index_html(index_keys: set, output_path: Path) -> None:
         const pulseN = list.filter(r => r && r.source === 'pulse').length;
         const protondbN = list.length - pulseN;
         statusEl.textContent = pulseN
-          ? protondbN + ' ProtonDB · ' + pulseN + ' Pulse'
+          ? protondbN + ' ProtonDB + ' + pulseN + ' Pulse'
           : list.length + ' reports';
         contentEl.innerHTML = jsonHtml(data);
       })
@@ -570,17 +570,85 @@ def derive_index_keys_from_disk(data_output_path: Path) -> set[tuple[str, str]]:
     return keys
 
 
+# Per-rating contribution to a game's overall score, on a 0..1 scale. Mirrors
+# scoring-info.json:ratingScores so the search-index tier maps cleanly back
+# onto the scoring page's score thresholds.
+_RATING_SCORES = {
+    "platinum": 1.0,
+    "gold": 0.8,
+    "silver": 0.6,
+    "bronze": 0.4,
+    "borked": 0.0,
+}
+# scoreTiers thresholds: 80+ platinum, 60+ gold, 40+ silver, 20+ bronze, else borked.
+# Match scoring-info.json's scoreTiers; pending used when there are no rated reports.
+def _score_to_tier(score_pct: float) -> str:
+    if score_pct >= 80: return "platinum"
+    if score_pct >= 60: return "gold"
+    if score_pct >= 40: return "silver"
+    if score_pct >= 20: return "bronze"
+    return "borked"
+
+
+def _compute_game_summary(app_dir: Path) -> tuple[str, int, int]:
+    """Walk a game's year files and return (overall_tier, protondb_count, pulse_count).
+
+    Tier is the average of per-report rating scores mapped through scoreTiers --
+    same algorithm the scoring page documents. Pending if no rated reports.
+    """
+    total_score = 0.0
+    rated_count = 0
+    protondb_count = 0
+    pulse_count = 0
+    if not app_dir.is_dir():
+        return ("pending", 0, 0)
+    for year_file in app_dir.glob("*.json"):
+        stem = year_file.stem
+        if stem in ("index", "latest", "votes", "metadata"):
+            continue
+        try:
+            reports = json.loads(year_file.read_text())
+        except (json.JSONDecodeError, OSError):
+            continue
+        if not isinstance(reports, list):
+            continue
+        for r in reports:
+            if not isinstance(r, dict):
+                continue
+            source = (r.get("source") or "protondb").lower()
+            if source == "pulse":
+                pulse_count += 1
+            else:
+                protondb_count += 1
+            rating = (r.get("rating") or "").lower()
+            if rating in _RATING_SCORES:
+                total_score += _RATING_SCORES[rating]
+                rated_count += 1
+    if rated_count == 0:
+        return ("pending", protondb_count, pulse_count)
+    score_pct = (total_score / rated_count) * 100
+    return (_score_to_tier(score_pct), protondb_count, pulse_count)
+
+
 def generate_search_index(index_keys: set, data_output_path: Path, output_path: Path) -> None:
-    """Generate search-index.json: compact [[appId, title], ...] list for client-side search."""
+    """Generate search-index.json with overall tier + report counts per game.
+
+    Shape: [[appId, title, tier, protondbCount, pulseCount], ...]
+    Older consumers reading only the first two columns continue to work --
+    JS destructuring ignores extra elements silently.
+    """
     app_ids = sorted(
         {app_id for app_id, _ in index_keys},
         key=lambda a: (0, int(a)) if a.isdigit() else (1, a),
     )
     entries = []
     for app_id in app_ids:
-        title = _extract_title(data_output_path / app_id)
-        if title:
-            entries.append([app_id, title])
+        app_dir = data_output_path / app_id
+        title = _extract_title(app_dir)
+        if not title:
+            continue
+        tier, pdb_count, pulse_count = _compute_game_summary(app_dir)
+        entries.append([app_id, title, tier, pdb_count, pulse_count])
     index_file = output_path / "search-index.json"
     index_file.write_text(json.dumps(entries, separators=(",", ":")))
     log(f"[search-index] Written {len(entries):,} entries to {index_file}")

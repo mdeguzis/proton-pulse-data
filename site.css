@@ -430,12 +430,37 @@ code {
   background: var(--s2);
   flex-shrink: 0;
 }
-.search-dropdown .sd-title {
+.search-dropdown .sd-meta {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+}
+.search-dropdown .sd-title {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.search-dropdown .sd-counts {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.search-dropdown .sd-tier {
+  flex-shrink: 0;
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  align-self: center;
 }
 .search-dropdown .sd-appid {
   font-family: var(--mono);

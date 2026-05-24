@@ -30,6 +30,9 @@
     <symbol id="icon-contact" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
       <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
     </symbol>
+    <symbol id="icon-scoring" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 2v20"/><path d="m17 5-5-3-5 3"/><path d="M5 14h14"/><path d="M5 14a4 4 0 0 0 4-4V5"/><path d="M19 14a4 4 0 0 1-4-4V5"/><path d="M19 14a4 4 0 0 1-4 4h-1a4 4 0 0 0-4 0H9a4 4 0 0 1-4-4"/>
+    </symbol>
     <symbol id="icon-github" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
       <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.4 5.4 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/>
       <path d="M9 18c-4.51 2-5-2-7-2"/>
@@ -175,6 +178,10 @@
         <svg class="nav-icon" aria-hidden="true"><use href="#icon-stats"/></svg>
         <span>Stats</span>
       </a>
+      <a href="scoring.html" data-page="scoring" title="How compatibility scores are calculated">
+        <svg class="nav-icon" aria-hidden="true"><use href="#icon-scoring"/></svg>
+        <span>Scoring</span>
+      </a>
       <a href="https://github.com/mdeguzis/decky-proton-pulse" target="_blank" rel="noopener" title="Decky Loader plugin for Steam Deck">
         <svg class="nav-icon" aria-hidden="true"><use href="#icon-gamepad"/></svg>
         <span>Decky Plugin</span>
@@ -200,6 +207,7 @@
   <a href="data-index.html" data-page="data-index"><svg class="nav-icon" aria-hidden="true"><use href="#icon-database"/></svg> Data</a>
   <a href="coverage.html" data-page="coverage"><svg class="nav-icon" aria-hidden="true"><use href="#icon-chart"/></svg> Coverage</a>
   <a href="stats.html" data-page="stats"><svg class="nav-icon" aria-hidden="true"><use href="#icon-stats"/></svg> Stats</a>
+  <a href="scoring.html" data-page="scoring"><svg class="nav-icon" aria-hidden="true"><use href="#icon-scoring"/></svg> Scoring</a>
   <a href="https://github.com/mdeguzis/decky-proton-pulse/issues/new/choose" target="_blank" rel="noopener"><svg class="nav-icon" aria-hidden="true"><use href="#icon-contact"/></svg> Contact</a>
   <a href="https://github.com/mdeguzis/decky-proton-pulse" target="_blank" rel="noopener"><svg class="nav-icon" aria-hidden="true"><use href="#icon-gamepad"/></svg> Decky Plugin</a>
   <a href="https://github.com/mdeguzis/proton-pulse-data" target="_blank" rel="noopener"><svg class="nav-icon" aria-hidden="true"><use href="#icon-github"/></svg> GitHub</a>
@@ -280,7 +288,14 @@
         const id = String(row[0]);
         const title = String(row[1] || '');
         if (asAppId ? id.startsWith(q) : title.toLowerCase().indexOf(ql) !== -1) {
-          out.push({ appId: id, title: title });
+          // extra columns may not exist on older deployments -- fall back gracefully
+          out.push({
+            appId: id,
+            title: title,
+            tier: row[2] || '',
+            protondbCount: row[3] || 0,
+            pulseCount: row[4] || 0,
+          });
         }
       }
       return out;
@@ -313,9 +328,25 @@
         const safe = r.title.replace(/[<>&]/g, function (c) {
           return { '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c];
         });
+        // Build the counts subline only if either count is present; older
+        // search-index.json deployments without these fields render the old
+        // way (no subline, no tier badge)
+        const counts = [];
+        if (r.protondbCount) counts.push(r.protondbCount + ' ProtonDB');
+        if (r.pulseCount) counts.push(r.pulseCount + ' Pulse');
+        const countsHtml = counts.length
+          ? '<span class="sd-counts">' + counts.join(' + ') + '</span>'
+          : '';
+        const tierHtml = r.tier
+          ? '<span class="sd-tier tier-' + r.tier + '">' + r.tier + '</span>'
+          : '';
         return '<a href="app.html#/app/' + r.appId + '" role="option" data-idx="' + idx + '">' +
                '<img loading="lazy" src="' + steamHeader(r.appId) + '" alt="">' +
-               '<span class="sd-title">' + safe + '</span>' +
+               '<span class="sd-meta">' +
+                 '<span class="sd-title">' + safe + '</span>' +
+                 countsHtml +
+               '</span>' +
+               tierHtml +
                '<span class="sd-appid">' + r.appId + '</span>' +
                '</a>';
       }).join('');

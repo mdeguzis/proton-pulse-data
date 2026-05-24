@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How Scoring Works - Proton Pulse</title>
+<meta name="description" content="Transparent explanation of how Proton Pulse scores compatibility reports against your hardware. Identical algorithm to the Decky Loader plugin -- one canonical source of truth, no hidden magic.">
+<meta name="color-scheme" content="dark">
+<link rel="stylesheet" href="site.css">
+<style>
+h1 {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  margin-bottom: 0.3em;
+}
+h2 {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text);
+  margin: 2.2em 0 0.8em;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+h2::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: var(--accent);
+  box-shadow: 0 0 6px var(--accent-glow);
+  flex-shrink: 0;
+}
+h3 { font-family: var(--font-display); font-size: 0.85rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--strong); margin: 1.4em 0 0.6em; }
+.meta { color: var(--muted); font-family: var(--mono); font-size: 0.8rem; letter-spacing: 0.04em; margin-bottom: 0.8em; }
+.lede {
+  font-size: 1rem;
+  color: var(--text);
+  line-height: 1.65;
+  max-width: 760px;
+  margin-bottom: 0.6em;
+}
+.lede a { color: var(--accent); }
+
+.card {
+  background: linear-gradient(180deg, rgba(27,40,56,0.55), rgba(11,17,22,0.45));
+  border: 1px solid var(--border);
+  padding: 16px 18px;
+  margin-bottom: 14px;
+}
+.card.formula {
+  border-left: 3px solid var(--accent);
+}
+.card.formula .formula-line {
+  font-family: var(--mono);
+  font-size: 0.95rem;
+  color: var(--accent-hi);
+  letter-spacing: 0.02em;
+  padding: 12px 0;
+  line-height: 1.5;
+  word-break: break-word;
+}
+.card .body { color: var(--text); line-height: 1.6; font-size: 0.92rem; }
+.card .body p { margin-bottom: 0.5em; }
+.card .body code, code.inline {
+  font-family: var(--mono);
+  font-size: 0.85em;
+  background: rgba(11,17,22,0.6);
+  border: 1px solid var(--border);
+  padding: 1px 6px;
+  color: var(--accent-hi);
+}
+
+/* tier rows for the rating table */
+.tier-row {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 16px;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.tier-row:last-child { border-bottom: none; }
+.tier-row .badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.tier-row[data-tier="platinum"] .badge { background: #b4c7dc; color: #0a0c10; }
+.tier-row[data-tier="gold"]     .badge { background: #c8a050; color: #0a0c10; }
+.tier-row[data-tier="silver"]   .badge { background: #8fa0b0; color: #0a0c10; }
+.tier-row[data-tier="bronze"]   .badge { background: #b07040; color: #fff; }
+.tier-row[data-tier="borked"]   .badge { background: #c85050; color: #fff; }
+.tier-row .rule { color: var(--text); font-size: 0.92rem; line-height: 1.5; }
+
+/* weights table */
+.weights {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+@media (max-width: 760px) { .weights { grid-template-columns: 1fr; } }
+.weight-group {
+  background: rgba(11,17,22,0.4);
+  border: 1px solid var(--border);
+  padding: 14px 16px;
+}
+.weight-group h3 { margin-top: 0; color: var(--accent-hi); }
+.weight-group .desc { color: var(--muted); font-size: 0.78rem; margin-bottom: 10px; line-height: 1.5; }
+.weight-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  padding: 4px 0;
+  font-family: var(--mono);
+  font-size: 0.8rem;
+}
+.weight-row .name { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.weight-row .value { color: var(--accent); font-weight: 600; }
+.weight-row .value.negative { color: var(--red); }
+.weight-row .value.multiplier { color: var(--green-hi); }
+
+/* quick reference */
+.quickref { display: flex; flex-direction: column; gap: 6px; font-family: var(--mono); font-size: 0.86rem; }
+.quickref code { background: rgba(11,17,22,0.6); border: 1px solid var(--border); padding: 6px 12px; color: var(--text); }
+
+/* keyword chips */
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips .chip {
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  padding: 4px 10px;
+  border: 1px solid var(--border2);
+  background: rgba(11,17,22,0.5);
+  color: var(--text);
+  letter-spacing: 0.02em;
+}
+.chips.positive .chip { color: var(--green-hi); border-color: rgba(190,238,17,0.3); }
+.chips.negative .chip { color: var(--red); border-color: rgba(200,80,80,0.3); }
+
+/* OS family list */
+.os-families { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+.os-fam { background: rgba(11,17,22,0.4); border: 1px solid var(--border); padding: 10px 14px; font-family: var(--mono); font-size: 0.82rem; }
+.os-fam .family-name { color: var(--accent-hi); font-weight: 600; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.74rem; }
+.os-fam .distros { color: var(--text); }
+
+/* rating derivation flow */
+.flow {
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  color: var(--text);
+  line-height: 1.75;
+  background: rgba(11,17,22,0.55);
+  border: 1px solid var(--border);
+  padding: 16px 20px;
+  white-space: pre-wrap;
+}
+.flow .branch { color: var(--accent); }
+.flow .verdict { color: var(--green-hi); }
+.flow .borked { color: var(--red); }
+
+.loading-state, .error-state {
+  padding: 60px 24px;
+  text-align: center;
+  font-family: var(--mono);
+  color: var(--muted);
+}
+.transparency-note {
+  margin-top: 2.4em;
+  padding: 14px 18px;
+  background: linear-gradient(180deg, rgba(102,192,244,0.06), rgba(11,17,22,0.4));
+  border: 1px solid var(--accent);
+  border-left: 3px solid var(--accent);
+  font-size: 0.86rem;
+  line-height: 1.6;
+}
+.transparency-note a { color: var(--accent-hi); }
+</style>
+</head>
+<body>
+<script src="topbar.js"></script>
+
+<div class="main-content"><div class="main-inner">
+
+<h1>How scoring works</h1>
+<p class="meta" id="scoring-meta">// Loading scoring-info.json...</p>
+
+<p class="lede">
+  Proton Pulse and the
+  <a href="https://github.com/mdeguzis/decky-proton-pulse" target="_blank" rel="noopener">Decky Loader plugin</a>
+  share <strong>one scoring algorithm</strong>, defined in
+  <code class="inline">src/lib/scoring.ts</code> in the plugin repo and exported
+  to <code class="inline">scoring-info.json</code>. Both the plugin and this site
+  fetch the same file at runtime, so what you see below is exactly what scores
+  your reports -- no hidden magic.
+</p>
+
+<div id="scoring-root">
+  <div class="loading-state">Fetching scoring-info.json...</div>
+</div>
+
+</div></div>
+
+<script>
+(function () {
+  const root = document.getElementById('scoring-root');
+  const metaEl = document.getElementById('scoring-meta');
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+  }
+
+  // Bucket the weight keys into thematic groups so users can find what they
+  // care about without scrolling a flat table. Order matters -- general first,
+  // hardware multipliers in the middle, edge cases last.
+  const WEIGHT_GROUPS = [
+    {
+      title: 'Base score + rating',
+      desc: 'How much each report\'s tier contributes before any modifiers.',
+      keys: ['BASE_MAX'],
+    },
+    {
+      title: 'Recency',
+      desc: 'Newer reports count more. Old reports lose ground; very old ones are penalized.',
+      keys: ['RECENCY_RECENT', 'RECENCY_MID', 'RECENCY_OLD', 'BORKED_DECAY_DAYS'],
+    },
+    {
+      title: 'Proton version match',
+      desc: 'Reports running the same Proton version you target are worth more.',
+      keys: ['PROTON_MATCH', 'PROTON_CLOSE', 'CUSTOM_PROTON'],
+    },
+    {
+      title: 'GPU match (multiplier)',
+      desc: 'Reports from a GPU like yours apply a multiplier to the score.',
+      keys: ['GPU_MATCH', 'GPU_MISMATCH', 'GPU_UNKNOWN', 'GPU_DRIVER_EXACT', 'GPU_DRIVER_CLOSE'],
+      mult: true,
+    },
+    {
+      title: 'OS family match (multiplier)',
+      desc: 'Matching your distro / family boosts the report. Family-level match is most reports.',
+      keys: ['OS_EXACT', 'OS_FAMILY_MATCH'],
+      mult: true,
+    },
+    {
+      title: 'Kernel match (multiplier)',
+      desc: 'Exact kernel version match is rare; minor/patch closeness is common.',
+      keys: ['KERNEL_EXACT', 'KERNEL_PATCH_CLOSE', 'KERNEL_MINOR_CLOSE'],
+      mult: true,
+    },
+    {
+      title: 'Playtime confidence',
+      desc: 'Reports that disclose actual playtime earn confidence. The longer the session, the bigger the bonus.',
+      keys: ['PLAYTIME_UNDER_ONE_HOUR', 'PLAYTIME_ONE_TO_FOUR_HOURS', 'PLAYTIME_FOUR_TO_TEN_HOURS', 'PLAYTIME_OVER_TEN_HOURS'],
+    },
+    {
+      title: 'Notes + source',
+      desc: 'Positive language adds, negative subtracts. Pulse-only reports take a small penalty until the corpus grows.',
+      keys: ['NOTES_MAX', 'SOURCE_PULSE_PENALTY'],
+    },
+  ];
+
+  function renderWeights(weights) {
+    return `<div class="weights">${WEIGHT_GROUPS.map(group => `
+      <div class="weight-group">
+        <h3>${esc(group.title)}</h3>
+        <div class="desc">${esc(group.desc)}</div>
+        ${group.keys.map(k => {
+          const v = weights[k];
+          if (v == null) return '';
+          const neg = typeof v === 'number' && v < 0;
+          const cls = group.mult ? 'multiplier' : (neg ? 'negative' : '');
+          return `<div class="weight-row"><span class="name">${esc(k)}</span><span class="value ${cls}">${v}</span></div>`;
+        }).join('')}
+      </div>
+    `).join('')}</div>`;
+  }
+
+  function renderTiers(tiers, ratingScores, scoreTiers) {
+    return `<div class="card">${tiers.map(t => `
+      <div class="tier-row" data-tier="${esc(t.name)}">
+        <span class="badge">${esc(t.name)}</span>
+        <span class="rule">${esc(t.rule)}</span>
+      </div>
+    `).join('')}</div>
+    ${scoreTiers ? `
+      <h3>Score thresholds (overall game score, 0-100)</h3>
+      <div class="card body">
+        <p>A game's overall score is the weighted average of its reports' scores. Where the result lands sets its top-level badge:</p>
+        <ul style="margin: 8px 0 0 16px; line-height: 1.7;">
+          ${Object.entries(scoreTiers).sort((a,b)=>b[1]-a[1]).map(([k,v]) => `<li><strong>${esc(k)}</strong>: ${v}+</li>`).join('')}
+        </ul>
+      </div>` : ''
+    }`;
+  }
+
+  function renderQuickRef(items) {
+    if (!items?.length) return '';
+    return `<div class="quickref">${items.map(line => `<code>${esc(line)}</code>`).join('')}</div>`;
+  }
+
+  function renderChips(items, cls) {
+    if (!items?.length) return '<p class="meta">none configured</p>';
+    return `<div class="chips ${cls}">${items.map(k => `<span class="chip">${esc(k)}</span>`).join('')}</div>`;
+  }
+
+  function renderOsFamilies(fams) {
+    return `<div class="os-families">${Object.entries(fams).map(([fam, distros]) => `
+      <div class="os-fam">
+        <div class="family-name">${esc(fam)}</div>
+        <div class="distros">${distros.map(d => esc(d)).join(' / ')}</div>
+      </div>
+    `).join('')}</div>`;
+  }
+
+  function renderRatingDerivation(rd) {
+    if (!rd) return '';
+    const ias = rd.installAndStartup || {};
+    const verdictYes = rd.verdictYes || {};
+    const lines = [
+      '<span class="branch">if</span>  canInstall=no, canStart=no, or canPlay=no:',
+      `   → <span class="borked">borked</span>`,
+      '<span class="branch">elif</span> overall verdict=no:',
+      `   → <span class="borked">borked</span>`,
+      '<span class="branch">elif</span> 3 or more faults:',
+      `   → <span class="verdict">bronze</span>`,
+      '<span class="branch">elif</span> exactly 2 faults:',
+      `   → <span class="verdict">silver</span>`,
+      '<span class="branch">elif</span> exactly 1 fault:',
+      `   → <span class="verdict">gold</span>`,
+      '<span class="branch">elif</span> 0 faults <span class="branch">and</span> "works out of the box"=yes:',
+      `   → <span class="verdict">platinum</span>`,
+      '<span class="branch">else</span> (0 faults, oob no):',
+      `   → <span class="verdict">gold</span>`,
+    ];
+    return `<div class="flow">${lines.join('\n')}</div>
+      <p class="meta" style="margin-top:10px">${esc(rd.tinkeringNote || '')}</p>`;
+  }
+
+  fetch('scoring-info.json', { cache: 'no-store' })
+    .then(r => r.ok ? r.json() : Promise.reject(r.status))
+    .then(s => {
+      metaEl.textContent = `// Canonical source: ${s._source || 'src/lib/scoring.ts in the plugin repo'}`;
+      root.innerHTML = `
+        <h2>The formula</h2>
+        <div class="card formula">
+          <div class="body">A single report's score is computed as:</div>
+          <div class="formula-line">${esc(s.formula || '')}</div>
+          ${s.sourcePenaltyNote ? `<div class="body" style="font-size:0.82rem;color:var(--muted)">${esc(s.sourcePenaltyNote)}</div>` : ''}
+          ${s.playtimeConfidenceNote ? `<div class="body" style="font-size:0.82rem;color:var(--muted);margin-top:6px">${esc(s.playtimeConfidenceNote)}</div>` : ''}
+        </div>
+
+        <h2>Tiers (per-report rating)</h2>
+        ${renderTiers(s.tiers || [], s.ratingScores, s.scoreTiers)}
+
+        <h2>Quick reference</h2>
+        ${renderQuickRef(s.quickReference)}
+        ${s.outOfBoxNote ? `<p class="meta" style="margin-top:10px">${esc(s.outOfBoxNote)}</p>` : ''}
+
+        <h2>How a rating is derived from your form answers</h2>
+        ${renderRatingDerivation(s.ratingDerivation)}
+
+        <h2>Weights and multipliers</h2>
+        <p class="lede">Each report's raw score starts at <code class="inline">BASE_MAX * rating</code> (so a platinum maxes out, a borked is 0), then everything below applies. Multipliers stack; bonuses add.</p>
+        ${renderWeights(s.weights || {})}
+
+        <h2>Custom Proton markers</h2>
+        <p class="lede" style="margin-bottom:8px">Any report whose <code class="inline">protonVersion</code> contains one of these tokens gets the <code class="inline">CUSTOM_PROTON</code> bonus -- credit for going off the official path:</p>
+        ${renderChips(s.customProtonMarkers, 'positive')}
+
+        <h2>OS family groupings</h2>
+        <p class="lede" style="margin-bottom:8px">Used by the OS multiplier. A report from a distro in your family gets <code class="inline">OS_FAMILY_MATCH</code>; an exact distro match (rare) gets <code class="inline">OS_EXACT</code>:</p>
+        ${renderOsFamilies(s.osFamilies || {})}
+
+        <h2>Notes sentiment keywords</h2>
+        <div class="card body">
+          <p>Free-form notes can swing the score within <code class="inline">+/- NOTES_MAX</code>. Detection is keyword-based, intentionally simple:</p>
+          <h3 style="margin-top:1em">Positive signals</h3>
+          ${renderChips(s.positiveKeywords, 'positive')}
+          <h3 style="margin-top:1em">Negative signals</h3>
+          ${renderChips(s.negativeKeywords, 'negative')}
+        </div>
+
+        ${s.durationAutoFillNote ? `<h2>Duration auto-fill (Decky plugin only)</h2>
+        <div class="card body">
+          <p>${esc(s.durationAutoFillNote)}</p>
+        </div>` : ''}
+
+        <div class="transparency-note">
+          <strong>Transparency:</strong> the algorithm above is implemented in
+          <a href="https://github.com/mdeguzis/decky-proton-pulse/blob/main/src/lib/scoring.ts" target="_blank" rel="noopener"><code>src/lib/scoring.ts</code></a>
+          in the plugin repo and exported to
+          <a href="scoring-info.json" target="_blank" rel="noopener"><code>scoring-info.json</code></a>
+          which this page renders verbatim. Both the plugin's score tooltip and
+          this page consume the same JSON -- no client-side reinterpretation.
+          Read the
+          <a href="https://github.com/mdeguzis/decky-proton-pulse/wiki/Scoring-Algorithm" target="_blank" rel="noopener">Scoring Algorithm wiki page</a>
+          for the full prose explanation.
+        </div>
+      `;
+    })
+    .catch(err => {
+      root.innerHTML = `<div class="error-state">
+        <p>scoring-info.json not available (${err}).</p>
+        <p style="margin-top:8px;font-size:0.74rem">In local dev, this file is fetched from the deployed pipeline; refresh after a deploy.</p>
+      </div>`;
+      metaEl.textContent = `// scoring-info.json fetch failed`;
+    });
+})();
+</script>
+</body>
+</html>
