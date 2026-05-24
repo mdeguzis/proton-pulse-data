@@ -112,6 +112,36 @@ _BARE_PROTON_VERSION = re.compile(
 )
 
 
+# Steam Deck hardware fingerprints. VanGogh is the GPU codename Valve used
+# for the LCD model and AMD only ships it in the Deck. The APU IDs are the
+# revision strings that appear in lspci / lscpu output, surfaced as the
+# user-visible cpu/gpu fields in ProtonDB reports.
+_STEAM_DECK_LCD = re.compile(r"\b(amd\s+custom\s+(apu|gpu)\s+0405|vangogh)\b", re.IGNORECASE)
+# OLED uses APU rev 0932 (codename "Sephiroth"). VanGogh is still the GPU
+# codename so VanGogh alone can't distinguish LCD vs OLED -- the 0932 string
+# is what nails the OLED specifically
+_STEAM_DECK_OLED = re.compile(r"\b(amd\s+custom\s+(apu|gpu)\s+0932|sephiroth)\b", re.IGNORECASE)
+
+
+def normalize_device_family(report: dict) -> str:
+    """Detect Steam Deck (LCD/OLED) and similar handhelds vs generic desktop.
+
+    Matches against both CPU and GPU strings since either field may carry the
+    Deck-identifying APU/GPU revision. Conservative -- only flags devices with
+    unambiguous fingerprints. Everything else is "desktop".
+    """
+    cpu = report.get("cpu") or ""
+    gpu = report.get("gpu") or ""
+    haystack = cpu + " " + gpu
+    if _STEAM_DECK_OLED.search(haystack):
+        return "steam-deck-oled"
+    if _STEAM_DECK_LCD.search(haystack):
+        return "steam-deck-lcd"
+    if not cpu and not gpu:
+        return "unknown"
+    return "desktop"
+
+
 def normalize_proton_type(report: dict) -> str:
     v = (report.get("protonVersion") or report.get("proton_version") or "").lower().strip()
     if not v:
@@ -191,6 +221,7 @@ def compute_stats(data_output_path: Path) -> dict[str, Any]:
     by_cpu: Counter = Counter()
     by_os: Counter = Counter()
     by_proton: Counter = Counter()
+    by_device: Counter = Counter()
     by_year: Counter = Counter()
     by_year_source: dict[str, Counter] = defaultdict(Counter)
 
@@ -200,6 +231,7 @@ def compute_stats(data_output_path: Path) -> dict[str, Any]:
     by_rating_x_cpu: dict[str, Counter] = defaultdict(Counter)
     by_rating_x_os: dict[str, Counter] = defaultdict(Counter)
     by_rating_x_source: dict[str, Counter] = defaultdict(Counter)
+    by_rating_x_device: dict[str, Counter] = defaultdict(Counter)
 
     # Per-app counts for the "top games" leaderboard
     per_game: dict[str, dict[str, Any]] = {}
@@ -225,6 +257,7 @@ def compute_stats(data_output_path: Path) -> dict[str, Any]:
             cpu = normalize_cpu_brand(r)
             os_fam = normalize_os_family(r)
             proton = normalize_proton_type(r)
+            device = normalize_device_family(r)
 
             by_source[src] += 1
             by_rating[rating] += 1
@@ -232,6 +265,7 @@ def compute_stats(data_output_path: Path) -> dict[str, Any]:
             by_cpu[cpu] += 1
             by_os[os_fam] += 1
             by_proton[proton] += 1
+            by_device[device] += 1
             if year.isdigit():
                 by_year[year] += 1
                 by_year_source[year][src] += 1
@@ -240,6 +274,7 @@ def compute_stats(data_output_path: Path) -> dict[str, Any]:
             by_rating_x_cpu[cpu][rating] += 1
             by_rating_x_os[os_fam][rating] += 1
             by_rating_x_source[src][rating] += 1
+            by_rating_x_device[device][rating] += 1
 
             if src == "pulse":
                 games_with_pulse.add(app_id)
@@ -274,6 +309,7 @@ def compute_stats(data_output_path: Path) -> dict[str, Any]:
         "by_cpu_brand": dict(by_cpu),
         "by_os_family": dict(by_os),
         "by_proton_type": dict(by_proton),
+        "by_device_family": dict(by_device),
         "by_year": dict(by_year),
         "by_year_source": {k: dict(v) for k, v in by_year_source.items()},
         # 2D cross-tabs for client-side filtering on the stats page
@@ -281,6 +317,7 @@ def compute_stats(data_output_path: Path) -> dict[str, Any]:
         "by_rating_x_cpu_brand": flatten_cross(by_rating_x_cpu),
         "by_rating_x_os_family": flatten_cross(by_rating_x_os),
         "by_rating_x_source": flatten_cross(by_rating_x_source),
+        "by_rating_x_device_family": flatten_cross(by_rating_x_device),
         # Leaderboard
         "top_games": [[app_id, title, count] for app_id, title, count in top_games],
     }

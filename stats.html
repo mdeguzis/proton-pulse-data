@@ -141,7 +141,15 @@ h2 {
   gap: 16px;
   margin-bottom: 24px;
 }
-@media (max-width: 880px) { .chart-grid { grid-template-columns: 1fr; } }
+/* if the final card is the odd one out (e.g. 7 cards in a 2-col grid),
+   let it span the full row instead of sitting alone with empty space */
+.chart-grid > .chart-card:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+@media (max-width: 880px) {
+  .chart-grid { grid-template-columns: 1fr; }
+  .chart-grid > .chart-card:last-child:nth-child(odd) { grid-column: auto; }
+}
 .chart-card {
   background: linear-gradient(180deg, rgba(27,40,56,0.55), rgba(11,17,22,0.45));
   border: 1px solid var(--border);
@@ -386,6 +394,9 @@ h2 {
     'steam-linux-runtime': 'Steam Linux Runtime',
     native: 'Native',
     protondb: 'ProtonDB', pulse: 'Pulse',
+    'steam-deck-lcd': 'Steam Deck LCD',
+    'steam-deck-oled': 'Steam Deck OLED',
+    desktop: 'Desktop / other',
     platinum: 'Platinum', gold: 'Gold', silver: 'Silver',
     bronze: 'Bronze', borked: 'Borked', pending: 'Pending',
   };
@@ -423,6 +434,7 @@ h2 {
         os:     stats.by_os_family || {},
         proton: stats.by_proton_type || {},
         source: stats.by_source || {},
+        device: stats.by_device_family || {},
         total:  stats.total_reports || 0,
       };
     }
@@ -431,15 +443,13 @@ h2 {
     // approximate by zeroing everything except the filtered token. This is
     // a known limitation -- proper multi-dim filtering needs a facts table.
     const out = {
-      rating: {}, gpu: {}, cpu: {}, os: {}, proton: {}, source: {},
+      rating: {}, gpu: {}, cpu: {}, os: {}, proton: {}, source: {}, device: {},
       total: 0,
     };
     if (filter.dim === 'gpu') {
       out.rating = pivotRatingByDim(stats.by_rating_x_gpu_vendor || {}, filter.value);
       out.gpu = { [filter.value]: sum(out.rating) };
       out.total = sum(out.rating);
-      // No cross-tabs for cpu/os/proton/source by gpu, leave them empty so we
-      // can show a "filter limits this chart" hint
     } else if (filter.dim === 'cpu') {
       out.rating = pivotRatingByDim(stats.by_rating_x_cpu_brand || {}, filter.value);
       out.cpu = { [filter.value]: sum(out.rating) };
@@ -452,12 +462,17 @@ h2 {
       out.rating = pivotRatingByDim(stats.by_rating_x_source || {}, filter.value);
       out.source = { [filter.value]: sum(out.rating) };
       out.total = sum(out.rating);
+    } else if (filter.dim === 'device') {
+      out.rating = pivotRatingByDim(stats.by_rating_x_device_family || {}, filter.value);
+      out.device = { [filter.value]: sum(out.rating) };
+      out.total = sum(out.rating);
     } else if (filter.dim === 'rating') {
       // Filter by rating: pivot each cross to get dim counts for this rating
       out.gpu    = pivotDimByRating(stats.by_rating_x_gpu_vendor || {}, filter.value);
       out.cpu    = pivotDimByRating(stats.by_rating_x_cpu_brand || {}, filter.value);
       out.os     = pivotDimByRating(stats.by_rating_x_os_family || {}, filter.value);
       out.source = pivotDimByRating(stats.by_rating_x_source || {}, filter.value);
+      out.device = pivotDimByRating(stats.by_rating_x_device_family || {}, filter.value);
       out.rating = { [filter.value]: stats.by_rating?.[filter.value] || 0 };
       out.total = out.rating[filter.value];
     }
@@ -542,6 +557,8 @@ h2 {
         <button class="chip ${filter.dim==='cpu' && filter.value==='intel' ? 'is-active' : ''}" data-filter-dim="cpu" data-filter-value="intel">Intel CPU</button>
         <button class="chip ${filter.dim==='os' && filter.value==='steamos' ? 'is-active' : ''}" data-filter-dim="os" data-filter-value="steamos">SteamOS</button>
         <button class="chip ${filter.dim==='os' && filter.value==='arch' ? 'is-active' : ''}" data-filter-dim="os" data-filter-value="arch">Arch</button>
+        <button class="chip ${filter.dim==='device' && filter.value==='steam-deck-lcd' ? 'is-active' : ''}" data-filter-dim="device" data-filter-value="steam-deck-lcd">Deck LCD</button>
+        <button class="chip ${filter.dim==='device' && filter.value==='steam-deck-oled' ? 'is-active' : ''}" data-filter-dim="device" data-filter-value="steam-deck-oled">Deck OLED</button>
         <button class="chip ${filter.dim==='source' && filter.value==='pulse' ? 'is-active' : ''}" data-filter-dim="source" data-filter-value="pulse">Pulse only</button>
         <span class="filter-status" id="filter-status"></span>
       </div>
@@ -575,6 +592,11 @@ h2 {
           <h3>Proton type</h3>
           <div class="bars" id="chart-proton"></div>
         </div>
+
+        <div class="chart-card">
+          <h3>Device family</h3>
+          <div class="bars" id="chart-device"></div>
+        </div>
       </div>
 
       <h2>Reports over time</h2>
@@ -598,6 +620,8 @@ h2 {
       data.os, { limit: 10, filterDim: 'os' });
     renderBars(document.getElementById('chart-proton'),
       data.proton, { limit: 10 });
+    renderBars(document.getElementById('chart-device'),
+      data.device, { filterDim: 'device' });
 
     // Source donut (uses unfiltered split intentionally; filtering by source
     // would just collapse it to one slice)
