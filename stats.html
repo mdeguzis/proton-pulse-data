@@ -863,8 +863,8 @@ h2 {
 
     // Wire hover behavior. Use the parent card for is-hovered toggle so CSS
     // can show/hide the guide+dots in one rule; tooltip is a separate DOM node
+    // wrap was captured earlier for sizing; reuse it here
     const card = document.getElementById('sparkline-card');
-    const wrap = document.getElementById('sparkline-wrap');
     const tooltip = document.getElementById('sparkline-tooltip');
     const guide = document.getElementById('hover-guide');
     const dotPdb = document.getElementById('hover-dot-protondb');
