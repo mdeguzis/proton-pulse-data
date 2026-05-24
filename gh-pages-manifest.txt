@@ -25,6 +25,7 @@ profile.html
 profile.js
 profile.css
 stats.html
+stats.js
 scoring.html
 supabase-client.js
 topbar.js

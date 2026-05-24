@@ -9,6 +9,7 @@ backups/
 coverage.html
 coverage-summary.json
 data-index.html
+data-index.js
 search-index.json
 stats.json
 
