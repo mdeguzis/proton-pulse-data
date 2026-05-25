@@ -72,7 +72,10 @@ async function submitReport(appId, title, form) {
     client_id: getWebClientId(),
     proton_pulse_user_id: protonPulseUserId,
     app_id: appId,
-    title: title,
+    // Prefer the user-edited title from the form; fall back to the resolved
+    // page title if the field is somehow empty. `required` on the input
+    // means an empty submit will be blocked by the browser before this runs
+    title: (form.gameTitle?.value || title || '').trim(),
     cpu: form.cpu.value,
     gpu: form.gpu.value,
     gpu_driver: form.gpuDriver.value,
@@ -197,6 +200,12 @@ async function populateSubmitForm(el) {
       </div>
     </details>
     <form id="submit-report-form" autocomplete="on">
+      <div class="sf-section-label">Game</div>
+      <!-- Game title is required so reports always carry the human-readable
+           name. Pre-filled from the resolved page title; users can correct it
+           if Steam's name differs (e.g. localized vs canonical spelling) -->
+      <div class="sf-row"><label>Game title *</label><input name="gameTitle" required placeholder="e.g. Black Myth: Wukong" minlength="1"></div>
+
       <div class="sf-section-label">Hardware &amp; Setup</div>
       <div class="sf-row"><label>Proton Version *</label>
         <input name="protonVersion" list="proton-versions" required placeholder="e.g. Proton 9.0-4 or GE-Proton9-7">

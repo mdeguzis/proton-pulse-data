@@ -1239,15 +1239,15 @@ async function renderGamePage(appId) {
     const overallConfidencePct = pulseHasReports && pulseTier.confidencePct
       ? pulseTier.confidencePct
       : (cdn.length > 0 ? Math.min(95, Math.round(30 + Math.log2(Math.max(1, cdn.length)) * 18)) : 0);
-    // Per-source breakdown - tiny stat strip at the bottom of the tile. Always
-    // shows BOTH Pulse + ProtonDB (even at 0) so users understand both feeds
-    // contribute even when only one has data. Configs only appear if > 0
-    const statBits = [
-      `<span><strong>${nativeReports.length}</strong> Pulse</span>`,
-      `<span><strong>${cdn.length}</strong> ProtonDB</span>`,
-    ];
+    // Per-source breakdown - tiny stat strip at the bottom of the tile so the
+    // homogeneous community view still answers "how much of that came from where"
+    const statBits = [];
+    if (nativeReports.length) statBits.push(`<span><strong>${nativeReports.length}</strong> Pulse</span>`);
+    if (cdn.length) statBits.push(`<span><strong>${cdn.length}</strong> ProtonDB</span>`);
     if (configs.length) statBits.push(`<span><strong>${configs.length}</strong> config${configs.length !== 1 ? 's' : ''}</span>`);
-    const statRow = `<div class="source-summary-stats">${statBits.join('<span class="ss-sep">/</span>')}</div>`;
+    const statRow = statBits.length
+      ? `<div class="source-summary-stats">${statBits.join('<span class="ss-sep">/</span>')}</div>`
+      : '';
 
     // Rating distribution bar across all reports. Five-color stack visualizes
     // the spread of platinum/gold/silver/bronze/borked which is otherwise
@@ -1283,27 +1283,19 @@ async function renderGamePage(appId) {
       : 0;
     const freshnessLine = newestTs ? `
       <div class="source-summary-freshness">Newest report: <strong>${daysAgo(newestTs)}</strong></div>` : '';
-    // Two-column inner layout so the wide tile actually uses its horizontal
-    // space. Left: kicker + rating + confidence + summary. Right: distribution
-    // bar + freshness + per-source breakdown. Collapses to single column on
-    // narrow screens via the media query in app.css
     const sourceTiles = `
       <div class="source-summary-grid">
         <button class="source-summary-tile source-summary-tile-combined" type="button" data-target="reports-summary" title="Jump to community configs and reports">
-          <div class="ss-primary">
-            <span class="source-summary-kicker">Community</span>
-            <span class="source-summary-tier-row">
-              ${hasAnyReports && overallConfidencePct ? `<a class="source-summary-conf conf-link" href="scoring.html" onclick="event.stopPropagation()" style="background:${confColor(overallConfidencePct / 10)};color:#0a0c10" title="Overall confidence aggregated across all sources. Click to read how scoring works.">Confidence: ${overallConfidencePct}%</a>` : ''}
-              <span class="source-summary-value" style="background:${overallTileColor};color:${overallTileText}">${overallTier}</span>
-            </span>
-            <span class="source-summary-meta">${overallTileSummary}</span>
-            <span class="source-summary-note">${overallNote}</span>
-          </div>
-          <div class="ss-details">
-            ${ratingDistribution}
-            ${freshnessLine}
-            ${statRow}
-          </div>
+          <span class="source-summary-kicker">Community</span>
+          <span class="source-summary-tier-row">
+            ${hasAnyReports && overallConfidencePct ? `<a class="source-summary-conf conf-link" href="scoring.html" onclick="event.stopPropagation()" style="background:${confColor(overallConfidencePct / 10)};color:#0a0c10" title="Overall confidence aggregated across all sources. Click to read how scoring works.">Confidence: ${overallConfidencePct}%</a>` : ''}
+            <span class="source-summary-value" style="background:${overallTileColor};color:${overallTileText}">${overallTier}</span>
+          </span>
+          <span class="source-summary-meta">${overallTileSummary}</span>
+          <span class="source-summary-note">${overallNote}</span>
+          ${ratingDistribution}
+          ${freshnessLine}
+          ${statRow}
         </button>
       </div>`;
 

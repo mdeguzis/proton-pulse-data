@@ -1239,15 +1239,15 @@ async function renderGamePage(appId) {
     const overallConfidencePct = pulseHasReports && pulseTier.confidencePct
       ? pulseTier.confidencePct
       : (cdn.length > 0 ? Math.min(95, Math.round(30 + Math.log2(Math.max(1, cdn.length)) * 18)) : 0);
-    // Per-source breakdown - tiny stat strip at the bottom of the tile. Always
-    // shows BOTH Pulse + ProtonDB (even at 0) so users understand both feeds
-    // contribute even when only one has data. Configs only appear if > 0
-    const statBits = [
-      `<span><strong>${nativeReports.length}</strong> Pulse</span>`,
-      `<span><strong>${cdn.length}</strong> ProtonDB</span>`,
-    ];
+    // Per-source breakdown - tiny stat strip at the bottom of the tile so the
+    // homogeneous community view still answers "how much of that came from where"
+    const statBits = [];
+    if (nativeReports.length) statBits.push(`<span><strong>${nativeReports.length}</strong> Pulse</span>`);
+    if (cdn.length) statBits.push(`<span><strong>${cdn.length}</strong> ProtonDB</span>`);
     if (configs.length) statBits.push(`<span><strong>${configs.length}</strong> config${configs.length !== 1 ? 's' : ''}</span>`);
-    const statRow = `<div class="source-summary-stats">${statBits.join('<span class="ss-sep">/</span>')}</div>`;
+    const statRow = statBits.length
+      ? `<div class="source-summary-stats">${statBits.join('<span class="ss-sep">/</span>')}</div>`
+      : '';
 
     // Rating distribution bar across all reports. Five-color stack visualizes
     // the spread of platinum/gold/silver/bronze/borked which is otherwise

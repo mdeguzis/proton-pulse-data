@@ -222,7 +222,9 @@
 }
 .game-header-main {
   display: flex;
-  align-items: center;
+  /* Top-align so the game box-art lines up with the title row instead of
+     centering vertically with the meta block below it */
+  align-items: flex-start;
   gap: 18px;
   min-width: 0;
 }
@@ -242,17 +244,19 @@
 }
 .game-header-actions {
   display: flex;
-  justify-content: flex-start;
+  /* Stretch across the same horizontal extent as the aggregate tile above
+     so the right-rail reads as one unit (tile + action row aligned edges) */
+  justify-content: space-between;
   gap: 10px;
   align-items: stretch;
   flex-wrap: wrap;
+  width: 100%;
 }
-/* Submit Report stretches to fill the remaining width so the row lines up with
-   the Pulse/ProtonDB tile grid above it instead of leaving dead space next to
-   a small pill of a button */
+/* Submit Report grows to fill remaining space so the row spans the full
+   tile width above. The icon-text buttons keep their natural width on the left */
 .game-header-actions .submit-report-btn {
   flex: 1 1 auto;
-  min-width: 0;
+  padding: 8px 18px;
   text-align: center;
 }
 .game-title {
@@ -271,6 +275,64 @@
   font-size: 0.82rem;
   color: #9fb4c9;
   line-height: 1.5;
+}
+
+/* --- Steam Deck Verified status (now a modal-triggering icon button) ---
+   Lives alongside the "i" info button and Min Reqs button in the
+   .game-header-actions row. The icon itself shows the status at a glance
+   (green check / yellow i / red x / gray ?) via inline SVG */
+.deck-status-btn { padding: 0; background: none; border: none; }
+.deck-status-btn-unsupported { opacity: 0.85; }
+.deck-status-btn svg { display: block; }
+/* Modal content - badge + per-criterion checklist */
+.deck-status-badge {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 4px;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  margin-left: 4px;
+}
+.deck-status-badge.deck-status-verified    { background: #5ba32b; color: #fff; }
+.deck-status-badge.deck-status-playable    { background: #d4a72c; color: #0a0c10; }
+.deck-status-badge.deck-status-unsupported { background: #c84a4a; color: #fff; }
+.deck-status-badge.deck-status-unknown {
+  background: rgba(120,120,120,0.35);
+  color: var(--muted);
+  border: 1px solid var(--border2);
+}
+.deck-criteria-list { display: flex; flex-direction: column; gap: 8px; }
+.deck-criterion {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.84rem;
+  color: var(--text);
+  line-height: 1.45;
+}
+.deck-criterion-icon { flex-shrink: 0; padding-top: 1px; }
+
+/* --- External links row ---
+   Matches ProtonDB's "Steam SteamDB Steamcharts ..." row near the top of a
+   game page. Keep links small + muted so they don't compete with the rating */
+.game-header-links {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  font-size: 0.8rem;
+}
+.game-link {
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px dashed transparent;
+  transition: color .12s, border-color .12s;
+}
+.game-link:hover {
+  color: var(--accent-hi, #aedcff);
+  border-bottom-color: var(--accent);
 }
 
 /* "Your report" chip, shown on the game page when the signed-in
@@ -309,17 +371,102 @@
 .my-config-banner--published .my-config-banner-status { color: #7ec48a; }
 .source-summary-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  /* Now one combined "Community" tile instead of separate Pulse + ProtonDB.
+     Per-source counts live in the small stat strip at the bottom of the tile */
+  grid-template-columns: 1fr;
   gap: 10px;
   width: 100%;
 }
-.source-summary-tile {
+/* Confidence pill is a link to scoring.html - reset the anchor underline +
+   color so it inherits the pill background like the original span did */
+.conf-link {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  cursor: pointer;
+}
+.conf-link:hover { filter: brightness(1.12); text-decoration: none; }
+
+/* Rating distribution bar - five-color stack showing the spread of tiers
+   across all reports. Sits under the tier badge so visitors see the
+   distribution at a glance, not just the aggregate */
+.source-summary-distribution {
+  margin-top: 10px;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 7px;
+  gap: 6px;
+}
+.dist-bar {
+  display: flex;
+  height: 8px;
+  border: 1px solid var(--border);
+  background: rgba(11,17,22,0.5);
+  overflow: hidden;
+}
+.dist-seg { display: block; height: 100%; }
+.dist-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+.dist-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.dist-swatch {
+  width: 8px;
+  height: 8px;
+  border: 1px solid rgba(0,0,0,0.4);
+  flex-shrink: 0;
+}
+/* Per-tier colors - same palette the cards / stats page already use */
+.dist-platinum { background: #b4c7dc; }
+.dist-gold     { background: #c8a050; }
+.dist-silver   { background: #8fa0b0; }
+.dist-bronze   { background: #b07040; }
+.dist-borked   { background: #c85050; }
+
+/* Newest-report freshness line - terse "data is fresh / stale" signal */
+.source-summary-freshness {
+  margin-top: 8px;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+.source-summary-freshness strong { color: var(--text); }
+
+/* Tiny per-source stat strip under the rating + confidence row */
+.source-summary-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border2);
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+.source-summary-stats strong { color: var(--text); }
+.source-summary-stats .ss-sep { opacity: 0.4; padding: 0 2px; }
+.source-summary-tile {
+  /* Two-column inner layout - primary info on left, distribution + freshness
+     + per-source stats on right. Used to be flex-column which left the right
+     half of the wide tile completely empty */
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 18px;
+  align-items: stretch;
   min-height: 136px;
-  padding: 12px 14px;
+  padding: 14px 16px;
   border: 1px solid var(--border2);
   background: linear-gradient(180deg, rgba(39, 49, 63, 0.98), rgba(28, 35, 46, 0.98));
   color: var(--text);
@@ -327,6 +474,29 @@
   cursor: pointer;
   font-family: inherit;
   transition: border-color .15s, transform .15s, background .15s, box-shadow .15s;
+}
+/* Inner columns - each is a vertical flex stack of its own content. Border
+   between them makes the split feel intentional, not accidental. Both use
+   space-between so the top items (kicker / distribution bar) hug the top,
+   bottom items (note / per-source stats) hug the bottom - keeps the two
+   columns visually aligned across their full height */
+.ss-primary, .ss-details {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  align-items: flex-start;
+  min-width: 0;
+  justify-content: space-between;
+}
+.ss-details {
+  padding-left: 18px;
+  border-left: 1px solid var(--border);
+}
+@media (max-width: 720px) {
+  /* On narrow screens the two columns stack to one - no more vertical border,
+     details flow below primary */
+  .source-summary-tile { grid-template-columns: 1fr; gap: 10px; }
+  .ss-details { padding-left: 0; border-left: none; padding-top: 10px; border-top: 1px solid var(--border); }
 }
 .source-summary-tile:hover {
   border-color: var(--accent);
@@ -367,6 +537,26 @@
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
+/* tier-row groups the [confidence%] [TIER] tiles side-by-side, matching the
+   plugin's "78% GOLD" pattern. Both tiles get the same min-height + padding
+   so the confidence reads as an equal-weight badge instead of an afterthought */
+.source-summary-tier-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.source-summary-conf {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 11px;
+  min-height: 31px;
+  font-family: var(--mono);
+  font-weight: 800;
+  font-size: 0.74rem;
+  letter-spacing: 0.04em;
+}
 .source-summary-meta {
   font-size: 0.82rem;
   color: var(--strong);
@@ -398,6 +588,31 @@
   border-color: rgba(95, 156, 250, 0.6);
 }
 .info-btn svg { display: block; }
+/* Labeled variant - icon + text. Used by Min Requirements + Deck Verified
+   so users don't have to hover to guess what each icon means */
+.info-btn-labeled {
+  width: auto;
+  height: 34px;
+  padding: 0 12px;
+  gap: 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: 0.02em;
+}
+.info-btn-labeled span { line-height: 1; }
+/* Deck status button matches the Min Requirements blue chrome so the row
+   reads as a coherent set. The status SVG icon (green check / yellow i /
+   red x / gray ?) still carries the at-a-glance state - the surrounding
+   button style stays neutral blue regardless */
+.deck-status-btn.info-btn-labeled {
+  background: rgba(59, 130, 246, 0.12);
+  border: 1px solid rgba(59, 130, 246, 0.35);
+}
+.deck-status-btn.info-btn-labeled:hover {
+  background: rgba(59, 130, 246, 0.2);
+  border-color: rgba(95, 156, 250, 0.6);
+}
 .info-tooltip {
   display: none;
   background: var(--s2);
@@ -485,7 +700,18 @@
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin-bottom: 16px;
+  /* extra breathing room before the "Community Configs & Reports" heading
+     so the link boxes don't crowd the section break below */
+  margin-bottom: 32px;
+}
+/* When the link strip lives inside the game-header banner (the new layout),
+   it stitches to the banner's bottom border instead of floating below. The
+   top border-line visually links it to the rating tile above */
+.hub-links-in-banner {
+  margin: 18px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  grid-column: 1 / -1;
 }
 .hub-link {
   display: inline-flex;
@@ -647,6 +873,9 @@
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 10px;
+  /* Equivalent to a double blank-line above the heading so the section
+     break reads clearly after the game-header banner ends */
+  margin-top: 48px;
 }
 .reports-section-copy {
   display: flex;
@@ -654,10 +883,10 @@
   gap: 4px;
 }
 .reports-section-title {
-  font-size: 1.08rem;
-  letter-spacing: 0.02em;
+  font-size: 1.35rem;
+  letter-spacing: -0.01em;
   color: var(--strong);
-  font-weight: 700;
+  font-weight: 800;
 }
 .reports-section-subtitle {
   font-size: 0.76rem;
@@ -712,6 +941,22 @@
 }
 .filter-bar select:focus { border-color: var(--accent); }
 .filter-count { font-size: 0.72rem; color: var(--muted); margin-left: auto; }
+/* Persist checkbox - opt-in toggle that saves filter state to localStorage.
+   When signed in this can later be mirrored to the user_configs row so
+   filters follow the user across devices */
+.filter-persist {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.74rem;
+  color: var(--muted);
+  cursor: pointer;
+  text-transform: none;
+  letter-spacing: 0;
+  user-select: none;
+}
+.filter-persist:hover { color: var(--text); }
+.filter-persist input { accent-color: var(--accent); cursor: pointer; }
 
 /* report cards */
 .cards { display: flex; flex-direction: column; gap: 12px; }
@@ -728,6 +973,145 @@ a.card:hover { text-decoration: none; }
 }
 .card:hover { background: var(--s2); }
 .card .left { flex: 1; min-width: 0; }
+/* card-body replaces .left for the new layout - middle column with proton +
+   hw + age + signal-strip. Same flex behavior as .left so existing rules still
+   apply to descendants */
+.card .card-body { flex: 1; min-width: 0; }
+
+/* --- Author column (left edge of each card) ---
+   Square 4x4-style profile area. Wider than before because the column was
+   too narrow + rectangular previously; now there's room to fit a larger
+   square avatar (Steam profile pics will land here once we wire that up). */
+.card-author {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 112px;
+  max-width: 128px;
+  flex-shrink: 0;
+  padding-right: 10px;
+  border-right: 1px solid var(--border);
+}
+.author-avatar {
+  /* Truly square - fills the column's content width with a locked 1:1 aspect
+     ratio. Previous fixed 80x80 looked rectangular because the column was
+     wider; now the avatar resizes with the column and stays a perfect square */
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 4px;
+  background: rgba(11,17,22,0.5);
+  border: 1px solid var(--border2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+}
+/* SVG inside scales with the box - 60% of the avatar size keeps it from
+   crowding the frame edges */
+.author-avatar svg { width: 60%; height: 60%; }
+/* atom-mark color shifts subtly per source so plugin vs protondb anonymous
+   are distinguishable at a glance */
+.author-avatar-pulse    { color: var(--accent-hi, #aedcff); }
+.author-avatar-protondb { color: var(--muted); }
+.author-name {
+  font-family: var(--font-display, var(--mono));
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-align: center;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+.author-sub {
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+/* --- Signal-icon strip (inline with report body) ---
+   Small ~22px squares, color-coded by yes/no/neutral. Tooltips on hover
+   give the full label since the icons alone are intentionally tight. */
+.signal-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 8px;
+}
+.signal-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  background: rgba(11,17,22,0.5);
+  color: var(--muted);
+  transition: transform .08s;
+}
+.signal-icon:hover { transform: scale(1.08); }
+.signal-icon svg { width: 20px; height: 20px; }
+/* state variants - good (Steam install green), bad (red), warn (amber),
+   info (accent blue), neutral (muted gray, dim) */
+.signal-icon.signal-good {
+  background: #5ba32b;
+  border-color: #5ba32b;
+  color: #0a0c10;
+}
+.signal-icon.signal-bad {
+  background: #c84a4a;
+  border-color: #c84a4a;
+  color: #fff;
+}
+.signal-icon.signal-warn {
+  background: #d4a72c;
+  border-color: #d4a72c;
+  color: #0a0c10;
+}
+.signal-icon.signal-info {
+  background: rgba(102,192,244,0.18);
+  border-color: var(--accent);
+  color: var(--accent-hi, #aedcff);
+}
+.signal-icon.signal-neutral {
+  opacity: 0.35;
+}
+
+/* --- Permalink button (right column) --- */
+.permalink-btn {
+  margin-top: 4px;
+  padding: 3px 6px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.66rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  transition: color .12s, border-color .12s, background .12s;
+}
+.permalink-btn:hover {
+  color: var(--accent-hi, #aedcff);
+  border-color: var(--accent);
+  background: rgba(102,192,244,0.06);
+}
+.permalink-btn.copied {
+  color: #5ba32b;
+  border-color: #5ba32b;
+}
+.permalink-btn svg { width: 12px; height: 12px; }
 .card .proton { font-size: 0.88rem; font-weight: 700; color: var(--strong); margin-bottom: 3px; font-family: var(--mono); }
 .card .card-head {
   display: flex;
@@ -745,6 +1129,11 @@ a.card:hover { text-decoration: none; }
   letter-spacing: 0.05em;
   margin-bottom: 5px;
 }
+.card .age .hours-inline {
+  color: var(--accent);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
 .card .notes { font-size: 0.76rem; color: #a0b4c4; line-height: 1.4; }
 .card .right {
   display: flex;
@@ -754,7 +1143,21 @@ a.card:hover { text-decoration: none; }
   min-width: 72px;
   flex-shrink: 0;
 }
-.card-rating-row { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; margin-top: 4px; }
+/* card-rating-row now shows confidence pill (left) and rating badge (right)
+   side-by-side in a horizontal row. Matches the plugin's "78% GOLD" layout */
+.card-rating-row { display: flex; flex-direction: row; align-items: center; gap: 6px; margin-top: 4px; flex-wrap: wrap; justify-content: flex-end; }
+/* Per-report confidence pill - square corners to match the rating badge
+   alongside it. Round corners read like a status pill, square reads like a
+   "fact" tile which is what confidence is */
+.card .confidence-pill {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 3px;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
 .card .rating {
   padding: 3px 8px;
   font-weight: 800;
@@ -763,14 +1166,17 @@ a.card:hover { text-decoration: none; }
   letter-spacing: 0.06em;
 }
 .card .score { font-size: 0.75rem; font-weight: 700; font-family: var(--mono); }
-.vote-btns { display: inline-flex; align-items: center; gap: 3px; }
+/* Vote buttons - bumped to match the confidence pill + rating badge sized
+   to their right. Old 11x11 icon felt undersized next to a 22+px badge */
+.vote-btns { display: inline-flex; align-items: center; gap: 5px; }
 .vote-btn {
-  display: inline-flex; align-items: center; gap: 3px;
+  display: inline-flex; align-items: center; gap: 5px;
   background: none; border: 1px solid var(--border2);
-  color: var(--muted); font-size: 0.68rem; font-family: var(--mono);
-  padding: 2px 5px; cursor: pointer; line-height: 1;
+  color: var(--muted); font-size: 0.78rem; font-family: var(--mono);
+  padding: 4px 9px; cursor: pointer; line-height: 1;
   transition: color .1s, border-color .1s;
 }
+.vote-btn svg { width: 16px; height: 16px; }
 .vote-btn:hover { color: var(--text); border-color: var(--accent); }
 .vote-btn.vote-up.active { color: var(--accent); border-color: var(--accent); }
 .vote-btn.vote-dn.active { color: #c85050; border-color: #c85050; }
@@ -839,7 +1245,9 @@ a.card:hover { text-decoration: none; }
 .card-summary .row:last-child { border-bottom: none; }
 .card-summary .label { color: var(--muted); min-width: 100px; }
 .card-summary .notes-full { margin-top: 10px; white-space: pre-wrap; line-height: 1.5; color: #a0b4c4; }
-.details-btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; justify-content: flex-end; }
+/* Detail buttons snug up against the row above instead of drifting with a
+   margin-top gap - keeps the card-summary stack visually tight */
+.details-btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 0; justify-content: flex-end; }
 .all-details-btn {
   background: var(--s1);
   border: 1px solid var(--accent);

@@ -519,9 +519,7 @@ function utcStamp(ts) {
 }
 
 function confColor(s) {
-  // Steam install-button green for high confidence - matches the plugin's
-  // confidence pill so per-report colors read the same on web and Deck
-  if (s >= 8) return '#5ba32b';
+  if (s >= 8) return '#4caf80';
   if (s >= 6) return '#c8a050';
   if (s >= 4) return '#c87840';
   return '#c85050';
@@ -625,8 +623,8 @@ function renderConfigCard(c, idx, votes = {}, userVotes = {}) {
               : '<span class="source-badge steam-game">Steam</span>'}
           </div>
           <div class="vote-btns">
-            <button class="vote-btn vote-up${userVote === 1 ? ' active' : ''}" data-vote="1" data-rkey="${esc(ck)}" data-appid="${c.appId}" title="Helpful"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"/></svg><span class="vote-count">${cv.up}</span></button>
-            <button class="vote-btn vote-dn${userVote === -1 ? ' active' : ''}" data-vote="-1" data-rkey="${esc(ck)}" data-appid="${c.appId}" title="Not helpful"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="transform:scaleY(-1)"><path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"/></svg><span class="vote-count">${cv.down}</span></button>
+            <button class="vote-btn vote-up${userVote === 1 ? ' active' : ''}" data-vote="1" data-rkey="${esc(ck)}" data-appid="${c.appId}" title="Helpful"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"/></svg><span class="vote-count">${cv.up}</span></button>
+            <button class="vote-btn vote-dn${userVote === -1 ? ' active' : ''}" data-vote="-1" data-rkey="${esc(ck)}" data-appid="${c.appId}" title="Not helpful"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" style="transform:scaleY(-1)"><path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"/></svg><span class="vote-count">${cv.down}</span></button>
           </div>
         </div>
       </div>
@@ -710,105 +708,6 @@ function trendSummary(reps) {
   return `<div class="trend">Compatibility is <strong style="color:var(--red)">declining</strong> - ${recent.length} recent vs ${older.length} older reports</div>`;
 }
 
-// - Deck Verified status helpers (stub for now) -------
-//
-// Real Deck compatibility comes from Steam's steam_deck_compatibility endpoint,
-// which the pipeline will publish per-game (task #37). Until then this stub
-// gives a deterministic-per-appId fake status so the UI is fully testable.
-// Values mirror Valve's official 4 buckets: verified, playable, unsupported,
-// unknown. When the real data lands, getDeckStatusForApp() swaps out for the
-// pipeline lookup and everything downstream keeps working unchanged.
-
-const DECK_STATUS_LABELS = {
-  verified:    'Verified',
-  playable:    'Playable',
-  unsupported: 'Unsupported',
-  unknown:     'Unknown',
-};
-// The 4 criteria Valve evaluates for each title - same wording the Steam Store
-// shows in its compatibility popup. Used for the per-criterion checklist in
-// the modal so users see WHY a game got its status, not just the summary
-const DECK_CRITERIA_LABELS = [
-  'All functionality is accessible when using the default controller configuration',
-  'This game shows Steam Deck controller icons',
-  'In-game interface text is legible on Steam Deck',
-  'This game\'s default graphics configuration performs well on Steam Deck',
-];
-// Pre-seeded sample profiles. Each entry maps a status to per-criterion
-// results: true=pass, false=fail, null=warning (the "yellow i" in the Steam
-// Store popup means "works but with caveats")
-const DECK_SAMPLE_PROFILES = {
-  verified:    { criteria: [true,  true,  true,  true]  },
-  playable:    { criteria: [null,  null,  null,  true]  },
-  unsupported: { criteria: [false, false, false, false] },
-};
-// Stub: deterministic per-appId sample so each game shows a stable fake
-// status (no jitter on refresh). Real implementation pulls from per-game
-// pipeline JSON (task #37). Returns null when no info is available
-function getDeckStatusForApp(appId) {
-  if (!appId) return { status: 'unknown', criteria: null };
-  const buckets = ['verified', 'playable', 'unsupported', 'unknown'];
-  const idx = Math.abs(Number(appId) % buckets.length);
-  const status = buckets[idx];
-  const profile = DECK_SAMPLE_PROFILES[status] || null;
-  return { status, criteria: profile?.criteria || null };
-}
-
-// Inline SVGs for Deck status icons. All 24x24 viewBox + currentColor so a
-// single CSS color rule paints them.
-const DECK_STATUS_ICON_SVG = {
-  verified:    '<circle cx="12" cy="12" r="10" fill="#5ba32b"/><path d="M8 12.5 11 15.5 16 9.5" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
-  playable:    '<circle cx="12" cy="12" r="10" fill="#d4a72c"/><text x="12" y="17" text-anchor="middle" font-size="14" font-weight="700" fill="#0a0c10" font-family="serif">i</text>',
-  unsupported: '<circle cx="12" cy="12" r="10" fill="#c84a4a"/><path d="M8 8 16 16 M16 8 8 16" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>',
-  unknown:     '<circle cx="12" cy="12" r="10" fill="rgba(120,120,120,0.45)" stroke="rgba(255,255,255,0.25)" stroke-width="1"/><text x="12" y="17" text-anchor="middle" font-size="13" font-weight="700" fill="#fff" font-family="serif">?</text>',
-};
-
-function renderDeckStatusButton(appId) {
-  const { status } = getDeckStatusForApp(appId);
-  const label = DECK_STATUS_LABELS[status] || 'Unknown';
-  // Unsupported has no deeper modal content to surface beyond the criteria
-  // list - keep the button clickable so users still see the explanation, but
-  // tag it visually so it reads as "definitively negative"
-  const disabledClass = status === 'unsupported' ? ' deck-status-btn-unsupported' : '';
-  // Button label is just "Steam Deck" - the colored icon already encodes
-  // the status (green check, yellow i, red x, gray ?). Full "Steam Deck:
-  // Verified" string lives in the modal heading + the title-attr tooltip
-  return `<button class="info-btn info-btn-labeled deck-status-btn${disabledClass}" id="deck-status-btn" title="Steam Deck: ${label} (click for details)">
-    <svg width="16" height="16" viewBox="0 0 24 24">${DECK_STATUS_ICON_SVG[status] || DECK_STATUS_ICON_SVG.unknown}</svg>
-    <span>Steam Deck</span>
-  </button>`;
-}
-
-// Modal body for the Deck-status popup. Mirrors the Steam Store layout:
-// title + summary sentence + per-criterion checklist
-function renderDeckStatusModalContent(appId) {
-  const { status, criteria } = getDeckStatusForApp(appId);
-  const label = DECK_STATUS_LABELS[status] || 'Unknown';
-  const summaryByStatus = {
-    verified:    `This game is <strong>Verified</strong> on Steam Deck. Fully functional, works great with the built-in controls and display.`,
-    playable:    `This game is <strong>Playable</strong> on Steam Deck. Functional, but may require extra effort to interact with or configure.`,
-    unsupported: `This game is <strong>not supported</strong> on Steam Deck. Will not run, or critical features are unavailable.`,
-    unknown:     `Steam Deck compatibility for this game is <strong>Unknown</strong>. Valve has not yet evaluated it.`,
-  };
-  const rows = criteria
-    ? criteria.map((pass, i) => {
-        const iconKey = pass === true ? 'verified' : pass === false ? 'unsupported' : 'playable';
-        return `<div class="deck-criterion">
-          <span class="deck-criterion-icon"><svg width="18" height="18" viewBox="0 0 24 24">${DECK_STATUS_ICON_SVG[iconKey]}</svg></span>
-          <span>${esc(DECK_CRITERIA_LABELS[i])}</span>
-        </div>`;
-      }).join('')
-    : '<p style="color:var(--muted);font-size:0.84rem;margin:0">No per-criterion data available for this title.</p>';
-  return `
-    <h3 style="margin:0 0 8px;font-size:0.95rem;color:var(--strong)">
-      Steam Deck Compatibility:
-      <span class="deck-status-badge deck-status-${status}">${label}</span>
-    </h3>
-    <p style="color:var(--muted);font-size:0.84rem;margin:0 0 12px;line-height:1.5">${summaryByStatus[status] || ''}</p>
-    <div class="deck-criteria-list">${rows}</div>
-    <p style="color:var(--muted);font-size:0.7rem;margin:10px 0 0;font-style:italic">Sample data shown - real per-game status will land when the pipeline publishes Steam Deck compatibility (task #37).</p>`;
-}
-
 // - Author / signals / permalink helpers --------------
 //
 // New card chrome: a left "author" column with avatar + identity, a row of
@@ -846,9 +745,7 @@ const SIGNAL_ICON_SVG = {
   verdict: '<path fill="currentColor" d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.3l.9-4.6.1-.3c0-.4-.2-.8-.4-1L14.2 1 7.6 7.6c-.4.4-.6.9-.6 1.4v10c0 1.1.9 2 2 2h9c.8 0 1.5-.5 1.8-1.2l3-7.1c.1-.2.2-.5.2-.7v-2z"/>',
   oob:     '<path fill="currentColor" d="M12 2 4 6v6c0 5 3.4 9.7 8 11 4.6-1.3 8-6 8-11V6l-8-4zm-1 14-4-4 1.4-1.4 2.6 2.6 5.6-5.6L18 9l-7 7z"/>',
   tinker:  '<path fill="currentColor" d="m22 8-3.5 3.5L15 8l3.5-3.5C16 3.6 13.3 4.4 11.4 6.3c-2 2-2.7 4.8-1.8 7.4l-7.4 7.4 2.8 2.8 7.4-7.4c2.6.9 5.4.2 7.4-1.8 1.9-1.9 2.7-4.6 1.8-7.1z"/>',
-  // Steam Deck wordmark glyph (the iconic "D" - solid dot + half-arc). Mirrors
-  // the official Deck logo, not a generic gamepad
-  deck:    '<circle cx="8" cy="12" r="3.6" fill="currentColor"/><path d="M13 5.4 a7.5 7.5 0 0 1 0 13.2" stroke="currentColor" stroke-width="2.8" fill="none" stroke-linecap="round"/>',
+  deck:    '<path fill="currentColor" d="M5 6h14a3 3 0 0 1 3 3v6a3 3 0 0 1-3 3h-2.5l-.7-1.4a3 3 0 0 0-2.7-1.6h-2.2a3 3 0 0 0-2.7 1.6L7.5 18H5a3 3 0 0 1-3-3V9a3 3 0 0 1 3-3zm2 4a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm10 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/>',
   owns:    '<path fill="currentColor" d="M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v1c0 2.55 1.92 4.63 4.39 4.94.63 1.5 1.98 2.63 3.61 2.96V19H7v2h10v-2h-4v-3.1c1.63-.33 2.98-1.46 3.61-2.96C19.08 12.63 21 10.55 21 8V7c0-1.1-.9-2-2-2zM5 8V7h2v3.82C5.84 10.4 5 9.3 5 8zm14 0c0 1.3-.84 2.4-2 2.82V7h2v1z"/>',
   framegen:'<path fill="currentColor" d="M7 21h2v-6H7v6zm4 0h2V9h-2v12zm4 0h2v-9h-2v9zM5 3v18h2V5h12V3H5z"/>',
 };
@@ -865,13 +762,7 @@ function renderSignalIcon(iconKey, value, label, opts = {}) {
   let state = 'neutral';
   if (value === positive) state = opts.positiveState || 'good';
   else if (value === negative) state = opts.negativeState || 'bad';
-  const yesLabel = opts.yesLabel || 'Yes';
-  const noLabel  = opts.noLabel  || 'No';
-  // Owns icon (and any signal flagged anonymous-unverifiable) should explain
-  // *why* the answer is missing - anonymous ProtonDB reports cannot be
-  // verified ownership, distinct from "user just didn't answer"
-  const neutralLabel = opts.neutralLabel || 'Not answered';
-  const stateLabel = value === positive ? yesLabel : value === negative ? noLabel : neutralLabel;
+  const stateLabel = value === positive ? 'Yes' : value === negative ? 'No' : 'Not answered';
   return `<span class="signal-icon signal-${state}" title="${label}: ${stateLabel}">
     <svg viewBox="0 0 24 24">${path}</svg>
   </span>`;
@@ -906,14 +797,7 @@ function renderSignalStrip(r) {
     renderSignalIcon('deck',    deckValue,     'Steam Deck',
       { positiveState: 'info' }),
     renderSignalIcon('owns',    ownsValue,     'Reporter owns the game',
-      { positiveState: 'info',
-        yesLabel: 'Confirmed',
-        // ProtonDB anonymous reports don't carry an ownership signal at all.
-        // Pulse reports do (game_owned flag from the submission), so missing
-        // means the reporter chose not to confirm rather than unverifiable
-        neutralLabel: (r.source || '').toLowerCase() === 'protondb'
-          ? 'Anonymous report - cannot be verified'
-          : 'Not confirmed' }),
+      { positiveState: 'info' }),
     renderSignalIcon('framegen', fr.requiresFramegen, 'Framegen required for smooth play',
       { positiveState: 'warn' }),
   ].filter(Boolean);
@@ -952,16 +836,11 @@ function getAuthorIdentity(r) {
 // the Steam avatar image when kind==='pulse' && profile is resolved.
 function renderAuthorBlock(r) {
   const a = getAuthorIdentity(r);
-  // Full client / proton-pulse user id for the hover tooltip. The visible
-  // .author-sub is truncated to 8 chars to keep the column narrow; users who
-  // want to recognize their own client id need to see the full value somewhere
-  const fullId = r.protonPulseUserId || r.proton_pulse_user_id || r.clientId || r.client_id || '';
-  const tooltipExtra = fullId ? `\nFull id: ${fullId}` : '';
   return `
-    <div class="card-author" title="${esc(a.displayName)} ${esc(a.subtitle)}${esc(tooltipExtra)}">
+    <div class="card-author" title="${esc(a.displayName)} ${esc(a.subtitle)}">
       <div class="author-avatar author-avatar-${a.kind}">${ATOM_ICON_SVG}</div>
       <div class="author-name">${esc(a.displayName)}</div>
-      <div class="author-sub" title="${esc(fullId || a.subtitle)}">${esc(a.subtitle)}</div>
+      <div class="author-sub">${esc(a.subtitle)}</div>
     </div>`;
 }
 
@@ -985,10 +864,7 @@ function renderCard(r, votes, userVotes = {}, configPlaytimeTotals = []) {
   const v     = votes[reportKey(r)] || { up: 0, down: 0 };
   const rKey  = reportKey(r);
   const userVote = userVotes[rKey] || 0;
-  // Raw score is already on a 0-100 scale internally; we used to divide by 10
-  // and display X.X/10 - switched to direct % to match the plugin pill format
-  const confRaw = Math.min(100, Math.max(0, r.score || estimateScore(r)));
-  const confPct = Math.round(confRaw);
+  const score = Math.min(10, Math.max(0, (r.score || estimateScore(r)) / 10)).toFixed(1);
   const src = (r.source || '').toLowerCase();
   // Pulse-submitted reports land in user_configs with source='user' (plugin) or
   // 'proton-pulse' (legacy). ProtonDB mirror rows are tagged 'protondb'.
@@ -1002,29 +878,32 @@ function renderCard(r, votes, userVotes = {}, configPlaytimeTotals = []) {
   const rc    = RATING_COLORS[r.rating] || '#3a4a5a';
   const rt    = RATING_TEXT[r.rating]   || '#c8d4e0';
   const na = s => s || '<span style="color:#4a5f70;font-style:italic">Not available</span>';
-  // Source badge used to render top-right of each card (Pulse / ProtonDB).
-  // Removed - the same info already appears in the "Source" row at the bottom
-  // of the card, so two pills said the same thing and crowded the right column.
+  const pulseBadge = '<span class="source-badge pulse"><img src="https://raw.githubusercontent.com/mdeguzis/decky-proton-pulse/main/assets/logo.png" alt="">Pulse</span>';
+  const sourceBadge = isProtonDb
+    ? '<span class="source-badge protondb">ProtonDB</span>'
+    : isWeb
+      ? `${pulseBadge}<span class="source-badge web">${webPlatformLabel}</span>`
+      : pulseBadge;
+  // ownerBadge is now folded into the signal-strip icons (see renderSignalStrip)
+  // but keep an empty string for backwards-compat in case any inline ref expects it
   return `
     <div class="card" id="${(() => { const id = r.reportId != null ? `r${r.reportId}` : (r.clientId ? `c${r.clientId.slice(0, 8)}` : ''); return id ? `report-${id}` : ''; })()}">
       ${renderAuthorBlock(r)}
       <div class="card-body">
         <div class="proton">${esc(r.protonVersion || 'Unknown')}</div>
         <div class="hw">${esc([r.gpu, r.os].filter(Boolean).join(' / ') || 'Hardware unavailable')}</div>
-        <div class="age">
-          ${daysAgo(r.timestamp)}
-          ${(r.durationMinutes != null || fmtDuration(r.duration)) ? `<span class="hours-inline" title="Steam playtime when the reporter submitted this report">  &middot;  ${r.durationMinutes != null ? fmtMinutes(r.durationMinutes) : fmtDuration(r.duration)} played</span>` : ''}
-        </div>
+        <div class="age">${daysAgo(r.timestamp)}</div>
         ${renderSignalStrip(r)}
       </div>
       <div class="right">
+        ${sourceBadge}
         <div class="card-rating-row">
-          <a class="confidence-pill conf-link" href="scoring.html" onclick="event.stopPropagation()" title="Per-report confidence based on hardware match, recency, playtime, etc. Click to read how scoring works." style="background:${confColor(confPct / 10)};color:#0a0c10">Confidence: ${confPct}%</a>
           <span class="rating" style="background:${rc};color:${rt}">${r.rating || '?'}</span>
+          <span class="score" style="color:${confColor(parseFloat(score))}">${score}/10</span>
         </div>
         <div class="vote-btns">
-          <button class="vote-btn vote-up${userVote === 1 ? ' active' : ''}" data-vote="1" data-rkey="${esc(rKey)}" data-appid="${r.appId}" title="Helpful"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"/></svg><span class="vote-count">${v.up}</span></button>
-          <button class="vote-btn vote-dn${userVote === -1 ? ' active' : ''}" data-vote="-1" data-rkey="${esc(rKey)}" data-appid="${r.appId}" title="Not helpful"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="transform:scaleY(-1)"><path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"/></svg><span class="vote-count">${v.down}</span></button>
+          <button class="vote-btn vote-up${userVote === 1 ? ' active' : ''}" data-vote="1" data-rkey="${esc(rKey)}" data-appid="${r.appId}" title="Helpful"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"/></svg><span class="vote-count">${v.up}</span></button>
+          <button class="vote-btn vote-dn${userVote === -1 ? ' active' : ''}" data-vote="-1" data-rkey="${esc(rKey)}" data-appid="${r.appId}" title="Not helpful"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" style="transform:scaleY(-1)"><path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"/></svg><span class="vote-count">${v.down}</span></button>
         </div>
         ${renderPermalink(r)}
       </div>
@@ -1080,12 +959,7 @@ async function renderGamePage(appId) {
     return;
   }
 
-  // Resolve a human-readable title: reports first (they almost always carry one),
-  // then configs, then fall back to the pre-loaded search-index which has the
-  // canonical Steam name per appId. Final fallback is the bare app id.
-  await loadSearchIndex();
-  const indexHit = (searchIndex || []).find(row => String(row[0]) === String(appId));
-  const title = reports[0]?.title || configs[0]?.appName || indexHit?.[1] || `App ${appId}`;
+  const title = reports[0]?.title || configs[0]?.appName || `App ${appId}`;
   const protonDbTier = tierFromReports(cdn);
   const pulseTier = pulseTierFromReports(nativeReports, cdn.length);
   document.title = `${title} - Proton Pulse`;
@@ -1094,35 +968,9 @@ async function renderGamePage(appId) {
   const totalSessionCount = playtimeTotals.reduce((s, r) => s + (r.session_count || 0), 0);
 
   let sortMode = 'recent';
-  // Filter state. Persisted to localStorage when the user ticks the "Save"
-  // checkbox - same shape works whether signed in or not (profile sync can
-  // layer on top later by mirroring this object to the user_configs row).
-  const FILTER_STORAGE_KEY = 'proton-pulse:report-filters';
-  const FILTER_PERSIST_KEY = 'proton-pulse:report-filters-persist';
-  const persistedFilters = (() => {
-    try {
-      if (localStorage.getItem(FILTER_PERSIST_KEY) !== '1') return {};
-      return JSON.parse(localStorage.getItem(FILTER_STORAGE_KEY) || '{}') || {};
-    } catch { return {}; }
-  })();
-
-  let filterGpu    = persistedFilters.gpu    || '';
-  let filterOs     = persistedFilters.os     || '';
-  let filterRating = persistedFilters.rating || '';
-  // 'deck-lcd' / 'deck-oled' / 'deck-any' / 'desktop' / ''
-  let filterDevice = persistedFilters.device || '';
-  // Minimum reporter playtime in minutes (0 = any). Useful to skip "launched
-  // it once" reports that don't reflect real-use compatibility
-  let filterMinPlaytime = persistedFilters.minPlaytime || 0;
-  let persistFilters = localStorage.getItem(FILTER_PERSIST_KEY) === '1';
-
-  function saveFiltersIfEnabled() {
-    if (!persistFilters) return;
-    try {
-      const snapshot = { gpu: filterGpu, os: filterOs, rating: filterRating, device: filterDevice, minPlaytime: filterMinPlaytime };
-      localStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(snapshot));
-    } catch { /* quota / disabled - ignore */ }
-  }
+  let filterGpu    = '';
+  let filterOs     = '';
+  let filterRating = '';
   // Unified source filter across configs + reports: 'pulse-config', 'pulse-report',
   // 'protondb', or '' for any
   let filterSource = localStorage.getItem('proton-pulse:config-type') || '';
@@ -1161,29 +1009,6 @@ async function renderGamePage(appId) {
     let arr = [...combined];
     if (filterGpu)    arr = arr.filter(r => gpuVendor(r.gpu) === filterGpu);
     if (filterOs)     arr = arr.filter(r => osBase(r.os) === filterOs);
-    if (filterDevice) {
-      arr = arr.filter(r => {
-        const haystack = `${r.cpu || ''} ${r.gpu || ''}`;
-        const isLcd  = _DECK_LCD_RE.test(haystack);
-        const isOled = _DECK_OLED_RE.test(haystack);
-        if (filterDevice === 'deck-lcd')  return isLcd;
-        if (filterDevice === 'deck-oled') return isOled;
-        if (filterDevice === 'deck-any')  return isLcd || isOled;
-        if (filterDevice === 'desktop')   return !isLcd && !isOled;
-        return true;
-      });
-    }
-    if (filterMinPlaytime > 0) {
-      // Match against durationMinutes if present; otherwise translate the
-      // bucketed duration enum to a coarse minute count so old reports still
-      // get filtered consistently
-      const DUR_MIN = { underOneHour: 0, oneToFourHours: 60, fourToTenHours: 240, overTenHours: 600 };
-      arr = arr.filter(r => {
-        if (r.durationMinutes != null) return r.durationMinutes >= filterMinPlaytime;
-        const m = DUR_MIN[r.duration];
-        return m != null && m >= filterMinPlaytime;
-      });
-    }
     // Rating filter only makes sense for reports. Configs don't carry a rating,
     // so drop them when the user explicitly narrows by rating
     if (filterRating) arr = arr.filter(r => r._kind === 'report' && r.rating === filterRating);
@@ -1213,97 +1038,27 @@ async function renderGamePage(appId) {
     const pulseSummaryBits = [];
     if (pulseHasReports) pulseSummaryBits.push(`${nativeReports.length} report${nativeReports.length !== 1 ? 's' : ''}`);
     if (pulseHasConfigs) pulseSummaryBits.push(`${configs.length} config${configs.length !== 1 ? 's' : ''}`);
-    // Combined tile - Pulse + ProtonDB roll into one homogeneous "Community"
-    // summary since the report list below mixes both sources too. pulseTier
-    // already accepts a protonDbCount that weights both sources into one
-    // overall rating + confidence, which is exactly what we want here
-    const totalReports = nativeReports.length + cdn.length;
-    const hasAnyReports = totalReports > 0;
-    // Use the combined-source tier when there are any reports; fall back to
-    // protondb tier if only protondb reports exist; "pending" when nothing
-    const overallTier = hasAnyReports
-      ? (pulseHasReports ? pulseTier.tier : protonDbTier)
-      : 'pending';
-    const overallTileColor = hasAnyReports ? (RATING_COLORS[overallTier] || '#3a4a5a') : '#2a5a8c';
-    const overallTileText  = hasAnyReports ? (RATING_TEXT[overallTier]   || '#c8d4e0') : '#d7e9fb';
-    const overallSummaryBits = [];
-    if (hasAnyReports) overallSummaryBits.push(`${totalReports} report${totalReports !== 1 ? 's' : ''}`);
-    if (pulseHasConfigs) overallSummaryBits.push(`${configs.length} config${configs.length !== 1 ? 's' : ''}`);
-    const overallTileSummary = overallSummaryBits.length ? overallSummaryBits.join(' / ') : 'No community data yet';
-    const overallNote = hasAnyReports
-      ? (pulseHasReports ? pulseTier.confidenceNote : `Based on ${cdn.length} ProtonDB report${cdn.length !== 1 ? 's' : ''}`)
-      : (pulseHasConfigs ? 'Community-submitted configs available' : 'Waiting for community reports');
-    // Confidence: prefer Pulse's computed confidencePct (weights both sources)
-    // when there are Pulse reports; otherwise fall back to a sample-size only
-    // approximation against the ProtonDB report count alone
-    const overallConfidencePct = pulseHasReports && pulseTier.confidencePct
-      ? pulseTier.confidencePct
-      : (cdn.length > 0 ? Math.min(95, Math.round(30 + Math.log2(Math.max(1, cdn.length)) * 18)) : 0);
-    // Per-source breakdown - tiny stat strip at the bottom of the tile. Always
-    // shows BOTH Pulse + ProtonDB (even at 0) so users understand both feeds
-    // contribute even when only one has data. Configs only appear if > 0
-    const statBits = [
-      `<span><strong>${nativeReports.length}</strong> Pulse</span>`,
-      `<span><strong>${cdn.length}</strong> ProtonDB</span>`,
-    ];
-    if (configs.length) statBits.push(`<span><strong>${configs.length}</strong> config${configs.length !== 1 ? 's' : ''}</span>`);
-    const statRow = `<div class="source-summary-stats">${statBits.join('<span class="ss-sep">/</span>')}</div>`;
-
-    // Rating distribution bar across all reports. Five-color stack visualizes
-    // the spread of platinum/gold/silver/bronze/borked which is otherwise
-    // invisible behind the single aggregate tier badge above
-    const allReports = [...nativeReports, ...cdn];
-    const ratingCounts = { platinum: 0, gold: 0, silver: 0, bronze: 0, borked: 0 };
-    for (const r of allReports) {
-      if (ratingCounts[r.rating] != null) ratingCounts[r.rating]++;
-    }
-    const ratingTotal = Object.values(ratingCounts).reduce((a, b) => a + b, 0);
-    const distSegments = ratingTotal
-      ? Object.entries(ratingCounts)
-          .filter(([, n]) => n > 0)
-          .map(([tier, n]) => {
-            const pct = (n / ratingTotal * 100).toFixed(2);
-            return `<span class="dist-seg dist-${tier}" style="width:${pct}%" title="${n} ${tier} report${n !== 1 ? 's' : ''}"></span>`;
-          }).join('')
-      : '';
-    const ratingDistribution = ratingTotal ? `
-      <div class="source-summary-distribution" title="Distribution of ratings across all ${ratingTotal} reports">
-        <div class="dist-bar">${distSegments}</div>
-        <div class="dist-legend">
-          ${Object.entries(ratingCounts).filter(([, n]) => n > 0).map(([tier, n]) =>
-            `<span class="dist-legend-item"><span class="dist-swatch dist-${tier}"></span>${n}</span>`
-          ).join('')}
-        </div>
-      </div>` : '';
-
-    // Newest-report age - tells visitors at a glance whether the data is
-    // fresh or stale. Uses the existing daysAgo helper for consistency
-    const newestTs = allReports.length
-      ? Math.max(...allReports.map(r => r.timestamp || 0))
-      : 0;
-    const freshnessLine = newestTs ? `
-      <div class="source-summary-freshness">Newest report: <strong>${daysAgo(newestTs)}</strong></div>` : '';
-    // Two-column inner layout so the wide tile actually uses its horizontal
-    // space. Left: kicker + rating + confidence + summary. Right: distribution
-    // bar + freshness + per-source breakdown. Collapses to single column on
-    // narrow screens via the media query in app.css
+    const pulseTileValue = pulseHasReports ? pulseTier.tier : (pulseHasConfigs ? 'config' : 'pending');
+    const pulseTileColor = pulseHasReports ? (RATING_COLORS[pulseTier.tier] || '#3a4a5a') : '#2a5a8c';
+    const pulseTileText = pulseHasReports ? (RATING_TEXT[pulseTier.tier] || '#c8d4e0') : '#d7e9fb';
+    const pulseTileSummary = pulseSummaryBits.length ? pulseSummaryBits.join(' / ') : 'No Pulse data yet';
+    const protonDbTileValue = cdn.length > 0 ? protonDbTier : 'pending';
+    const protonDbTileSummary = cdn.length > 0
+      ? `${cdn.length} report${cdn.length !== 1 ? 's' : ''}`
+      : 'No ProtonDB reports';
     const sourceTiles = `
       <div class="source-summary-grid">
-        <button class="source-summary-tile source-summary-tile-combined" type="button" data-target="reports-summary" title="Jump to community configs and reports">
-          <div class="ss-primary">
-            <span class="source-summary-kicker">Community</span>
-            <span class="source-summary-tier-row">
-              ${hasAnyReports && overallConfidencePct ? `<a class="source-summary-conf conf-link" href="scoring.html" onclick="event.stopPropagation()" style="background:${confColor(overallConfidencePct / 10)};color:#0a0c10" title="Overall confidence aggregated across all sources. Click to read how scoring works.">Confidence: ${overallConfidencePct}%</a>` : ''}
-              <span class="source-summary-value" style="background:${overallTileColor};color:${overallTileText}">${overallTier}</span>
-            </span>
-            <span class="source-summary-meta">${overallTileSummary}</span>
-            <span class="source-summary-note">${overallNote}</span>
-          </div>
-          <div class="ss-details">
-            ${ratingDistribution}
-            ${freshnessLine}
-            ${statRow}
-          </div>
+        <button class="source-summary-tile source-summary-tile-pulse" type="button" data-target="pulse-summary" title="Jump to Proton Pulse configs and reports">
+          <span class="source-summary-kicker">Pulse</span>
+          <span class="source-summary-value" style="background:${pulseTileColor};color:${pulseTileText}">${pulseTileValue}</span>
+          <span class="source-summary-meta">${pulseTileSummary}</span>
+          <span class="source-summary-note">${pulseHasReports ? pulseTier.confidenceNote : (pulseHasConfigs ? 'Community-submitted configs available' : 'Waiting for Pulse reports')}</span>
+        </button>
+        <button class="source-summary-tile source-summary-tile-protondb" type="button" data-target="reports-summary" title="Jump to ProtonDB community reports">
+          <span class="source-summary-kicker">ProtonDB</span>
+          <span class="source-summary-value" style="background:${protonDbBadgeColor};color:${protonDbBadgeText}">${protonDbTileValue}</span>
+          <span class="source-summary-meta">${protonDbTileSummary}</span>
+          <span class="source-summary-note">Community compatibility rating</span>
         </button>
       </div>`;
 
@@ -1334,49 +1089,31 @@ async function renderGamePage(appId) {
             <div class="game-header-summary">
               Browse the combined community view for this game across ProtonDB reports, Pulse compatibility reports, and shared Pulse configs.
             </div>
-
             ${myStatusBadge}
           </div>
         </div>
         <div class="game-header-side">
           ${sourceTiles}
           <div class="game-header-actions">
-            <a class="info-btn" href="scoring.html" id="rating-info-btn" title="How scoring works (opens the canonical scoring page)"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="11" fill="#3b82f6"/><text x="12" y="17" text-anchor="middle" font-size="15" font-weight="700" fill="#fff" font-family="serif">i</text></svg></a>
-            <button class="info-btn info-btn-labeled" id="min-reqs-btn" title="Minimum system requirements (from Steam Store, served by pipeline)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="14" rx="1"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="20" x2="15" y2="20"/></svg><span>Min. Requirements</span></button>
-            ${renderDeckStatusButton(appId)}
+            <button class="info-btn" id="rating-info-btn" title="What does this rating mean?"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="11" fill="#3b82f6"/><text x="12" y="17" text-anchor="middle" font-size="15" font-weight="700" fill="#fff" font-family="serif">i</text></svg></button>
             <button class="submit-report-btn" id="submit-report-btn">Submit Report</button>
           </div>
         </div>
-        <!-- rating-info popup removed - i button now navigates directly to
-             scoring.html, which is the canonical scoring data source -->
+        <div class="info-tooltip" id="rating-info-tip">
+          <div class="info-tooltip-inner" id="rating-info-content">Loading...</div>
+        </div>
         <div class="info-tooltip" id="submit-form-panel">
           <div class="info-tooltip-inner" id="submit-form-content">Loading form...</div>
         </div>
-        <div class="info-tooltip" id="min-reqs-tip">
-          <div class="info-tooltip-inner" id="min-reqs-content">
-            <h3 style="margin:0 0 8px;font-size:0.95rem;color:var(--strong)">Minimum System Requirements</h3>
-            <p style="color:var(--muted);font-size:0.84rem;margin:0">System requirements come from the Steam Store appdetails endpoint. The plugin already pulls these as scoring confidence boosters; webui needs the pipeline to publish them per-game (task #37). Once that lands, this panel will show the same CPU/GPU/RAM/OS minimums the plugin shows on the Configure tab.</p>
-            <p style="color:var(--muted);font-size:0.78rem;margin:8px 0 0;font-style:italic">Awaiting pipeline backfill</p>
-          </div>
-        </div>
-        <div class="info-tooltip" id="deck-status-tip">
-          <div class="info-tooltip-inner" id="deck-status-content">${renderDeckStatusModalContent(appId)}</div>
-        </div>
+      </div>
 
-        <!-- External link footer lives inside the game-header banner so it
-             reads as part of the game's metadata strip instead of a floating
-             group of buttons. Less cluttered, less visual seams between the
-             rating tile and the navigation links -->
-        <div class="hub-links hub-links-in-banner">
-          <a class="hub-link" href="https://store.steampowered.com/app/${appId}" target="_blank" rel="noopener">Steam ></a>
-          <a class="hub-link" href="https://steamdb.info/app/${appId}/" target="_blank" rel="noopener">SteamDB ></a>
-          <a class="hub-link" href="https://www.protondb.com/app/${appId}" target="_blank" rel="noopener">ProtonDB ></a>
-          <a class="hub-link" href="https://www.pcgamingwiki.com/w/index.php?search=${encodeURIComponent(title)}" target="_blank" rel="noopener">PCGamingWiki ></a>
-          <a class="hub-link" href="https://steamcharts.com/app/${appId}" target="_blank" rel="noopener">Steam Charts ></a>
-          <a class="hub-link" href="https://github.com/ValveSoftware/Proton/issues?q=${encodeURIComponent(title)}" target="_blank" rel="noopener">Proton Issues ></a>
-          <a class="hub-link" href="${dataFilesHref(appId)}">Data Files ></a>
-          <button class="hub-link" id="scoring-info-btn">How Scoring Works ></button>
-        </div>
+      <div class="hub-links">
+        <a class="hub-link" href="https://store.steampowered.com/app/${appId}" target="_blank" rel="noopener">Steam ></a>
+        <a class="hub-link" href="https://steamdb.info/app/${appId}/" target="_blank" rel="noopener">SteamDB ></a>
+        <a class="hub-link" href="https://www.protondb.com/app/${appId}" target="_blank" rel="noopener">ProtonDB ></a>
+        <a class="hub-link" href="https://www.pcgamingwiki.com/w/index.php?search=${encodeURIComponent(title)}" target="_blank" rel="noopener">PCGamingWiki ></a>
+        <a class="hub-link" href="${dataFilesHref(appId)}">Data Files ></a>
+        <button class="hub-link" id="scoring-info-btn">How Scoring Works ></button>
       </div>
 
       ${trendSummary(reports)}
@@ -1435,43 +1172,8 @@ async function renderGamePage(appId) {
               ${availSrcs.map(v => `<option value="${v}" ${filterSource===v?'selected':''}>${SRC_LABEL[v]||v}</option>`).join('')}
             </select>` : '';
 
-          // Steam Deck device filter. Only show if at least one report on this
-          // game is on a Deck, otherwise the dropdown is meaningless noise
-          const hasDeck = combined.some(r => {
-            const h = `${r.cpu || ''} ${r.gpu || ''}`;
-            return _DECK_LCD_RE.test(h) || _DECK_OLED_RE.test(h);
-          });
-          const deviceSel = hasDeck ? `
-            <label>Device</label>
-            <select id="fDevice">
-              <option value="">Any</option>
-              <option value="deck-any"  ${filterDevice==='deck-any'?'selected':''}>Steam Deck (any)</option>
-              <option value="deck-lcd"  ${filterDevice==='deck-lcd'?'selected':''}>Steam Deck LCD</option>
-              <option value="deck-oled" ${filterDevice==='deck-oled'?'selected':''}>Steam Deck OLED</option>
-              <option value="desktop"   ${filterDevice==='desktop'?'selected':''}>Desktop / other</option>
-            </select>` : '';
-
-          // Playtime threshold filter. Buckets match the values stored on
-          // existing reports so the dropdown reads predictably (e.g. "2h+"
-          // matches reports tagged oneToFourHours and up)
-          const playtimeSel = `
-            <label>Min playtime</label>
-            <select id="fPlaytime">
-              <option value="0"    ${filterMinPlaytime===0?'selected':''}>Any</option>
-              <option value="60"   ${filterMinPlaytime===60?'selected':''}>1h+</option>
-              <option value="120"  ${filterMinPlaytime===120?'selected':''}>2h+</option>
-              <option value="240"  ${filterMinPlaytime===240?'selected':''}>4h+</option>
-              <option value="600"  ${filterMinPlaytime===600?'selected':''}>10h+</option>
-            </select>`;
-
-          const persistChk = `
-            <label class="filter-persist" title="Save these filters so they apply next time you visit a game page">
-              <input type="checkbox" id="fPersist" ${persistFilters ? 'checked' : ''}>
-              <span>Save filters</span>
-            </label>`;
-
-          const anyActive = filterGpu || filterOs || filterRating || filterSource || filterDevice || filterMinPlaytime;
-          return gpuSel + osSel + ratingSel + srcSel + deviceSel + playtimeSel + persistChk +
+          const anyActive = filterGpu || filterOs || filterRating || filterSource;
+          return gpuSel + osSel + ratingSel + srcSel +
             (anyActive ? `<span class="filter-count">${reps.length} of ${combined.length}</span>` : '');
         })()}
       </div>
@@ -1489,18 +1191,10 @@ async function renderGamePage(appId) {
     el.querySelectorAll('.sort-bar button').forEach(b =>
       b.onclick = () => { sortMode = b.dataset.sort; render(); }
     );
-    // rating-info-btn is now a plain <a href> to scoring.html - no JS needed.
-    // populateScoringTooltip / #rating-info-tip kept around in case anything
-    // else still references them (search/etc); safe to delete in a cleanup pass
-    el.querySelector('#min-reqs-btn')?.addEventListener('click', () => {
-      // Min-reqs panel reuses the same .info-tooltip styling. Content is a
-      // placeholder until task #37 publishes per-game sysreqs from the pipeline
-      el.querySelector('#min-reqs-tip')?.classList.toggle('open');
-    });
-    el.querySelector('#deck-status-btn')?.addEventListener('click', () => {
-      // Deck status modal mirrors the Steam Store Deck Compatibility popup -
-      // status badge + summary sentence + per-criterion checklist
-      el.querySelector('#deck-status-tip')?.classList.toggle('open');
+    el.querySelector('#rating-info-btn')?.addEventListener('click', async () => {
+      const tip = el.querySelector('#rating-info-tip');
+      tip?.classList.toggle('open');
+      if (tip?.classList.contains('open')) await populateScoringTooltip(el);
     });
     el.querySelectorAll('.source-summary-tile').forEach((tile) => {
       tile.addEventListener('click', () => {
@@ -1525,10 +1219,6 @@ async function renderGamePage(appId) {
       if (panel?.classList.contains('open')) {
         await populateSubmitForm(el);
         prefillSubmitFormFromMyHardware(el);
-        // Prefill the title input with whatever we resolved for the game
-        // page header so users only have to confirm/correct it, not type it
-        const titleInput = el.querySelector('input[name="gameTitle"]');
-        if (titleInput && !titleInput.value) titleInput.value = title;
         const protonInput = el.querySelector('input[name="protonVersion"]');
         const protonHint = el.querySelector('#proton-hint');
         if (protonInput && protonHint) {
@@ -1548,20 +1238,10 @@ async function renderGamePage(appId) {
         });
       }
     });
-    el.querySelector('#fGpu')?.addEventListener('change', e => { filterGpu    = e.target.value; saveFiltersIfEnabled(); render(); });
-    el.querySelector('#fOs')?.addEventListener('change',  e => { filterOs     = e.target.value; saveFiltersIfEnabled(); render(); });
-    el.querySelector('#fRating')?.addEventListener('change', e => { filterRating = e.target.value; saveFiltersIfEnabled(); render(); });
-    el.querySelector('#fSource')?.addEventListener('change', e => { filterSource = e.target.value; saveFiltersIfEnabled(); render(); });
-    el.querySelector('#fDevice')?.addEventListener('change', e => { filterDevice = e.target.value; saveFiltersIfEnabled(); render(); });
-    el.querySelector('#fPlaytime')?.addEventListener('change', e => { filterMinPlaytime = parseInt(e.target.value, 10) || 0; saveFiltersIfEnabled(); render(); });
-    el.querySelector('#fPersist')?.addEventListener('change', e => {
-      persistFilters = e.target.checked;
-      try {
-        localStorage.setItem(FILTER_PERSIST_KEY, persistFilters ? '1' : '0');
-        if (persistFilters) saveFiltersIfEnabled();
-        else localStorage.removeItem(FILTER_STORAGE_KEY);
-      } catch { /* quota - ignore */ }
-    });
+    el.querySelector('#fGpu')?.addEventListener('change', e => { filterGpu    = e.target.value; render(); });
+    el.querySelector('#fOs')?.addEventListener('change',  e => { filterOs     = e.target.value; render(); });
+    el.querySelector('#fRating')?.addEventListener('change', e => { filterRating = e.target.value; render(); });
+    el.querySelector('#fSource')?.addEventListener('change', e => { filterSource = e.target.value; render(); });
     el.querySelectorAll('.cfg-dl-btn').forEach(b => {
       b.addEventListener('click', e => {
         e.stopPropagation();

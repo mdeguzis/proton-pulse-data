@@ -625,8 +625,8 @@ function renderConfigCard(c, idx, votes = {}, userVotes = {}) {
               : '<span class="source-badge steam-game">Steam</span>'}
           </div>
           <div class="vote-btns">
-            <button class="vote-btn vote-up${userVote === 1 ? ' active' : ''}" data-vote="1" data-rkey="${esc(ck)}" data-appid="${c.appId}" title="Helpful"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"/></svg><span class="vote-count">${cv.up}</span></button>
-            <button class="vote-btn vote-dn${userVote === -1 ? ' active' : ''}" data-vote="-1" data-rkey="${esc(ck)}" data-appid="${c.appId}" title="Not helpful"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="transform:scaleY(-1)"><path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"/></svg><span class="vote-count">${cv.down}</span></button>
+            <button class="vote-btn vote-up${userVote === 1 ? ' active' : ''}" data-vote="1" data-rkey="${esc(ck)}" data-appid="${c.appId}" title="Helpful"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"/></svg><span class="vote-count">${cv.up}</span></button>
+            <button class="vote-btn vote-dn${userVote === -1 ? ' active' : ''}" data-vote="-1" data-rkey="${esc(ck)}" data-appid="${c.appId}" title="Not helpful"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" style="transform:scaleY(-1)"><path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"/></svg><span class="vote-count">${cv.down}</span></button>
           </div>
         </div>
       </div>
@@ -770,12 +770,9 @@ function renderDeckStatusButton(appId) {
   // list - keep the button clickable so users still see the explanation, but
   // tag it visually so it reads as "definitively negative"
   const disabledClass = status === 'unsupported' ? ' deck-status-btn-unsupported' : '';
-  // Button label is just "Steam Deck" - the colored icon already encodes
-  // the status (green check, yellow i, red x, gray ?). Full "Steam Deck:
-  // Verified" string lives in the modal heading + the title-attr tooltip
   return `<button class="info-btn info-btn-labeled deck-status-btn${disabledClass}" id="deck-status-btn" title="Steam Deck: ${label} (click for details)">
     <svg width="16" height="16" viewBox="0 0 24 24">${DECK_STATUS_ICON_SVG[status] || DECK_STATUS_ICON_SVG.unknown}</svg>
-    <span>Steam Deck</span>
+    <span>Steam Deck: ${label}</span>
   </button>`;
 }
 
@@ -1019,12 +1016,12 @@ function renderCard(r, votes, userVotes = {}, configPlaytimeTotals = []) {
       </div>
       <div class="right">
         <div class="card-rating-row">
-          <a class="confidence-pill conf-link" href="scoring.html" onclick="event.stopPropagation()" title="Per-report confidence based on hardware match, recency, playtime, etc. Click to read how scoring works." style="background:${confColor(confPct / 10)};color:#0a0c10">Confidence: ${confPct}%</a>
+          <span class="confidence-pill" title="Per-report confidence based on hardware match, recency, playtime, etc." style="background:${confColor(confPct / 10)};color:#0a0c10">Confidence: ${confPct}%</span>
           <span class="rating" style="background:${rc};color:${rt}">${r.rating || '?'}</span>
         </div>
         <div class="vote-btns">
-          <button class="vote-btn vote-up${userVote === 1 ? ' active' : ''}" data-vote="1" data-rkey="${esc(rKey)}" data-appid="${r.appId}" title="Helpful"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"/></svg><span class="vote-count">${v.up}</span></button>
-          <button class="vote-btn vote-dn${userVote === -1 ? ' active' : ''}" data-vote="-1" data-rkey="${esc(rKey)}" data-appid="${r.appId}" title="Not helpful"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="transform:scaleY(-1)"><path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"/></svg><span class="vote-count">${v.down}</span></button>
+          <button class="vote-btn vote-up${userVote === 1 ? ' active' : ''}" data-vote="1" data-rkey="${esc(rKey)}" data-appid="${r.appId}" title="Helpful"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"/></svg><span class="vote-count">${v.up}</span></button>
+          <button class="vote-btn vote-dn${userVote === -1 ? ' active' : ''}" data-vote="-1" data-rkey="${esc(rKey)}" data-appid="${r.appId}" title="Not helpful"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" style="transform:scaleY(-1)"><path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"/></svg><span class="vote-count">${v.down}</span></button>
         </div>
         ${renderPermalink(r)}
       </div>
@@ -1213,97 +1210,30 @@ async function renderGamePage(appId) {
     const pulseSummaryBits = [];
     if (pulseHasReports) pulseSummaryBits.push(`${nativeReports.length} report${nativeReports.length !== 1 ? 's' : ''}`);
     if (pulseHasConfigs) pulseSummaryBits.push(`${configs.length} config${configs.length !== 1 ? 's' : ''}`);
-    // Combined tile - Pulse + ProtonDB roll into one homogeneous "Community"
-    // summary since the report list below mixes both sources too. pulseTier
-    // already accepts a protonDbCount that weights both sources into one
-    // overall rating + confidence, which is exactly what we want here
-    const totalReports = nativeReports.length + cdn.length;
-    const hasAnyReports = totalReports > 0;
-    // Use the combined-source tier when there are any reports; fall back to
-    // protondb tier if only protondb reports exist; "pending" when nothing
-    const overallTier = hasAnyReports
-      ? (pulseHasReports ? pulseTier.tier : protonDbTier)
-      : 'pending';
-    const overallTileColor = hasAnyReports ? (RATING_COLORS[overallTier] || '#3a4a5a') : '#2a5a8c';
-    const overallTileText  = hasAnyReports ? (RATING_TEXT[overallTier]   || '#c8d4e0') : '#d7e9fb';
-    const overallSummaryBits = [];
-    if (hasAnyReports) overallSummaryBits.push(`${totalReports} report${totalReports !== 1 ? 's' : ''}`);
-    if (pulseHasConfigs) overallSummaryBits.push(`${configs.length} config${configs.length !== 1 ? 's' : ''}`);
-    const overallTileSummary = overallSummaryBits.length ? overallSummaryBits.join(' / ') : 'No community data yet';
-    const overallNote = hasAnyReports
-      ? (pulseHasReports ? pulseTier.confidenceNote : `Based on ${cdn.length} ProtonDB report${cdn.length !== 1 ? 's' : ''}`)
-      : (pulseHasConfigs ? 'Community-submitted configs available' : 'Waiting for community reports');
-    // Confidence: prefer Pulse's computed confidencePct (weights both sources)
-    // when there are Pulse reports; otherwise fall back to a sample-size only
-    // approximation against the ProtonDB report count alone
-    const overallConfidencePct = pulseHasReports && pulseTier.confidencePct
-      ? pulseTier.confidencePct
-      : (cdn.length > 0 ? Math.min(95, Math.round(30 + Math.log2(Math.max(1, cdn.length)) * 18)) : 0);
-    // Per-source breakdown - tiny stat strip at the bottom of the tile. Always
-    // shows BOTH Pulse + ProtonDB (even at 0) so users understand both feeds
-    // contribute even when only one has data. Configs only appear if > 0
-    const statBits = [
-      `<span><strong>${nativeReports.length}</strong> Pulse</span>`,
-      `<span><strong>${cdn.length}</strong> ProtonDB</span>`,
-    ];
-    if (configs.length) statBits.push(`<span><strong>${configs.length}</strong> config${configs.length !== 1 ? 's' : ''}</span>`);
-    const statRow = `<div class="source-summary-stats">${statBits.join('<span class="ss-sep">/</span>')}</div>`;
-
-    // Rating distribution bar across all reports. Five-color stack visualizes
-    // the spread of platinum/gold/silver/bronze/borked which is otherwise
-    // invisible behind the single aggregate tier badge above
-    const allReports = [...nativeReports, ...cdn];
-    const ratingCounts = { platinum: 0, gold: 0, silver: 0, bronze: 0, borked: 0 };
-    for (const r of allReports) {
-      if (ratingCounts[r.rating] != null) ratingCounts[r.rating]++;
-    }
-    const ratingTotal = Object.values(ratingCounts).reduce((a, b) => a + b, 0);
-    const distSegments = ratingTotal
-      ? Object.entries(ratingCounts)
-          .filter(([, n]) => n > 0)
-          .map(([tier, n]) => {
-            const pct = (n / ratingTotal * 100).toFixed(2);
-            return `<span class="dist-seg dist-${tier}" style="width:${pct}%" title="${n} ${tier} report${n !== 1 ? 's' : ''}"></span>`;
-          }).join('')
-      : '';
-    const ratingDistribution = ratingTotal ? `
-      <div class="source-summary-distribution" title="Distribution of ratings across all ${ratingTotal} reports">
-        <div class="dist-bar">${distSegments}</div>
-        <div class="dist-legend">
-          ${Object.entries(ratingCounts).filter(([, n]) => n > 0).map(([tier, n]) =>
-            `<span class="dist-legend-item"><span class="dist-swatch dist-${tier}"></span>${n}</span>`
-          ).join('')}
-        </div>
-      </div>` : '';
-
-    // Newest-report age - tells visitors at a glance whether the data is
-    // fresh or stale. Uses the existing daysAgo helper for consistency
-    const newestTs = allReports.length
-      ? Math.max(...allReports.map(r => r.timestamp || 0))
-      : 0;
-    const freshnessLine = newestTs ? `
-      <div class="source-summary-freshness">Newest report: <strong>${daysAgo(newestTs)}</strong></div>` : '';
-    // Two-column inner layout so the wide tile actually uses its horizontal
-    // space. Left: kicker + rating + confidence + summary. Right: distribution
-    // bar + freshness + per-source breakdown. Collapses to single column on
-    // narrow screens via the media query in app.css
+    const pulseTileValue = pulseHasReports ? pulseTier.tier : (pulseHasConfigs ? 'config' : 'pending');
+    const pulseTileColor = pulseHasReports ? (RATING_COLORS[pulseTier.tier] || '#3a4a5a') : '#2a5a8c';
+    const pulseTileText = pulseHasReports ? (RATING_TEXT[pulseTier.tier] || '#c8d4e0') : '#d7e9fb';
+    const pulseTileSummary = pulseSummaryBits.length ? pulseSummaryBits.join(' / ') : 'No Pulse data yet';
+    const protonDbTileValue = cdn.length > 0 ? protonDbTier : 'pending';
+    const protonDbTileSummary = cdn.length > 0
+      ? `${cdn.length} report${cdn.length !== 1 ? 's' : ''}`
+      : 'No ProtonDB reports';
     const sourceTiles = `
       <div class="source-summary-grid">
-        <button class="source-summary-tile source-summary-tile-combined" type="button" data-target="reports-summary" title="Jump to community configs and reports">
-          <div class="ss-primary">
-            <span class="source-summary-kicker">Community</span>
-            <span class="source-summary-tier-row">
-              ${hasAnyReports && overallConfidencePct ? `<a class="source-summary-conf conf-link" href="scoring.html" onclick="event.stopPropagation()" style="background:${confColor(overallConfidencePct / 10)};color:#0a0c10" title="Overall confidence aggregated across all sources. Click to read how scoring works.">Confidence: ${overallConfidencePct}%</a>` : ''}
-              <span class="source-summary-value" style="background:${overallTileColor};color:${overallTileText}">${overallTier}</span>
-            </span>
-            <span class="source-summary-meta">${overallTileSummary}</span>
-            <span class="source-summary-note">${overallNote}</span>
-          </div>
-          <div class="ss-details">
-            ${ratingDistribution}
-            ${freshnessLine}
-            ${statRow}
-          </div>
+        <button class="source-summary-tile source-summary-tile-pulse" type="button" data-target="pulse-summary" title="Jump to Proton Pulse configs and reports">
+          <span class="source-summary-kicker">Pulse</span>
+          <span class="source-summary-tier-row">
+            ${pulseHasReports && pulseTier.confidencePct ? `<span class="source-summary-conf" style="background:${confColor(pulseTier.confidencePct / 10)};color:#0a0c10" title="Overall Pulse confidence aggregated across all reports">Confidence: ${pulseTier.confidencePct}%</span>` : ''}
+            <span class="source-summary-value" style="background:${pulseTileColor};color:${pulseTileText}">${pulseTileValue}</span>
+          </span>
+          <span class="source-summary-meta">${pulseTileSummary}</span>
+          <span class="source-summary-note">${pulseHasReports ? pulseTier.confidenceNote : (pulseHasConfigs ? 'Community-submitted configs available' : 'Waiting for Pulse reports')}</span>
+        </button>
+        <button class="source-summary-tile source-summary-tile-protondb" type="button" data-target="reports-summary" title="Jump to ProtonDB community reports">
+          <span class="source-summary-kicker">ProtonDB</span>
+          <span class="source-summary-value" style="background:${protonDbBadgeColor};color:${protonDbBadgeText}">${protonDbTileValue}</span>
+          <span class="source-summary-meta">${protonDbTileSummary}</span>
+          <span class="source-summary-note">Community compatibility rating</span>
         </button>
       </div>`;
 
@@ -1341,14 +1271,15 @@ async function renderGamePage(appId) {
         <div class="game-header-side">
           ${sourceTiles}
           <div class="game-header-actions">
-            <a class="info-btn" href="scoring.html" id="rating-info-btn" title="How scoring works (opens the canonical scoring page)"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="11" fill="#3b82f6"/><text x="12" y="17" text-anchor="middle" font-size="15" font-weight="700" fill="#fff" font-family="serif">i</text></svg></a>
+            <button class="info-btn" id="rating-info-btn" title="What does this rating mean?"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="11" fill="#3b82f6"/><text x="12" y="17" text-anchor="middle" font-size="15" font-weight="700" fill="#fff" font-family="serif">i</text></svg></button>
             <button class="info-btn info-btn-labeled" id="min-reqs-btn" title="Minimum system requirements (from Steam Store, served by pipeline)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="14" rx="1"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="20" x2="15" y2="20"/></svg><span>Min. Requirements</span></button>
             ${renderDeckStatusButton(appId)}
             <button class="submit-report-btn" id="submit-report-btn">Submit Report</button>
           </div>
         </div>
-        <!-- rating-info popup removed - i button now navigates directly to
-             scoring.html, which is the canonical scoring data source -->
+        <div class="info-tooltip" id="rating-info-tip">
+          <div class="info-tooltip-inner" id="rating-info-content">Loading...</div>
+        </div>
         <div class="info-tooltip" id="submit-form-panel">
           <div class="info-tooltip-inner" id="submit-form-content">Loading form...</div>
         </div>
@@ -1489,9 +1420,11 @@ async function renderGamePage(appId) {
     el.querySelectorAll('.sort-bar button').forEach(b =>
       b.onclick = () => { sortMode = b.dataset.sort; render(); }
     );
-    // rating-info-btn is now a plain <a href> to scoring.html - no JS needed.
-    // populateScoringTooltip / #rating-info-tip kept around in case anything
-    // else still references them (search/etc); safe to delete in a cleanup pass
+    el.querySelector('#rating-info-btn')?.addEventListener('click', async () => {
+      const tip = el.querySelector('#rating-info-tip');
+      tip?.classList.toggle('open');
+      if (tip?.classList.contains('open')) await populateScoringTooltip(el);
+    });
     el.querySelector('#min-reqs-btn')?.addEventListener('click', () => {
       // Min-reqs panel reuses the same .info-tooltip styling. Content is a
       // placeholder until task #37 publishes per-game sysreqs from the pipeline
