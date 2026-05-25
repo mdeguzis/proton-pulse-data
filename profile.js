@@ -1,5 +1,8 @@
 // profile.js — My Account page logic
 
+// localhost dev mode: show mock profile data so the page is previewable
+const IS_LOCAL_DEV = /^localhost(:\d+)?$/.test(window.location.host);
+
 const SHOW_USERNAME_KEY = 'proton-pulse:show-username-on-reports';
 
 // Filter preferences (used by the View Reports pages)
@@ -572,6 +575,43 @@ function getPluginLinkCodeFromLocation(loc = window.location) {
   return new URLSearchParams(hashQuery).get('pluginLinkCode');
 }
 
+// Mock data for localhost preview so the full profile page is testable offline
+const MOCK_USER = {
+  id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+  email: 'deckpilot@protonmail.com',
+  last_sign_in_at: new Date(Date.now() - 3600_000).toISOString(),
+  user_metadata: {
+    full_name: 'DeckPilot42',
+    avatar_url: 'https://avatars.steamstatic.com/fef49e7fa7e1997310d705b2a6158ff8dc1cdfeb_full.jpg',
+    steam_id: '76561198012345678',
+  },
+};
+const MOCK_SYSTEMS = [
+  {
+    device_id: 'deck-lcd-001',
+    label: 'Steam Deck LCD',
+    is_default: true,
+    updated_at: new Date(Date.now() - 86400_000 * 2).toISOString(),
+    sysinfo_text: 'CPU Brand: AMD Custom APU 0405\nVideo Card: AMD Custom GPU 0405 (VanGogh)\nRAM: 16384 Mb\nOS Version: SteamOS 3.5.17 (Jupiter)\nDriver Version: Mesa 24.1.0\nKernel Version: 6.5.0-valve22',
+  },
+  {
+    device_id: 'desktop-001',
+    label: 'Desktop',
+    is_default: false,
+    updated_at: new Date(Date.now() - 86400_000 * 10).toISOString(),
+    sysinfo_text: 'CPU Brand: AMD Ryzen 7 5800X3D 8-Core Processor\nVideo Card: NVIDIA GeForce RTX 4070\nRAM: 32768 Mb\nOS Version: Arch Linux\nDriver Version: 555.42.02\nKernel Version: 6.8.12-arch1-1',
+  },
+];
+const MOCK_LINKED_PLUGINS = [
+  { installation_id: 'inst-deck-lcd-001', device_label: 'Steam Deck LCD', linked_at: new Date(Date.now() - 86400_000 * 30).toISOString() },
+];
+const MOCK_REPORTS = [
+  { app_id: 1091500, title: 'Cyberpunk 2077', rating: 'Gold', updated_at: new Date(Date.now() - 86400_000 * 3).toISOString(), cloud: true, unpublished: false },
+  { app_id: 1245620, title: 'Elden Ring',     rating: 'Gold', updated_at: new Date(Date.now() - 86400_000 * 7).toISOString(), cloud: true, unpublished: false },
+  { app_id: 292030,  title: 'The Witcher 3: Wild Hunt', rating: 'Platinum', updated_at: new Date(Date.now() - 86400_000 * 14).toISOString(), cloud: false, unpublished: false },
+  { app_id: 413150,  title: 'Stardew Valley', rating: 'Platinum', updated_at: new Date(Date.now() - 86400_000 * 21).toISOString(), cloud: true, unpublished: true },
+];
+
 (async function () {
   const signedIn  = document.getElementById('profile-signed-in');
   const signedOut = document.getElementById('profile-signed-out');
@@ -866,23 +906,28 @@ function getPluginLinkCodeFromLocation(loc = window.location) {
   }
 
   // ── Initial state ──────────────────────────────────────────────────────────
-  const session = await SupaAuth.getSession();
-  if (session?.user) {
-    showUser(session.user);
-    void refreshLinkedPlugins();
+  if (IS_LOCAL_DEV) {
+    // skip Supabase on localhost, show mock profile
+    showUser(MOCK_USER);
   } else {
-    showSignedOut();
-  }
-
-  // ── Stay in sync (e.g. sign-out in another tab) ───────────────────────────
-  SupaAuth.onStateChange(({ user }) => {
-    if (user) {
-      showUser(user);
+    const session = await SupaAuth.getSession();
+    if (session?.user) {
+      showUser(session.user);
       void refreshLinkedPlugins();
     } else {
       showSignedOut();
     }
-  });
+
+    // ── Stay in sync (e.g. sign-out in another tab) ─────────────────────────
+    SupaAuth.onStateChange(({ user }) => {
+      if (user) {
+        showUser(user);
+        void refreshLinkedPlugins();
+      } else {
+        showSignedOut();
+      }
+    });
+  }
 
   // ── Actions ───────────────────────────────────────────────────────────────
   loginBtn?.addEventListener('click', () => {

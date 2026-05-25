@@ -170,9 +170,32 @@ function pulseTierFromReports(nativeReports, protonDbCount = 0) {
 
 // --- estimateScore ---
 function estimateScore(r) {
-  const base = { platinum: 60, gold: 48, silver: 36, bronze: 24, borked: 0 }[r.rating] || 30;
-  const days = Math.round((Date.now() / 1000 - r.timestamp) / 86400);
-  const recency = days < 90 ? 15 : days < 365 ? 5 : -5;
-  return Math.max(0, base + recency);
+  return estimateScoreBreakdown(r).total;
+}
+
+// Same math as estimateScore but also returns the per-factor contributions
+// so the confidence-breakdown page can render exactly why a report scored
+// the way it did. Keep this in sync with the plugin's computeConfidence -
+// the webui currently runs a simplified subset since we don't have the
+// viewer's hardware info to do GPU/OS/kernel match factors.
+function estimateScoreBreakdown(r) {
+  const RATING_BASE = { platinum: 60, gold: 48, silver: 36, bronze: 24, borked: 0 };
+  const base = RATING_BASE[r.rating] ?? 30;
+  const days = Math.round((Date.now() / 1000 - (r.timestamp || 0)) / 86400);
+  const recencyLabel = days < 90 ? 'fresh (<90d)' : days < 365 ? 'mid (90-365d)' : 'old (>1yr)';
+  const recencyVal = days < 90 ? 15 : days < 365 ? 5 : -5;
+  const total = Math.max(0, base + recencyVal);
+  return {
+    total,
+    factors: [
+      { label: 'Rating baseline',  detail: `rating=${r.rating || 'unknown'}`, value: base },
+      { label: 'Recency',          detail: `${days} days old (${recencyLabel})`, value: recencyVal },
+    ],
+    meta: {
+      cappedAtZero: (base + recencyVal) < 0,
+      raw: base + recencyVal,
+      days,
+    },
+  };
 }
 

@@ -1042,7 +1042,7 @@ function renderCard(r, votes, userVotes = {}, configPlaytimeTotals = []) {
       </div>
       <div class="right">
         <div class="card-rating-row">
-          <a class="confidence-pill conf-link" href="confidence.html?app=${r.appId}${r.reportId != null ? '&report=' + r.reportId : '&ts=' + (r.timestamp || '')}" onclick="event.stopPropagation()" title="See the factor-by-factor breakdown of how this confidence was computed" style="background:${confColor(confPct / 10)};color:${confTextColor(confPct / 10)}">Confidence: ${confPct}%</a>
+          <a class="confidence-pill conf-link" href="confidence.html?app=${r.appId}${r.reportId != null ? '&report=' + r.reportId : ''}" onclick="event.stopPropagation()" title="See the factor-by-factor breakdown of how this confidence was computed" style="background:${confColor(confPct / 10)};color:${confTextColor(confPct / 10)}">Confidence: ${confPct}%</a>
           <span class="rating" style="background:${rc};color:${rt}">${r.rating || '?'}</span>
         </div>
         <div class="vote-btns">
@@ -1253,13 +1253,11 @@ async function renderGamePage(appId) {
       : 'pending';
     const overallTileColor = hasAnyReports ? (RATING_COLORS[overallTier] || '#3a4a5a') : '#2a5a8c';
     const overallTileText  = hasAnyReports ? (RATING_TEXT[overallTier]   || '#c8d4e0') : '#d7e9fb';
-    // Single summary line - confidence label comes from TOTAL report count,
-    // not just Pulse. The old code used pulseTier.confidence which returns
-    // 'none' when there are 0 Pulse reports (even if there are 163 ProtonDB
-    // reports), producing the nonsensical "none confidence across 163 reports"
-    const confBucket = totalReports >= 20 ? 'high' : totalReports >= 5 ? 'medium' : totalReports >= 1 ? 'low' : '';
+    // Single summary line replaces the old two-line setup ("163 reports" on
+    // one line, "Based on 163 ProtonDB reports" on the next) which was
+    // redundant. One unified line that includes confidence bucket + count
     const overallTileSummary = hasAnyReports
-      ? `${confBucket} confidence across ${totalReports} report${totalReports !== 1 ? 's' : ''}${pulseHasConfigs ? ` / ${configs.length} config${configs.length !== 1 ? 's' : ''}` : ''}`
+      ? `${pulseTier.confidence || 'low'} confidence across ${totalReports} report${totalReports !== 1 ? 's' : ''}${pulseHasConfigs ? ` / ${configs.length} config${configs.length !== 1 ? 's' : ''}` : ''}`
       : (pulseHasConfigs ? 'Community-submitted configs available' : 'No community data yet');
     // Confidence: prefer Pulse's computed confidencePct (weights both sources)
     // when there are Pulse reports; otherwise fall back to a sample-size only
@@ -1310,7 +1308,7 @@ async function renderGamePage(appId) {
     // narrow screens via the media query in app.css
     const sourceTiles = `
       <div class="source-summary-grid">
-        <button class="source-summary-tile source-summary-tile-combined" type="button" data-target="pulse-summary">
+        <button class="source-summary-tile source-summary-tile-combined" type="button" data-target="reports-summary">
           <div class="ss-primary">
             <!-- Badge on top, confidence pill below - reads as "the rating
                  first, the trustworthiness second" which matches how users

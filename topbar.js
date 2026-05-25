@@ -137,6 +137,13 @@
     </a>
 
     <div class="topbar-banner-actions">
+      <!-- Theme toggle - sun/moon icon flips between dark (default) and light.
+           Persists to localStorage so it survives page reloads. Respects
+           prefers-color-scheme on first visit when no preference is saved -->
+      <button class="banner-icon-link theme-toggle" id="theme-toggle" title="Toggle light/dark theme" aria-label="Toggle theme">
+        <svg class="nav-icon theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+        <svg class="nav-icon theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+      </button>
       <a class="banner-icon-link" href="https://github.com/mdeguzis/proton-pulse-data" target="_blank" rel="noopener" title="Source on GitHub" aria-label="Source on GitHub">
         <svg class="nav-icon" aria-hidden="true"><use href="#icon-github"/></svg>
       </a>
@@ -225,6 +232,54 @@
 
   // ---- 2. Insert markup at body start (skip if already present) --------
 
+  // ---- Theme toggle (light/dark) -----------------------------------
+  //
+  // Dark is the default. The toggle persists the user's choice in
+  // localStorage so it survives page reloads. On first visit with no
+  // stored preference, we respect prefers-color-scheme if the OS is
+  // set to light mode. The CSS flips via [data-theme="light"] on <html>.
+
+  function initTheme() {
+    const THEME_KEY = 'proton-pulse:theme';
+    const stored = localStorage.getItem(THEME_KEY);
+    if (stored === 'light') {
+      document.documentElement.setAttribute('data-theme', 'light');
+    } else if (!stored && window.matchMedia('(prefers-color-scheme: light)').matches) {
+      document.documentElement.setAttribute('data-theme', 'light');
+    }
+  }
+
+  function wireThemeToggle() {
+    const THEME_KEY = 'proton-pulse:theme';
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+
+    function update() {
+      const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+      btn.querySelector('.theme-icon-sun').style.display = isLight ? 'none' : 'block';
+      btn.querySelector('.theme-icon-moon').style.display = isLight ? 'block' : 'none';
+      btn.title = isLight ? 'Switch to dark theme' : 'Switch to light theme';
+    }
+
+    btn.addEventListener('click', function () {
+      const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+      if (isLight) {
+        document.documentElement.removeAttribute('data-theme');
+        localStorage.setItem(THEME_KEY, 'dark');
+      } else {
+        document.documentElement.setAttribute('data-theme', 'light');
+        localStorage.setItem(THEME_KEY, 'light');
+      }
+      update();
+    });
+
+    update();
+  }
+
+  // Apply theme BEFORE inject so the first paint is the right mode
+  // (avoids a dark->light flash)
+  initTheme();
+
   function inject() {
     if (document.querySelector('.topbar')) return; // page already has it (e.g. inlined for SSR)
     // sprite first so the <use href="#..."> refs in the banner resolve immediately
@@ -234,6 +289,7 @@
     wireSearchDropdown();
     wireAuthIndicator();
     wireNavOverflow();
+    wireThemeToggle();
   }
 
   // ---- 3. Active link based on current page ----------------------------

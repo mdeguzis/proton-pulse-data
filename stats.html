@@ -41,7 +41,7 @@ h2 {
 @media (max-width: 500px) { .stat-strip { grid-template-columns: 1fr; } }
 .stat-tile {
   position: relative;
-  background: linear-gradient(180deg, rgba(27,40,56,0.55), rgba(11,17,22,0.45));
+  background: linear-gradient(180deg, var(--s2), var(--s1));
   border: 1px solid var(--border);
   padding: 16px 18px 18px;
   clip-path: polygon(0 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%);
@@ -60,7 +60,7 @@ h2 {
   font-size: 0.66rem;
   text-transform: uppercase;
   letter-spacing: 0.18em;
-  color: var(--muted);
+  color: var(--text);
 }
 .stat-tile .value {
   font-family: var(--mono);
@@ -258,13 +258,13 @@ h2 {
   .chart-grid > .chart-card:last-child:nth-child(odd) { grid-column: auto; }
 }
 .chart-card {
-  background: linear-gradient(180deg, rgba(27,40,56,0.55), rgba(11,17,22,0.45));
+  background: linear-gradient(180deg, var(--s2), var(--s1));
   border: 1px solid var(--border);
   padding: 16px 18px;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  min-width: 0; /* let the inner bars actually fit */
+  min-width: 0;
 }
 .chart-card h3 {
   font-family: var(--font-display);
@@ -315,7 +315,7 @@ h2 {
 .bar-row .track {
   position: relative;
   height: 14px;
-  background: rgba(11,17,22,0.5);
+  background: var(--s1);
   border: 1px solid var(--border);
   overflow: hidden;
 }
@@ -476,7 +476,7 @@ h2 {
   align-items: center;
   gap: 12px;
   padding: 8px 12px;
-  background: linear-gradient(180deg, rgba(27,40,56,0.4), rgba(11,17,22,0.3));
+  background: linear-gradient(180deg, var(--s2), var(--s1));
   border: 1px solid var(--border);
   color: var(--text);
   text-decoration: none;
@@ -484,7 +484,7 @@ h2 {
 }
 .topgames a:hover {
   border-color: var(--accent);
-  background: linear-gradient(180deg, rgba(102,192,244,0.06), rgba(11,17,22,0.4));
+  background: linear-gradient(180deg, var(--s3), var(--s2));
 }
 .topgames .rank {
   font-family: var(--mono);
@@ -601,7 +601,7 @@ h2 {
   gap: 28px;
   flex-wrap: wrap;
   padding: 18px 22px;
-  background: linear-gradient(180deg, rgba(102,192,244,0.06), rgba(11,17,22,0.4));
+  background: linear-gradient(180deg, rgba(102,192,244,0.06), var(--s1));
   border: 1px solid var(--border);
   border-left: 3px solid var(--accent);
   margin-bottom: 18px;

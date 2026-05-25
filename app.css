@@ -539,11 +539,14 @@
 /* tier-row groups the [confidence%] [TIER] tiles side-by-side, matching the
    plugin's "78% GOLD" pattern. Both tiles get the same min-height + padding
    so the confidence reads as an equal-weight badge instead of an afterthought */
+/* Badge stacks on top of confidence vertically so users read "the rating
+   first, then the trust qualifier second". Side-by-side was confusing when
+   both pills had the same width - they blurred into one visual band */
 .source-summary-tier-row {
-  display: inline-flex;
-  align-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
   gap: 6px;
-  flex-wrap: wrap;
 }
 .source-summary-conf {
   display: inline-flex;
@@ -558,8 +561,8 @@
 }
 .source-summary-meta {
   font-size: 0.82rem;
-  color: var(--strong);
-  font-weight: 700;
+  color: var(--muted);
+  font-weight: 400;
   line-height: 1.3;
 }
 .source-summary-note {
@@ -1272,6 +1275,62 @@ a.card:hover { text-decoration: none; }
   margin-top: 8px;
   display: flex;
   justify-content: flex-end;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+/* Uniform footer action buttons - Show Responses, All Hardware Details,
+   Permalink, JSON, Delete all share the same outlined-blue look so the row
+   reads as one toolbar. Previously they were mixed (.all-details-btn in
+   the middle, .cfg-dl-btn at the end) which felt unrelated */
+.action-btn {
+  background: var(--s1);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font-size: 0.72rem;
+  padding: 5px 12px;
+  cursor: pointer;
+  border-radius: 3px;
+  font-weight: 600;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background .12s, color .12s, border-color .12s;
+}
+.action-btn:hover {
+  background: rgba(102,192,244,0.12);
+  color: var(--accent-hi);
+}
+.action-btn-disabled, .action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  border-color: var(--border2);
+  color: var(--muted);
+}
+.action-btn-disabled:hover { background: var(--s1); color: var(--muted); }
+.action-btn-danger {
+  border-color: #c85050;
+  color: #c85050;
+}
+.action-btn-danger:hover { background: rgba(200,80,80,0.12); color: #ff8a7a; }
+/* Permalink button used in the footer alongside the other action buttons -
+   inherits .action-btn styling, just adds the chain icon */
+.card-footer .permalink-btn {
+  background: var(--s1);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  margin-top: 0;
+  padding: 5px 10px;
+}
+.card-footer .permalink-btn:hover {
+  background: rgba(102,192,244,0.12);
+  color: var(--accent-hi);
+  border-color: var(--accent);
+}
+.card-footer .permalink-btn.copied {
+  background: rgba(91,163,43,0.18);
+  color: #5ba32b;
+  border-color: #5ba32b;
 }
 
 /* configs empty state */
@@ -1522,12 +1581,67 @@ a.card:hover { text-decoration: none; }
   }
   .source-summary-tile {
     min-height: 0;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .ss-details {
+    padding-left: 0;
+    border-left: none;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+  }
+  .source-summary-distribution {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
   .game-header-actions {
     justify-content: flex-start;
   }
-  .card { flex-direction: row; align-items: flex-start; }
-  .card .right { flex-direction: column; align-items: flex-end; }
+  /* Mobile card layout: the 3-column (author | body | right) must collapse.
+     Author goes on top as a compact horizontal bar, body fills the width,
+     right column pins to the top of the body so badge + confidence stay
+     scannable. Signal icons wrap freely below the body text */
+  .card {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .card-author {
+    flex-direction: row;
+    min-width: 0;
+    max-width: none;
+    gap: 10px;
+    padding-right: 0;
+    padding-bottom: 8px;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    align-items: center;
+  }
+  .author-avatar {
+    width: 42px;
+    height: 42px;
+    aspect-ratio: 1 / 1;
+    flex-shrink: 0;
+  }
+  .author-avatar svg { width: 28px; height: 28px; }
+  .card .card-body { min-width: 0; }
+  .card .proton { font-size: 0.82rem; word-break: break-word; }
+  .card .hw { word-break: break-word; }
+  .card .right {
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    min-width: 0;
+  }
+  .card-rating-row {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+  .signal-strip { flex-wrap: wrap; }
+  .signal-icon { width: 26px; height: 26px; }
+  .signal-icon svg { width: 17px; height: 17px; }
+  .card-footer { flex-wrap: wrap; justify-content: flex-start; }
   .card-summary .row { flex-direction: column; gap: 2px; }
   .reports-section-head { flex-direction: column; align-items: flex-start; gap: 8px; }
   .filter-bar { gap: 6px; }

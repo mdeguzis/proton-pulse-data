@@ -1042,7 +1042,7 @@ function renderCard(r, votes, userVotes = {}, configPlaytimeTotals = []) {
       </div>
       <div class="right">
         <div class="card-rating-row">
-          <a class="confidence-pill conf-link" href="confidence.html?app=${r.appId}${r.reportId != null ? '&report=' + r.reportId : '&ts=' + (r.timestamp || '')}" onclick="event.stopPropagation()" title="See the factor-by-factor breakdown of how this confidence was computed" style="background:${confColor(confPct / 10)};color:${confTextColor(confPct / 10)}">Confidence: ${confPct}%</a>
+          <a class="confidence-pill conf-link" href="confidence.html?app=${r.appId}${r.reportId != null ? '&report=' + r.reportId : ''}" onclick="event.stopPropagation()" title="See the factor-by-factor breakdown of how this confidence was computed" style="background:${confColor(confPct / 10)};color:${confTextColor(confPct / 10)}">Confidence: ${confPct}%</a>
           <span class="rating" style="background:${rc};color:${rt}">${r.rating || '?'}</span>
         </div>
         <div class="vote-btns">
@@ -1310,7 +1310,7 @@ async function renderGamePage(appId) {
     // narrow screens via the media query in app.css
     const sourceTiles = `
       <div class="source-summary-grid">
-        <button class="source-summary-tile source-summary-tile-combined" type="button" data-target="pulse-summary">
+        <button class="source-summary-tile source-summary-tile-combined" type="button" data-target="reports-summary">
           <div class="ss-primary">
             <!-- Badge on top, confidence pill below - reads as "the rating
                  first, the trustworthiness second" which matches how users

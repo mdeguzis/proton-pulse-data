@@ -8,7 +8,7 @@
   border-radius: 2px;
   background:
     radial-gradient(700px 320px at 70% 50%, rgba(102, 192, 244, 0.08), transparent 60%),
-    linear-gradient(180deg, rgba(27, 40, 56, 0.55), rgba(11, 17, 22, 0.55));
+    linear-gradient(180deg, var(--s2), var(--s1));
   padding: 36px 32px 38px;
   margin-bottom: 28px;
   overflow: hidden;
@@ -187,7 +187,7 @@
 }
 .explore-item {
   position: relative;
-  background: linear-gradient(180deg, rgba(27, 40, 56, 0.55), rgba(11, 17, 22, 0.45));
+  background: linear-gradient(180deg, var(--s2), var(--s1));
   border: 1px solid var(--border);
   padding: 18px 18px 16px;
   display: flex;
@@ -208,7 +208,7 @@
 }
 .explore-item:hover {
   border-color: var(--accent);
-  background: linear-gradient(180deg, rgba(102, 192, 244, 0.06), rgba(11, 17, 22, 0.6));
+  background: linear-gradient(180deg, var(--s3), var(--s2));
   box-shadow: 0 0 24px -8px var(--accent-glow);
   transform: translateY(-2px);
   text-decoration: none;
