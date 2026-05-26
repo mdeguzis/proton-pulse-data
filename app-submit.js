@@ -6,13 +6,18 @@
 // available when app.js runs. Depends on FAULT_KEYS_WEB +
 // deriveRatingFromState + inferProtonType from app-scoring.js.
 
-// globals that app.js normally defines but submit.html loads without app.js
-if (typeof esc === 'undefined') {
-  var esc = function(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; };
-}
-if (typeof SB_URL === 'undefined') {
-  var SB_URL = SUPABASE_URL + '/rest/v1';
-  var SB_KEY = SUPABASE_ANON_KEY;
+// globals that app.js normally defines but submit.html loads without app.js.
+// can't use var here because app.js uses const for SB_URL/SB_KEY/esc and
+// a var hoisted from this file would collide with the const declaration
+if (typeof window._ppSubmitGlobalsReady === 'undefined') {
+  window._ppSubmitGlobalsReady = true;
+  if (typeof window.esc !== 'function') {
+    window.esc = function(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; };
+  }
+  if (typeof window.SB_URL === 'undefined') {
+    window.SB_URL = SUPABASE_URL + '/rest/v1';
+    window.SB_KEY = SUPABASE_ANON_KEY;
+  }
 }
 
 // lightweight sysinfo parser for the system picker. profile.js has the
