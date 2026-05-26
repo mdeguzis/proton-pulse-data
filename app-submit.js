@@ -6,6 +6,37 @@
 // available when app.js runs. Depends on FAULT_KEYS_WEB +
 // deriveRatingFromState + inferProtonType from app-scoring.js.
 
+// lightweight sysinfo parser for the system picker. profile.js has the
+// full version, but that file only loads on profile.html. keep this
+// self-contained so the submit form works on app.html without it
+function parseSteamSystemInfo(text) {
+  const out = {};
+  if (!text) return out;
+  const m = (pat) => { const r = text.match(pat); return r ? r[1].trim() : ''; };
+  const cpu = m(/CPU Brand:\s*(.+)/i);
+  if (cpu) out.cpu = cpu;
+  const gpu = m(/Video Card:\s*(.+)/i) || m(/Driver:\s*(.+)/i);
+  if (gpu && !/^unknown$/i.test(gpu)) out.gpu = gpu.replace(/^(NVIDIA Corporation|AMD|Intel Corporation)\s+/i, '').replace(/^NVIDIA\s+/i, '');
+  const drv = m(/Driver Version:\s*(.+)/i);
+  if (drv) out.gpuDriver = drv;
+  const ram = text.match(/RAM:\s*(\d+)\s*Mb/i);
+  if (ram) { const gb = Math.round(Number(ram[1]) / 1024); if (gb > 0) out.ram = `${gb} GB`; }
+  const vram = text.match(/VRAM:\s*(\d+)\s*Mb/i);
+  if (vram) out.vramMb = Number(vram[1]);
+  const os = m(/OS Version:\s*(.+)/i) || m(/Operating System Version:\s*\n\s*(.+)/i);
+  if (os) out.os = os.replace(/\s*\(.*?\)/g, '').replace(/^"(.*)"$/, '$1');
+  const kern = m(/Kernel Version:\s*(.+)/i);
+  if (kern) out.kernel = kern;
+  // infer vendor from GPU name
+  if (out.gpu) {
+    const gl = out.gpu.toLowerCase();
+    if (gl.includes('nvidia') || gl.includes('geforce') || gl.includes('rtx') || gl.includes('gtx')) out.gpuVendor = 'nvidia';
+    else if (gl.includes('amd') || gl.includes('radeon') || gl.includes('vangogh') || gl.includes('0405')) out.gpuVendor = 'amd';
+    else if (gl.includes('intel') || gl.includes('iris') || gl.includes('uhd')) out.gpuVendor = 'intel';
+  }
+  return out;
+}
+
 function getWebClientId() {
   const key = 'proton-pulse:web-client-id';
   let id = localStorage.getItem(key);
@@ -94,7 +125,7 @@ async function submitReport(appId, title, form) {
     confidence_score: null,
     source: form.reportSource?.value || getWebSource(),
     vram_mb: form.vramMb.value ? Number(form.vramMb.value) : null,
-    game_owned: form.gameOwned?.checked ?? false,
+    game_owned: true,  // authenticated web users own the game by definition
     form_responses: formResponses,
   };
   const r = await fetch(`${SB_URL}/user_configs?on_conflict=client_id,app_id`, {
@@ -150,7 +181,14 @@ const MYHW_FORM_MAP = {
 // setting — right now no listeners care, but it's a cheap habit that avoids
 // surprises later.
 function prefillSubmitFormFromMyHardware(el) {
-  // your code here
+  const form = el.querySelector('#submit-report-form');
+  if (!form) return;
+  for (const [name, key] of Object.entries(MYHW_FORM_MAP)) {
+    const input = form.elements[name];
+    if (!input || input.value) continue;
+    const val = localStorage.getItem(key);
+    if (val) input.value = val;
+  }
 }
 
 async function populateSubmitForm(el) {
@@ -212,6 +250,12 @@ async function populateSubmitForm(el) {
       <div class="sf-row"><label>Game title *</label><input name="gameTitle" required placeholder="e.g. Black Myth: Wukong" minlength="1"></div>
 
       <div class="sf-section-label">Hardware &amp; Setup</div>
+      <div class="sf-row"><label>System</label>
+        <select name="systemPicker" id="sf-system-picker">
+          <option value="">Manual entry</option>
+        </select>
+        <span style="font-size:0.72rem;color:var(--muted)">Pick a saved system to prefill hardware fields</span>
+      </div>
       <div class="sf-row"><label>Proton Version *</label>
         <input name="protonVersion" list="proton-versions" required placeholder="e.g. Proton 9.0-4 or GE-Proton9-7">
         <datalist id="proton-versions">
@@ -287,10 +331,6 @@ async function populateSubmitForm(el) {
           <option value="web-steamdeck"${getWebSource()==='web-steamdeck'?' selected':''}>Steam Deck</option>
           <option value="web"${getWebSource()==='web'?' selected':''}>Other / Unknown</option>
         </select>
-      </div>
-      <div class="sf-row sf-row--check">
-        <label class="sf-check-label"><input type="checkbox" name="gameOwned"> I own this game on Steam</label>
-        <span class="sf-check-hint">Adds a verified owner badge to your report</span>
       </div>
       <div class="sf-row" style="justify-content:flex-end;gap:8px">
         <span id="submit-status" style="font-size:0.76rem;color:var(--muted)"></span>
@@ -412,5 +452,63 @@ async function populateSubmitForm(el) {
         .then(rels => { for (const rel of rels) { const l = tagToLabel(rel.tag_name); if (l) known.add(l); } }),
     ]);
     dl.innerHTML = [...known].map(v => '<option value="'+esc(v)+'">').join('');
+  }
+
+  // populate system picker from user's saved systems
+  const sysPicker = container.querySelector('#sf-system-picker');
+  if (sysPicker) {
+    void (async () => {
+      try {
+        const s = await SupaAuth.getSession();
+        if (!s?.user) return;
+        const uid = s.user.id;
+        const url = `${SUPABASE_URL}/rest/v1/user_systems?proton_pulse_user_id=eq.${uid}&order=updated_at.desc`;
+        const resp = await fetch(url, { headers: { apikey: SUPABASE_ANON_KEY } });
+        if (!resp.ok) return;
+        const systems = await resp.json();
+        if (!systems.length) return;
+        // stash the full system data for prefilling on select
+        sysPicker._systems = systems;
+        for (const sys of systems) {
+          const parsed = parseSteamSystemInfo(sys.sysinfo_text || '');
+          const label = sys.label || [parsed.os, parsed.gpu].filter(Boolean).join(' / ') || sys.device_id;
+          const opt = document.createElement('option');
+          opt.value = sys.device_id;
+          opt.textContent = label + (sys.is_default ? ' (default)' : '');
+          sysPicker.appendChild(opt);
+        }
+        // auto-select the default system
+        const def = systems.find(s => s.is_default);
+        if (def) {
+          sysPicker.value = def.device_id;
+          sysPicker.dispatchEvent(new Event('change'));
+        }
+      } catch { /* non-fatal */ }
+    })();
+
+    sysPicker.addEventListener('change', () => {
+      const systems = sysPicker._systems || [];
+      const sys = systems.find(s => s.device_id === sysPicker.value);
+      if (!sys) return; // "Manual entry" selected, leave fields as-is
+      const parsed = parseSteamSystemInfo(sys.sysinfo_text || '');
+      const f = form;
+      if (parsed.cpu) f.cpu.value = parsed.cpu;
+      if (parsed.gpu) f.gpu.value = parsed.gpu;
+      if (parsed.gpuVendor) f.gpuVendor.value = parsed.gpuVendor;
+      if (parsed.gpuDriver) f.gpuDriver.value = parsed.gpuDriver;
+      if (parsed.ram) f.ram.value = parsed.ram;
+      if (parsed.vramMb) f.vramMb.value = parsed.vramMb;
+      if (parsed.os) {
+        // try matching the OS select, fall back to first word
+        const osBase = parsed.os.split(/\s+/)[0];
+        const osOpts = [...f.os.options].map(o => o.value);
+        const match = osOpts.find(v => parsed.os.startsWith(v)) || osOpts.find(v => v.startsWith(osBase));
+        if (match) f.os.value = match;
+        // os version after the base distro name
+        const ver = parsed.osVersion || parsed.os.replace(osBase, '').trim();
+        if (ver && f.osVersion) f.osVersion.value = ver;
+      }
+      if (parsed.kernel && f.kernel) f.kernel.value = parsed.kernel;
+    });
   }
 }
