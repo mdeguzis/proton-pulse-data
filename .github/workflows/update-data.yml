@@ -350,8 +350,13 @@ jobs:
           while IFS= read -r path; do
             [ -z "$path" ] && continue
             case "$path" in \#*) continue ;; esac
-            mkdir -p "$(dirname "$path")"
-            cp "../repo/$path" "./$path"
+            # some manifest entries (data-index.html, coverage.html) are
+            # pipeline-generated and gitignored, so they won't exist in a
+            # plain checkout. skip those and keep whatever gh-pages already has
+            if [ -f "../repo/$path" ]; then
+              mkdir -p "$(dirname "$path")"
+              cp "../repo/$path" "./$path"
+            fi
           done < gh-pages-manifest.txt
           curl -sL https://raw.githubusercontent.com/mdeguzis/decky-proton-pulse/main/src/data/scoring-info.json -o ./scoring-info.json
           curl -sL https://raw.githubusercontent.com/mdeguzis/decky-proton-pulse/main/src/data/form-schema.json -o ./form-schema.json
