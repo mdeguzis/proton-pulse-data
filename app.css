@@ -250,10 +250,17 @@
   flex-wrap: wrap;
   width: 100%;
 }
-/* Submit Report grows to fill whatever space remains after the icon buttons,
-   keeping the row full-width without pushing icon buttons apart */
+/* Icon-text action buttons grow to fill the row evenly. Without this, they
+   sit on the left at their natural width and leave a gap before the row wraps */
+.game-header-actions .info-btn-labeled,
+.game-header-actions .deck-status-btn {
+  flex: 1 1 0;
+  min-width: 120px;
+  justify-content: center;
+}
+/* Submit Report goes full-width on its own row below the icon buttons */
 .game-header-actions .submit-report-btn {
-  flex: 1 1 auto;
+  flex: 1 1 100%;
   padding: 8px 18px;
   text-align: center;
 }
