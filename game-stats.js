@@ -1,0 +1,371 @@
+// Per-game stats page (game-stats.html). Reads ?app=APPID from the URL,
+// pulls the same CDN data the main app page uses, then renders a thoughtful
+// breakdown via computeGameStats() from app-game-stats.js.
+//
+// Same CDN base resolution as confidence.html so localhost dev preview works.
+
+(function () {
+  const root = document.getElementById('gs-root');
+  const metaEl = document.getElementById('gs-meta');
+
+  const SITE_BASE = (() => {
+    const parts = location.pathname.split('/').filter(Boolean);
+    return parts[0] === 'proton-pulse-data' ? '/proton-pulse-data' : '';
+  })();
+  const IS_LOCAL_DEV = ['localhost', '127.0.0.1', '0.0.0.0'].includes(location.hostname);
+  const CDN_BASE = IS_LOCAL_DEV
+    ? 'https://www.proton-pulse.com/data'
+    : `${location.origin}${SITE_BASE}/data`;
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+  }
+
+  // --- CDN loaders ---
+
+  async function loadGame(appId) {
+    try {
+      const r = await fetch(`${CDN_BASE}/${appId}/latest.json`);
+      if (!r.ok) return [];
+      return await r.json();
+    } catch { return []; }
+  }
+
+  async function loadSearchIndex() {
+    try {
+      const url = IS_LOCAL_DEV
+        ? 'https://www.proton-pulse.com/search-index.json'
+        : 'search-index.json';
+      const r = await fetch(url);
+      return r.ok ? await r.json() : [];
+    } catch { return []; }
+  }
+
+  // --- Supabase native reports + configs (best effort, optional) ---
+
+  async function loadPulseReports(appId) {
+    try {
+      if (!window.protonPulseSupabase) return [];
+      const { data } = await window.protonPulseSupabase
+        .from('native_reports')
+        .select('*')
+        .eq('app_id', appId);
+      return data || [];
+    } catch { return []; }
+  }
+
+  async function loadConfigs(appId) {
+    try {
+      if (!window.protonPulseSupabase) return [];
+      const { data } = await window.protonPulseSupabase
+        .from('pulse_configs')
+        .select('*')
+        .eq('app_id', appId);
+      return data || [];
+    } catch { return []; }
+  }
+
+  // --- header rendering ---
+
+  function renderHeader(appId, title) {
+    const headerImg = `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${appId}/header.jpg`;
+    return `
+      <div class="gs-header">
+        <img src="${headerImg}" alt="" onerror="this.style.display='none'">
+        <div class="gs-header-info">
+          <div class="name">${esc(title || `App ${appId}`)}</div>
+          <div class="sub">App ${esc(appId)}</div>
+        </div>
+        <a class="gs-back" href="app.html#/app/${esc(appId)}">&larr; Back to game page</a>
+      </div>
+    `;
+  }
+
+  // --- section icons ---
+
+  const ICON = {
+    status: '<svg viewBox="0 0 24 24" fill="none"><path d="M12 2v4M12 18v4M2 12h4M18 12h4M5 5l3 3M16 16l3 3M5 19l3-3M16 8l3-3"/></svg>',
+    chart: '<svg viewBox="0 0 24 24" fill="none"><path d="M3 21h18M5 21V9l4 6 4-10 4 7 3-4v13"/></svg>',
+    factors: '<svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 3v18"/></svg>',
+    dist: '<svg viewBox="0 0 24 24" fill="none"><rect x="3" y="11" width="3" height="9"/><rect x="9" y="7" width="3" height="13"/><rect x="15" y="3" width="3" height="17"/></svg>',
+    versions: '<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+    tips: '<svg viewBox="0 0 24 24" fill="none"><path d="M9 18h6M10 22h4M12 2a7 7 0 00-4 12.7V17h8v-2.3A7 7 0 0012 2z"/></svg>',
+  };
+
+  // --- status cards (working / confidence / freshness) ---
+
+  function renderStatusCards(stats) {
+    const ws = stats.workingStatus;
+    const wsTone = ws.status === 'working' ? 'green' : ws.status === 'not_working' ? 'red' : ws.status === 'mixed' ? 'amber' : '';
+    const wsLabel = ws.status === 'working' ? 'Working'
+                  : ws.status === 'not_working' ? 'Not working'
+                  : ws.status === 'mixed' ? 'Mixed signal' : 'Unknown';
+    const wsSub = `Based on last ${ws.timeframe_days} days · ${ws.confidence} certainty`
+                + (ws.recently_broken ? ' · Recently broken' : '');
+
+    const confTone = stats.confidencePct >= 70 ? 'green' : stats.confidencePct >= 40 ? 'amber' : 'red';
+
+    const fresh = stats.freshness;
+    const freshTone = fresh.is_stale ? 'red' : fresh.latest_report_age < 90 ? 'green' : 'amber';
+    const freshSub = fresh.latest_report_age != null
+      ? `Latest report ${fresh.latest_report_age} day${fresh.latest_report_age !== 1 ? 's' : ''} ago`
+      : 'No timestamped reports';
+
+    const lpRel = ws.last_positive_report_age;
+    const lastPositive = lpRel != null
+      ? `${lpRel} days ago`
+      : '—';
+
+    return `
+      <div class="gs-status-grid">
+        <div class="gs-card ${wsTone}">
+          <div class="label">Working status</div>
+          <div class="value">${wsLabel}</div>
+          <div class="sub">${esc(wsSub)}</div>
+        </div>
+        <div class="gs-card ${confTone}">
+          <div class="label">Confidence</div>
+          <div class="value">${stats.confidencePct}%</div>
+          <div class="sub">Across ${stats.totalReports} report${stats.totalReports !== 1 ? 's' : ''}</div>
+        </div>
+        <div class="gs-card ${freshTone}">
+          <div class="label">Freshness</div>
+          <div class="value">${esc(fresh.label)}</div>
+          <div class="sub">${esc(freshSub)}</div>
+        </div>
+        <div class="gs-card blue">
+          <div class="label">Last positive report</div>
+          <div class="value">${esc(lastPositive)}</div>
+          <div class="sub">Across all data sources</div>
+        </div>
+      </div>
+    `;
+  }
+
+  // --- monthly chart (SVG, 5-year window) ---
+
+  function renderChart(months) {
+    if (!months || months.length === 0) {
+      return `<div class="gs-chart" style="text-align:center;color:var(--muted);padding:40px 0">No timestamped reports.</div>`;
+    }
+    const now = new Date();
+    const cutoff = new Date(now.getFullYear() - 5, now.getMonth(), 1);
+    const filtered = months.filter(m => {
+      const [y, mo] = m.month.split('-').map(Number);
+      return new Date(y, mo - 1, 1) >= cutoff;
+    });
+    if (filtered.length === 0) {
+      return `<div class="gs-chart" style="text-align:center;color:var(--muted);padding:40px 0">No reports in the last 5 years.</div>`;
+    }
+
+    const w = 600, h = 200, pad = 36, chartW = w - pad - 20, chartH = h - 30;
+    let maxVal = 1;
+    filtered.forEach(m => { maxVal = Math.max(maxVal, m.positive, m.negative); });
+    const x = i => pad + (i / (filtered.length - 1 || 1)) * chartW;
+    const y = v => 10 + chartH - (v / maxVal) * chartH;
+    const line = (data, key) => data.map((d, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y(d[key]).toFixed(1)}`).join(' ');
+    const area = (data, key) => `${line(data, key)} L${x(data.length - 1).toFixed(1)},${10 + chartH} L${pad},${10 + chartH} Z`;
+
+    const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const fmt = m => { const [y, mo] = m.split('-'); return `${MONTHS[+mo - 1]} '${y.slice(2)}`; };
+    const step = Math.max(1, Math.floor(filtered.length / 8));
+    let labels = '';
+    for (let i = 0; i < filtered.length; i += step) {
+      labels += `<text x="${x(i).toFixed(1)}" y="${h - 4}" fill="#7a9bb5" font-size="9" text-anchor="middle">${fmt(filtered[i].month)}</text>`;
+    }
+
+    return `
+      <div class="gs-chart">
+        <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid meet">
+          <defs>
+            <linearGradient id="gpos" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#5bd17a" stop-opacity="0.4"/>
+              <stop offset="100%" stop-color="#5bd17a" stop-opacity="0.05"/>
+            </linearGradient>
+            <linearGradient id="gneg" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#ff6b6b" stop-opacity="0.4"/>
+              <stop offset="100%" stop-color="#ff6b6b" stop-opacity="0.05"/>
+            </linearGradient>
+          </defs>
+          <path d="${area(filtered, 'positive')}" fill="url(#gpos)"/>
+          <path d="${line(filtered, 'positive')}" fill="none" stroke="#5bd17a" stroke-width="2"/>
+          <path d="${area(filtered, 'negative')}" fill="url(#gneg)"/>
+          <path d="${line(filtered, 'negative')}" fill="none" stroke="#ff6b6b" stroke-width="2"/>
+          ${labels}
+        </svg>
+        <div class="gs-chart-legend">
+          <span><span class="dot" style="background:#5bd17a"></span>Positive (platinum/gold/silver)</span>
+          <span><span class="dot" style="background:#ff6b6b"></span>Negative (bronze/borked)</span>
+        </div>
+      </div>
+    `;
+  }
+
+  // --- confidence factors ---
+
+  function renderFactors(stats) {
+    return stats.confFactors.map(f => {
+      const tone = f.value >= 70 ? '#5bd17a' : f.value >= 40 ? '#ffb84d' : '#ff6b6b';
+      return `
+        <div class="gs-factor-row">
+          <span class="lbl">${esc(f.label)}</span>
+          <div class="bar"><div style="width:${f.value}%;background:${tone}"></div></div>
+          <span class="pct">${f.value}%</span>
+          <span class="det">${esc(f.detail)}</span>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // --- rating distribution chips ---
+
+  function renderDistribution(stats) {
+    // Match the global tier color set used elsewhere
+    const TIERS = [
+      { key: 'platinum', label: 'Plat', bg: '#bcd9ff', fg: '#0a1830' },
+      { key: 'gold',     label: 'Gold', bg: '#f7c948', fg: '#3a2b00' },
+      { key: 'silver',   label: 'Silv', bg: '#c0c8d4', fg: '#1a2030' },
+      { key: 'bronze',   label: 'Bron', bg: '#d28846', fg: '#3a1d05' },
+      { key: 'borked',   label: 'Bork', bg: '#e85a5a', fg: '#3a0606' },
+    ];
+    return `
+      <div class="gs-dist">
+        ${TIERS.map(t => `
+          <div class="chip" style="background:${t.bg};color:${t.fg}">
+            <div class="tier">${t.label}</div>
+            <div class="n">${stats.ratingCounts[t.key] || 0}</div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  // --- Proton version success rates ---
+
+  function renderVersions(stats) {
+    if (!stats.versionStats.length) {
+      return `<div style="color:var(--muted);font-size:0.85rem">No version data.</div>`;
+    }
+    return `
+      <div class="gs-row-list">
+        ${stats.versionStats.map(v => {
+          const tone = v.pct >= 70 ? '#5bd17a' : v.pct >= 40 ? '#ffb84d' : '#ff6b6b';
+          return `
+            <div class="row">
+              <span class="name">${esc(v.ver)}</span>
+              <span class="count">${v.total}</span>
+              <div class="bar"><div style="width:${v.pct}%;background:${tone}"></div></div>
+              <span class="pct">${v.pct}%</span>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+  }
+
+  // --- Settings tips (launch options from positive reports) ---
+
+  function renderTips(stats) {
+    if (!stats.settingsTips.length) {
+      return `<div style="color:var(--muted);font-size:0.85rem">No launch options recorded in positive reports.</div>`;
+    }
+    return `
+      <div class="gs-row-list">
+        ${stats.settingsTips.map(t => `
+          <div class="row">
+            <span class="name">${esc(t.flag)}</span>
+            <span class="count">${t.cnt} uses</span>
+            <div class="bar"><div style="width:${t.pct}%;background:var(--accent)"></div></div>
+            <span class="pct">${t.pct}%</span>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  // --- assemble everything ---
+
+  function renderAll(appId, title, stats) {
+    const sectionHead = (icon, title) => `<div class="gs-section-head">${icon}<span>${title}</span></div>`;
+
+    return `
+      ${renderHeader(appId, title)}
+      ${sectionHead(ICON.status, 'Current state')}
+      ${renderStatusCards(stats)}
+
+      ${sectionHead(ICON.chart, 'Monthly reports (last 5 years)')}
+      ${renderChart(stats.monthly)}
+
+      ${sectionHead(ICON.dist, 'Rating distribution')}
+      ${renderDistribution(stats)}
+
+      ${sectionHead(ICON.factors, 'Confidence factors')}
+      ${renderFactors(stats)}
+
+      <div class="gs-two-col" style="margin-top:8px">
+        <div>
+          ${sectionHead(ICON.versions, 'Per Proton version')}
+          ${renderVersions(stats)}
+        </div>
+        <div>
+          ${sectionHead(ICON.tips, 'Launch options that work')}
+          ${renderTips(stats)}
+        </div>
+      </div>
+
+      <a class="gs-back" href="app.html#/app/${esc(appId)}">&larr; Back to game page</a>
+    `;
+  }
+
+  // --- entry point ---
+
+  async function run() {
+    const params = new URLSearchParams(location.search);
+    const appId = params.get('app');
+    if (!appId) {
+      root.innerHTML = `<div class="error-state">
+        <p>No app id in URL.</p>
+        <p style="font-size:0.78rem;margin-top:8px">Expected <code>?app=1091500</code>.</p>
+      </div>`;
+      return;
+    }
+
+    metaEl.textContent = `// app id ${appId} · live computation from CDN + Pulse data`;
+
+    // Pull search index in parallel with CDN data so we can show the proper title
+    const [cdnReports, searchIndex, pulseReports, configs] = await Promise.all([
+      loadGame(appId),
+      loadSearchIndex(),
+      loadPulseReports(appId),
+      loadConfigs(appId),
+    ]);
+
+    // Find the game's title - search index entries are [appId, title, ...] tuples
+    let title = `App ${appId}`;
+    if (Array.isArray(searchIndex)) {
+      const hit = searchIndex.find(row => Array.isArray(row) && String(row[0]) === String(appId));
+      if (hit && hit[1]) title = hit[1];
+    }
+
+    const allReports = [...cdnReports, ...pulseReports];
+    if (allReports.length === 0 && configs.length === 0) {
+      root.innerHTML = renderHeader(appId, title) + `
+        <div class="error-state">
+          <p>No reports or configs found for this game.</p>
+          <p style="font-size:0.78rem;margin-top:8px">
+            Try <a href="app.html#/app/${esc(appId)}">the game page</a> and submit the first report.
+          </p>
+        </div>
+      `;
+      return;
+    }
+
+    const stats = computeGameStats(allReports, configs);
+    root.innerHTML = renderAll(appId, title, stats);
+  }
+
+  run().catch(err => {
+    console.error('[game-stats] failed', err);
+    root.innerHTML = `<div class="error-state">Stats failed to load: ${esc(err && err.message || err)}</div>`;
+  });
+})();

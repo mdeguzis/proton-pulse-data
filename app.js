@@ -1728,7 +1728,7 @@ async function renderGamePage(appId) {
           ${sourceTiles}
           <div class="game-header-actions">
             <a class="info-btn" href="scoring.html" id="rating-info-btn" title="How scoring works (opens the canonical scoring page)"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="11" fill="#3b82f6"/><text x="12" y="17" text-anchor="middle" font-size="15" font-weight="700" fill="#fff" font-family="serif">i</text></svg></a>
-            <button class="info-btn info-btn-labeled" id="stats-btn" title="Per-game compatibility stats: confidence factors, trend, Proton version success rates, launch option frequency"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="4" height="18" rx="1"/><rect x="10" y="8" width="4" height="13" rx="1"/><rect x="17" y="12" width="4" height="9" rx="1"/></svg><span>Stats</span></button>
+            <a class="info-btn info-btn-labeled" id="stats-btn" href="game-stats.html?app=${appId}" title="Per-game compatibility stats: confidence factors, trend, Proton version success rates, launch option frequency, and proven launch options"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="4" height="18" rx="1"/><rect x="10" y="8" width="4" height="13" rx="1"/><rect x="17" y="12" width="4" height="9" rx="1"/></svg><span>Stats</span></a>
             <button class="info-btn info-btn-labeled" id="min-reqs-btn" title="Minimum system requirements (from Steam Store, served by pipeline)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="14" rx="1"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="20" x2="15" y2="20"/></svg><span>Min. Requirements</span></button>
             ${renderDeckStatusButton(appId)}
             <a class="submit-report-btn" href="submit.html?app=${appId}&title=${encodeURIComponent(title)}">Submit Report</a>
@@ -1744,13 +1744,6 @@ async function renderGamePage(appId) {
         <div class="info-tooltip" id="deck-status-tip">
           <div class="info-tooltip-inner" id="deck-status-content">${renderDeckStatusModalContent(appId)}</div>
         </div>
-        <div class="info-tooltip" id="stats-tip">
-          <div class="info-tooltip-inner" id="stats-content">
-            <h3 style="margin:0 0 8px;font-size:0.95rem;color:var(--strong)">Compatibility Stats</h3>
-            <p style="color:var(--muted);font-size:0.84rem;margin:0">Loading stats...</p>
-          </div>
-        </div>
-
         <!-- External link footer lives inside the game-header banner so it
              reads as part of the game's metadata strip instead of a floating
              group of buttons. Less cluttered, less visual seams between the
@@ -1880,20 +1873,8 @@ async function renderGamePage(appId) {
     // rating-info-btn is now a plain <a href> to scoring.html - no JS needed.
     // populateScoringTooltip / #rating-info-tip kept around in case anything
     // else still references them (search/etc); safe to delete in a cleanup pass
-    el.querySelector('#stats-btn')?.addEventListener('click', () => {
-      const tip = el.querySelector('#stats-tip');
-      if (!tip) return;
-      const isOpen = tip.classList.toggle('open');
-      if (isOpen) {
-        const content = el.querySelector('#stats-content');
-        if (content) {
-          const allReports = [...cdn, ...nativeReports];
-          const stats = computeGameStats(allReports, configs);
-          console.debug(`[proton-pulse] computeGameStats | appId=${appId} reports=${allReports.length} configs=${configs.length} confidence=${stats.confidencePct}% trend=${stats.trendDir}`);
-          content.innerHTML = renderStatsPanel(stats, appId);
-        }
-      }
-    });
+    // #stats-btn now navigates to game-stats.html?app=ID via plain <a href>,
+    // no click handler needed. The old inline tooltip flow is gone
     el.querySelector('#min-reqs-btn')?.addEventListener('click', () => {
       // Min-reqs panel reuses the same .info-tooltip styling. Content is a
       // placeholder until task #37 publishes per-game sysreqs from the pipeline
