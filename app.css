@@ -244,16 +244,14 @@
 }
 .game-header-actions {
   display: flex;
-  /* Stretch across the same horizontal extent as the aggregate tile above
-     so the right-rail reads as one unit (tile + action row aligned edges) */
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 10px;
   align-items: stretch;
   flex-wrap: wrap;
   width: 100%;
 }
-/* Submit Report grows to fill remaining space so the row spans the full
-   tile width above. The icon-text buttons keep their natural width on the left */
+/* Submit Report grows to fill whatever space remains after the icon buttons,
+   keeping the row full-width without pushing icon buttons apart */
 .game-header-actions .submit-report-btn {
   flex: 1 1 auto;
   padding: 8px 18px;
