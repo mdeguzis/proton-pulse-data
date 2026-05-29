@@ -585,15 +585,25 @@ h1 {
       else rawBuckets[key].neg++;
     }
 
-    const monthKeys = [];
+    // Walk month-by-month from the earlier of (earliest report, 24 months ago)
+    // up to NOW. The old version added 30.5 days * 24 iterations which always
+    // ended in the future when the earliest report was recent, painting an
+    // empty band of flat-zero months into next year. Iterating actual months
+    // also avoids the 30.5-day drift over long spans
     const earliestTs = Math.min(...reports.map(r => r.timestamp || now));
     const windowStart = Math.max(earliestTs, now - MONTHS * 30.5 * 86400);
-    for (let i = 0; i < MONTHS; i++) {
-      const d = new Date((windowStart + i * 30.5 * 86400) * 1000);
-      const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-      if (!monthKeys.includes(key)) monthKeys.push(key);
+    const startDate = new Date(windowStart * 1000);
+    const endDate = new Date(now * 1000);
+    const monthKeys = [];
+    let y = startDate.getFullYear();
+    let m = startDate.getMonth();
+    const endY = endDate.getFullYear();
+    const endM = endDate.getMonth();
+    while (y < endY || (y === endY && m <= endM)) {
+      monthKeys.push(`${y}-${String(m + 1).padStart(2, '0')}`);
+      m += 1;
+      if (m > 11) { m = 0; y += 1; }
     }
-    monthKeys.sort();
 
     const data = monthKeys.map(k => ({ key: k, ...(rawBuckets[k] || { pos: 0, neg: 0 }) }));
     const maxCount = Math.max(1, ...data.map(d => d.pos + d.neg));
