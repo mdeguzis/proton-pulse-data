@@ -664,13 +664,10 @@ h1 {
       `<line x1="${PAD_L}" y1="${(PAD_T + cH * (1-f)).toFixed(1)}" x2="${PAD_L + cW}" y2="${(PAD_T + cH * (1-f)).toFixed(1)}" stroke="#1e2e3e" stroke-width="1"/>`
     ).join('');
 
-    // Invisible hover targets, one per month column. Wide enough to grab
-    // the cursor anywhere over that column
-    const colW = n > 1 ? xStep : cW;
-    const targets = data.map((_, i) => {
-      const cx = xAt(i);
-      return `<rect class="ci-hover-target" data-idx="${i}" x="${(cx - colW / 2).toFixed(1)}" y="${PAD_T}" width="${colW.toFixed(1)}" height="${cH}" fill="transparent"/>`;
-    }).join('');
+    // Single full-width hover target so the cursor tracks continuously
+    // across the chart instead of snapping to discrete column rects. The
+    // helper picks the nearest data point on mousemove
+    const targets = `<rect class="ci-hover-target ci-hover-full" x="${PAD_L}" y="${PAD_T}" width="${cW}" height="${cH}" fill="transparent"/>`;
 
     const html = `
       <div class="cb-history-chart" id="cb-history-chart">

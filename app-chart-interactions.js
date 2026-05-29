@@ -54,50 +54,93 @@ function attachChartHover(opts) {
   } = opts;
   if (!svg || !host || !tooltip || !data || !data.length) return;
 
+  // showAt(idx) does the actual reveal -- guide line, dots, tooltip.
+  // Factored out so both the per-column rects (discrete snap) and the
+  // full-width mousemove (continuous tracking) can share it
+  const showAt = (idx) => {
+    const item = data[idx];
+    if (item == null) return;
+    const x = getX(idx);
+    if (guide) {
+      guide.setAttribute('x1', x);
+      guide.setAttribute('x2', x);
+    }
+    dots.forEach((dot, di) => {
+      if (!dot) return;
+      dot.setAttribute('cx', x);
+      dot.setAttribute('cy', getYForDot(item, di));
+    });
+    host.classList.add('is-hovered');
+    tooltip.innerHTML = renderTip(item, idx);
+
+    // Tooltip x = data-point x in screen pixels, clamped inside the host.
+    // We translate viewBox x -> screen x via the svg's bounding rect so
+    // the math works whether the chart uses preserveAspectRatio meet or
+    // none. viewBox is `0 0 vbW vbH`
+    const hostRect = host.getBoundingClientRect();
+    const svgRect = svg.getBoundingClientRect();
+    const vb = svg.viewBox && svg.viewBox.baseVal;
+    const vbW = vb ? vb.width : svgRect.width;
+    const screenXInSvg = (x / vbW) * svgRect.width;
+    const screenX = svgRect.left + screenXInSvg - hostRect.left;
+
+    const tipW = tooltip.offsetWidth || 120;
+    let leftPx = screenX - tipW / 2;
+    const maxLeft = hostRect.width - tipW - 4;
+    if (leftPx < 4) leftPx = 4;
+    if (leftPx > maxLeft) leftPx = maxLeft;
+    tooltip.style.left = leftPx + 'px';
+  };
+
+  // Continuous mode: a single full-width <rect class="ci-hover-target ci-hover-full">
+  // gets a mousemove listener that picks the nearest data point. Falls back
+  // to discrete per-column rects when ci-hover-full isnt present.
+  const fullTarget = svg.querySelector('.ci-hover-target.ci-hover-full');
+  if (fullTarget) {
+    const handleMove = (ev) => {
+      const svgRect = svg.getBoundingClientRect();
+      const vb = svg.viewBox && svg.viewBox.baseVal;
+      const vbW = vb ? vb.width : svgRect.width;
+      // Map cursor screen x back into viewBox x, then find nearest data idx
+      const vbX = ((ev.clientX - svgRect.left) / svgRect.width) * vbW;
+      let nearest = 0;
+      let bestDist = Infinity;
+      for (let i = 0; i < data.length; i++) {
+        const dx = Math.abs(getX(i) - vbX);
+        if (dx < bestDist) { bestDist = dx; nearest = i; }
+      }
+      showAt(nearest);
+    };
+    fullTarget.addEventListener('mousemove', handleMove);
+    fullTarget.addEventListener('mouseleave', () => {
+      host.classList.remove('is-hovered');
+    });
+    if (onClick) {
+      fullTarget.addEventListener('click', (ev) => {
+        const svgRect = svg.getBoundingClientRect();
+        const vb = svg.viewBox && svg.viewBox.baseVal;
+        const vbW = vb ? vb.width : svgRect.width;
+        const vbX = ((ev.clientX - svgRect.left) / svgRect.width) * vbW;
+        let nearest = 0;
+        let bestDist = Infinity;
+        for (let i = 0; i < data.length; i++) {
+          const dx = Math.abs(getX(i) - vbX);
+          if (dx < bestDist) { bestDist = dx; nearest = i; }
+        }
+        onClick(data[nearest], nearest);
+      });
+    }
+    return;
+  }
+
+  // Legacy discrete mode: one rect per data point
   const targets = svg.querySelectorAll('.ci-hover-target');
   targets.forEach(rect => {
     const idx = parseInt(rect.getAttribute('data-idx'), 10);
-    const item = data[idx];
-    if (item == null) return;
-
-    rect.addEventListener('mouseenter', () => {
-      const x = getX(idx);
-      if (guide) {
-        guide.setAttribute('x1', x);
-        guide.setAttribute('x2', x);
-      }
-      dots.forEach((dot, di) => {
-        if (!dot) return;
-        dot.setAttribute('cx', x);
-        dot.setAttribute('cy', getYForDot(item, di));
-      });
-
-      host.classList.add('is-hovered');
-      tooltip.innerHTML = renderTip(item, idx);
-
-      // Position the tooltip horizontally aligned with the data point,
-      // clamped so it doesn't run off the host's edges
-      const hostRect = host.getBoundingClientRect();
-      const svgRect = svg.getBoundingClientRect();
-      // Use the rect's screen position so the tooltip lines up regardless
-      // of the SVG viewBox scaling we set up
-      const rectRect = rect.getBoundingClientRect();
-      const screenX = (rectRect.left + rectRect.right) / 2 - hostRect.left;
-      const tipW = tooltip.offsetWidth || 120;
-      let leftPx = screenX - tipW / 2;
-      const maxLeft = hostRect.width - tipW - 4;
-      if (leftPx < 4) leftPx = 4;
-      if (leftPx > maxLeft) leftPx = maxLeft;
-      tooltip.style.left = leftPx + 'px';
-    });
-
-    rect.addEventListener('mouseleave', () => {
-      host.classList.remove('is-hovered');
-    });
-
-    if (onClick) {
-      rect.addEventListener('click', () => onClick(item, idx));
-    }
+    if (isNaN(idx) || data[idx] == null) return;
+    rect.addEventListener('mouseenter', () => showAt(idx));
+    rect.addEventListener('mouseleave', () => host.classList.remove('is-hovered'));
+    if (onClick) rect.addEventListener('click', () => onClick(data[idx], idx));
   });
 }
 

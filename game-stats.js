@@ -191,13 +191,9 @@
       labels += `<text x="${x(i).toFixed(1)}" y="${h - 4}" fill="#7a9bb5" font-size="9" text-anchor="middle">${fmt(filtered[i].month)}</text>`;
     }
 
-    // Invisible hover targets, one per month column. Width = the spacing
-    // between columns so any mouse position inside the column triggers it
-    const colW = filtered.length > 1 ? (x(1) - x(0)) : chartW;
-    const targets = filtered.map((_, i) => {
-      const cx = x(i);
-      return `<rect class="ci-hover-target" data-idx="${i}" x="${(cx - colW / 2).toFixed(1)}" y="10" width="${colW.toFixed(1)}" height="${chartH}" fill="transparent"/>`;
-    }).join('');
+    // Single full-width hover target so the cursor tracks continuously
+    // along the line; the helper picks the nearest data point on mousemove
+    const targets = `<rect class="ci-hover-target ci-hover-full" x="${pad}" y="10" width="${chartW}" height="${chartH}" fill="transparent"/>`;
 
     const html = `
       <div class="gs-chart" id="gs-monthly-chart">
