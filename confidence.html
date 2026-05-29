@@ -615,11 +615,10 @@ h1 {
 
     // Bigger viewBox + preserveAspectRatio="none" so the chart stretches
     // edge-to-edge. The old 560x140 stayed letterboxed in wide layouts.
-    // PAD_R needs room for the last x-axis label (eg "May '26") which is
-    // centered at the rightmost data point - half the label text extends
-    // past that anchor, so 40-50px of right padding keeps it inside the
-    // visible chart area
-    const W = 1000, H = 200, PAD_L = 36, PAD_R = 48, PAD_B = 26, PAD_T = 12;
+    // Right padding stays small (8px) so the line fills the full width;
+    // edge labels use text-anchor="start"/"end" so they stay inside the
+    // visible chart area without needing extra padding around the line
+    const W = 1000, H = 200, PAD_L = 36, PAD_R = 8, PAD_B = 26, PAD_T = 12;
     const cW = W - PAD_L - PAD_R;
     const cH = H - PAD_B - PAD_T;
     const n = data.length;
@@ -642,11 +641,15 @@ h1 {
       `<text x="${PAD_L - 6}" y="${parseFloat(yFor(v)) + 3}" text-anchor="end" fill="#7a9bb5" font-size="10">${v}</text>`
     ).join('');
 
+    // Edge labels (first / last) use start / end anchoring so they stay
+    // inside the chart even though their data points sit at the edges.
+    // Middle labels stay centered on their tick
     const labelEvery = Math.ceil(n / 8);
     const xLabels = data.map((d, i) => {
-      if (i % labelEvery !== 0 && i !== n - 1) return '';
+      if (i % labelEvery !== 0 && i !== n - 1 && i !== 0) return '';
       const [yr, mo] = d.key.split('-');
-      return `<text x="${xAt(i).toFixed(1)}" y="${H - 6}" text-anchor="middle" fill="#7a9bb5" font-size="10">${MONTH_ABBR[parseInt(mo)-1]} '${yr.slice(2)}</text>`;
+      const anchor = i === 0 ? 'start' : (i === n - 1 ? 'end' : 'middle');
+      return `<text x="${xAt(i).toFixed(1)}" y="${H - 6}" text-anchor="${anchor}" fill="#7a9bb5" font-size="10">${MONTH_ABBR[parseInt(mo)-1]} '${yr.slice(2)}</text>`;
     }).join('');
 
     const gridLines = [0.25, 0.5, 0.75].map(f =>
