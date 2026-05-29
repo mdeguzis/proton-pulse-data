@@ -158,7 +158,10 @@ h1 {
    is short for chart-interactions so callers can spot them at a glance. The
    targets cover full vertical slabs so hovering anywhere over a month picks
    up the data point for that column */
-.ci-hover-target  { cursor: pointer; }
+/* pointer-events:all forces SVG rect to capture mousemove even when the
+   fill is "transparent". Without it, browsers default to visiblePainted
+   which can drop events on transparent fills */
+.ci-hover-target  { cursor: pointer; pointer-events: all; }
 .ci-hover-guide   { opacity: 0; stroke: rgba(255,255,255,0.22); stroke-dasharray: 3 3; pointer-events: none; transition: opacity 0.1s; }
 .ci-hover-dot     { opacity: 0; pointer-events: none; transition: opacity 0.1s; }
 .is-hovered .ci-hover-guide,

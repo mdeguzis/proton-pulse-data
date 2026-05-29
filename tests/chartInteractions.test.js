@@ -1,8 +1,11 @@
 /**
  * Tests for app-chart-interactions.js -- attachClickToFilter, dispatchFilter,
- * onFilterChange. attachChartHover is exercised lightly since it depends on
- * SVG measurement which jsdom doesn't really do; we rely on the manual
- * dev-server check for full hover validation.
+ * onFilterChange, and attachChartHover's continuous-tracking path.
+ *
+ * jsdom doesnt do real SVG measurement, but the helper only needs
+ * getBoundingClientRect on the svg (which jsdom returns as zeros) plus
+ * the viewBox.baseVal width. We mock both so attachChartHover can pick
+ * the nearest data index from a mousemove event.
  */
 
 const path = require('path');
@@ -156,5 +159,119 @@ describe('attachClickToFilter', () => {
       getFilter: () => ({ key: 'tier', value: 'gold' }),
     });
     expect(chip.style.cursor).toBe('pointer');
+  });
+});
+
+describe('attachChartHover (continuous tracking)', () => {
+  // Build a minimal SVG with a .ci-hover-full target, guide line, dots,
+  // and a tooltip in a host element. The helper finds elements via
+  // querySelector and listens for mousemove on the full target
+  function buildChart(data) {
+    const host = document.createElement('div');
+    host.style.position = 'relative';
+    host.innerHTML = `
+      <svg viewBox="0 0 1000 200">
+        <line class="ci-hover-guide" id="guide"/>
+        <circle class="ci-hover-dot" id="dot0"/>
+        <rect class="ci-hover-target ci-hover-full" data-idx="0" x="0" y="0" width="1000" height="200"/>
+      </svg>
+      <div class="ci-tooltip" id="tip"></div>
+    `;
+    document.body.appendChild(host);
+    const svg = host.querySelector('svg');
+    // jsdom doesnt populate viewBox.baseVal correctly so stub it
+    Object.defineProperty(svg, 'viewBox', {
+      value: { baseVal: { width: 1000, height: 200 } },
+      configurable: true,
+    });
+    // Mock getBoundingClientRect so the helper can map viewBox <-> screen
+    svg.getBoundingClientRect = () => ({ left: 0, top: 0, width: 1000, height: 200, right: 1000, bottom: 200 });
+    host.getBoundingClientRect = () => ({ left: 0, top: 0, width: 1000, height: 200, right: 1000, bottom: 200 });
+    const tooltip = host.querySelector('#tip');
+    Object.defineProperty(tooltip, 'offsetWidth', { value: 100, configurable: true });
+    return { host, svg, tooltip };
+  }
+
+  test('mousemove triggers showAt with the nearest data point', () => {
+    const { attachChartHover } = loadMod();
+    const { host, svg, tooltip } = buildChart();
+    const data = [
+      { label: 'A' },
+      { label: 'B' },
+      { label: 'C' },
+    ];
+    // x positions: 0=100, 1=500, 2=900
+    const getX = i => 100 + i * 400;
+    const renderTip = jest.fn(item => `<span>${item.label}</span>`);
+    attachChartHover({
+      svg, host, tooltip,
+      guide: svg.querySelector('#guide'),
+      dots: [svg.querySelector('#dot0')],
+      data,
+      getX,
+      getYForDot: () => 50,
+      renderTip,
+    });
+
+    const fullTarget = svg.querySelector('.ci-hover-full');
+    expect(fullTarget).toBeTruthy();
+
+    // Move cursor near data point 1 (x=500). Should snap to it
+    const ev = new MouseEvent('mousemove', { clientX: 480, clientY: 50 });
+    fullTarget.dispatchEvent(ev);
+
+    expect(host.classList.contains('is-hovered')).toBe(true);
+    expect(renderTip).toHaveBeenCalledWith(data[1], 1);
+    expect(tooltip.innerHTML).toContain('B');
+  });
+
+  test('mouseleave clears is-hovered', () => {
+    const { attachChartHover } = loadMod();
+    const { host, svg, tooltip } = buildChart();
+    attachChartHover({
+      svg, host, tooltip,
+      data: [{}, {}, {}],
+      getX: i => i * 100,
+      getYForDot: () => 0,
+      renderTip: () => '',
+    });
+    host.classList.add('is-hovered');
+    const fullTarget = svg.querySelector('.ci-hover-full');
+    fullTarget.dispatchEvent(new MouseEvent('mouseleave'));
+    expect(host.classList.contains('is-hovered')).toBe(false);
+  });
+
+  test('falls back to discrete rects when no .ci-hover-full present', () => {
+    const { attachChartHover } = loadMod();
+    const host = document.createElement('div');
+    host.innerHTML = `
+      <svg viewBox="0 0 1000 200">
+        <rect class="ci-hover-target" data-idx="0"/>
+        <rect class="ci-hover-target" data-idx="1"/>
+      </svg>
+      <div class="ci-tooltip"></div>
+    `;
+    document.body.appendChild(host);
+    const svg = host.querySelector('svg');
+    Object.defineProperty(svg, 'viewBox', {
+      value: { baseVal: { width: 1000, height: 200 } },
+      configurable: true,
+    });
+    svg.getBoundingClientRect = () => ({ left: 0, top: 0, width: 1000, height: 200, right: 1000, bottom: 200 });
+    host.getBoundingClientRect = () => ({ left: 0, top: 0, width: 1000, height: 200, right: 1000, bottom: 200 });
+    const tooltip = host.querySelector('.ci-tooltip');
+    Object.defineProperty(tooltip, 'offsetWidth', { value: 100, configurable: true });
+
+    const data = [{ id: 0 }, { id: 1 }];
+    const renderTip = jest.fn(item => `${item.id}`);
+    attachChartHover({
+      svg, host, tooltip,
+      data, getX: i => i * 100, getYForDot: () => 0, renderTip,
+    });
+
+    // Trigger mouseenter on the second rect
+    const rects = svg.querySelectorAll('.ci-hover-target');
+    rects[1].dispatchEvent(new MouseEvent('mouseenter'));
+    expect(renderTip).toHaveBeenCalledWith(data[1], 1);
   });
 });
