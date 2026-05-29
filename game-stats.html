@@ -123,12 +123,13 @@ h1 {
 .gs-factor-row .pct   { width: 38px; text-align: right; font-weight: 700; }
 .gs-factor-row .det   { color: var(--muted); font-size: 0.74rem; flex: 2; }
 
-/* Chart wrapper */
+/* Chart wrapper. position:relative so the absolute tooltip can anchor here */
 .gs-chart {
   background: rgba(20, 32, 44, 0.55);
   border: 1px solid var(--border);
   border-radius: 4px;
   padding: 14px;
+  position: relative;
 }
 .gs-chart svg { width: 100%; height: 260px; display: block; }
 .gs-chart-legend {
@@ -139,6 +140,42 @@ h1 {
   color: var(--muted);
 }
 .gs-chart-legend .dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; vertical-align: middle; margin-right: 6px; }
+
+/* Interactive chart pieces, shared via app-chart-interactions.js. ci- prefix
+   is short for chart-interactions so callers can spot them at a glance. The
+   targets cover full vertical slabs so hovering anywhere over a month picks
+   up the data point for that column */
+.ci-hover-target  { cursor: pointer; }
+.ci-hover-guide   { opacity: 0; stroke: rgba(255,255,255,0.22); stroke-dasharray: 3 3; pointer-events: none; transition: opacity 0.1s; }
+.ci-hover-dot     { opacity: 0; pointer-events: none; transition: opacity 0.1s; }
+.is-hovered .ci-hover-guide,
+.is-hovered .ci-hover-dot { opacity: 1; }
+.ci-tooltip {
+  position: absolute;
+  top: 6px;
+  padding: 6px 10px;
+  background: rgba(8, 14, 22, 0.92);
+  border: 1px solid rgba(110, 180, 240, 0.28);
+  border-radius: 3px;
+  font-size: 0.78rem;
+  color: var(--text);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.08s;
+  white-space: nowrap;
+  font-family: var(--mono);
+}
+.ci-tooltip .ci-tip-month { color: var(--muted); font-size: 0.72rem; letter-spacing: 0.05em; }
+.ci-tooltip .ci-tip-row   { margin-top: 3px; display: flex; gap: 8px; align-items: center; }
+.ci-tooltip .ci-tip-dot   { display: inline-block; width: 8px; height: 8px; border-radius: 2px; }
+.ci-tooltip .ci-tip-val   { margin-left: auto; font-weight: 700; }
+.is-hovered .ci-tooltip   { opacity: 1; }
+
+/* Active filter highlight for chips/rows that drive list filtering */
+.is-active {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
 
 /* Version + launch flag lists (two columns on wide, stacked on narrow) */
 .gs-two-col {
@@ -225,6 +262,8 @@ h1 {
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="supabase-client.js"></script>
 <script src="app-scoring.js"></script>
+<script src="app-hardware.js?v=1"></script>
+<script src="app-chart-interactions.js?v=1"></script>
 <script src="app-game-stats.js?v=1"></script>
 <script src="game-stats.js?v=1"></script>
 

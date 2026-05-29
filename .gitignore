@@ -5,9 +5,13 @@ backups/
 *.zip
 
 # Old-style hashed app copies (cache busting now uses ?v= query params)
-# The real module files (app-scoring.js, app-search.js, app-submit.js) are
-# tracked normally since their names don't contain hex hashes
-app-[0-9a-f]*.js
+# The real module files (app-scoring.js, app-search.js, app-submit.js,
+# app-chart-interactions.js, etc) are tracked normally. We only want to
+# ignore the legacy app-XXXXXXXX.js shape, where XXXXXXXX is a 7-10 char
+# hex hash and nothing follows it. The character class on its own would
+# eat letters like 'a-c' that appear in real module names.
+app-[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]*.js
+!app-*-*.js
 
 # Pipeline-generated pages and data. Real versions ship via the production pipeline.
 # Local dev stubs go in their place for vite preview - never commit either.

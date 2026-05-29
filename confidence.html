@@ -182,6 +182,7 @@ h1 {
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="supabase-client.js"></script>
 <script src="app-scoring.js"></script>
+<script src="app-hardware.js?v=1"></script>
 
 <script>
 (function () {
@@ -203,20 +204,9 @@ h1 {
     return String(s == null ? '' : s).replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
   }
 
-  // Load the user's saved hardware from localStorage (written by profile.js).
-  // Returns null if nothing is saved yet.
-  function loadMyHardware() {
-    try {
-      const HW = {
-        cpu:       localStorage.getItem('proton-pulse:myhw:cpu')       || '',
-        gpu:       localStorage.getItem('proton-pulse:myhw:gpu')       || '',
-        gpuVendor: localStorage.getItem('proton-pulse:myhw:gpu-vendor') || '',
-        os:        localStorage.getItem('proton-pulse:myhw:os')        || '',
-        kernel:    localStorage.getItem('proton-pulse:myhw:kernel')    || '',
-      };
-      return (HW.gpu || HW.os) ? HW : null;
-    } catch { return null; }
-  }
+  // loadMyHardware lives in app-hardware.js so all pages share the same
+  // localStorage keys + Steam Deck preview fallback. Always returns an
+  // object now (preview vs saved is signalled by hw._isPreview).
 
   // Compute hardware match multipliers between the viewer's saved hw and a report.
   // w = weights object from scoring-info.json.
@@ -876,9 +866,13 @@ h1 {
     const indexHit = (searchIndex || []).find(row => String(row[0]) === String(appId));
     const gameTitle = reports[0]?.title || indexHit?.[1] || `App ${appId}`;
 
-    metaEl.textContent = myHw
-      ? `// Computed from ${reports.length} report${reports.length === 1 ? '' : 's'} on ${appId} -- hardware match active (${myHw.gpuVendor || myHw.gpu || 'unknown GPU'})`
-      : `// Computed from ${reports.length} report${reports.length === 1 ? '' : 's'} on ${appId}`;
+    // Tag the meta line based on whether we're using saved or preview hw
+    const hwLabel = isPreviewHardware(myHw)
+      ? 'Steam Deck preview'
+      : (myHw.gpuVendor || myHw.gpu || 'unknown GPU');
+    metaEl.textContent = `// Computed from ${reports.length} report${reports.length === 1 ? '' : 's'} on ${appId} -- hardware match active (${hwLabel})`;
+
+    const previewBanner = isPreviewHardware(myHw) ? renderPreviewHardwareBanner() : '';
 
     if (wantsPerReport) {
       const target = reportId
@@ -891,9 +885,9 @@ h1 {
         </div>`;
         return;
       }
-      root.innerHTML = renderReportBreakdown(target, gameTitle, appId, myHw, scoringData);
+      root.innerHTML = previewBanner + renderReportBreakdown(target, gameTitle, appId, myHw, scoringData);
     } else {
-      root.innerHTML = renderGameBreakdown(reports, gameTitle, appId);
+      root.innerHTML = previewBanner + renderGameBreakdown(reports, gameTitle, appId);
     }
   }
 

@@ -143,10 +143,16 @@
   }
 
   // --- monthly chart (SVG, 5-year window) ---
-
+  //
+  // Returns an object: { html, wire }. The caller injects html into the DOM
+  // then calls wire(rootEl) once the chart is in the document so the hover
+  // helper can attach to the live nodes (attachChartHover needs measured rects)
   function renderChart(months) {
     if (!months || months.length === 0) {
-      return `<div class="gs-chart" style="text-align:center;color:var(--muted);padding:40px 0">No timestamped reports.</div>`;
+      return {
+        html: `<div class="gs-chart" style="text-align:center;color:var(--muted);padding:40px 0">No timestamped reports.</div>`,
+        wire: () => {},
+      };
     }
     const now = new Date();
     const cutoff = new Date(now.getFullYear() - 5, now.getMonth(), 1);
@@ -155,7 +161,10 @@
       return new Date(y, mo - 1, 1) >= cutoff;
     });
     if (filtered.length === 0) {
-      return `<div class="gs-chart" style="text-align:center;color:var(--muted);padding:40px 0">No reports in the last 5 years.</div>`;
+      return {
+        html: `<div class="gs-chart" style="text-align:center;color:var(--muted);padding:40px 0">No reports in the last 5 years.</div>`,
+        wire: () => {},
+      };
     }
 
     const w = 600, h = 200, pad = 36, chartW = w - pad - 20, chartH = h - 30;
@@ -174,8 +183,16 @@
       labels += `<text x="${x(i).toFixed(1)}" y="${h - 4}" fill="#7a9bb5" font-size="9" text-anchor="middle">${fmt(filtered[i].month)}</text>`;
     }
 
-    return `
-      <div class="gs-chart">
+    // Invisible hover targets, one per month column. Width = the spacing
+    // between columns so any mouse position inside the column triggers it
+    const colW = filtered.length > 1 ? (x(1) - x(0)) : chartW;
+    const targets = filtered.map((_, i) => {
+      const cx = x(i);
+      return `<rect class="ci-hover-target" data-idx="${i}" x="${(cx - colW / 2).toFixed(1)}" y="10" width="${colW.toFixed(1)}" height="${chartH}" fill="transparent"/>`;
+    }).join('');
+
+    const html = `
+      <div class="gs-chart" id="gs-monthly-chart">
         <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid meet">
           <defs>
             <linearGradient id="gpos" x1="0" y1="0" x2="0" y2="1">
@@ -192,13 +209,53 @@
           <path d="${area(filtered, 'negative')}" fill="url(#gneg)"/>
           <path d="${line(filtered, 'negative')}" fill="none" stroke="#ff6b6b" stroke-width="2"/>
           ${labels}
+          <line class="ci-hover-guide" id="gs-mc-guide" x1="0" y1="10" x2="0" y2="${10 + chartH}"/>
+          <circle class="ci-hover-dot" id="gs-mc-dot-pos" r="4" fill="#5bd17a"/>
+          <circle class="ci-hover-dot" id="gs-mc-dot-neg" r="4" fill="#ff6b6b"/>
+          ${targets}
         </svg>
+        <div class="ci-tooltip" id="gs-mc-tip"></div>
         <div class="gs-chart-legend">
           <span><span class="dot" style="background:#5bd17a"></span>Positive (platinum/gold/silver)</span>
           <span><span class="dot" style="background:#ff6b6b"></span>Negative (bronze/borked)</span>
         </div>
       </div>
     `;
+
+    const wire = () => {
+      const host = document.getElementById('gs-monthly-chart');
+      if (!host) return;
+      const svg = host.querySelector('svg');
+      const tooltip = document.getElementById('gs-mc-tip');
+      const guide = document.getElementById('gs-mc-guide');
+      const dotPos = document.getElementById('gs-mc-dot-pos');
+      const dotNeg = document.getElementById('gs-mc-dot-neg');
+      attachChartHover({
+        svg, host, tooltip, guide,
+        dots: [dotPos, dotNeg],
+        data: filtered,
+        getX: x,
+        getYForDot: (item, dotIdx) => y(dotIdx === 0 ? item.positive : item.negative),
+        renderTip: item => `
+          <div class="ci-tip-month">${fmt(item.month)}</div>
+          <div class="ci-tip-row">
+            <span class="ci-tip-dot" style="background:#5bd17a"></span>
+            <span>Positive</span>
+            <span class="ci-tip-val">${item.positive}</span>
+          </div>
+          <div class="ci-tip-row">
+            <span class="ci-tip-dot" style="background:#ff6b6b"></span>
+            <span>Negative</span>
+            <span class="ci-tip-val">${item.negative}</span>
+          </div>
+        `,
+        // Click a month to filter the page below. Right now nothing listens
+        // for this, but the event is dispatched for future per-month filter
+        onClick: item => dispatchFilter({ key: 'month', value: item.month, label: fmt(item.month) }),
+      });
+    };
+
+    return { html, wire };
   }
 
   // --- confidence factors ---
@@ -231,7 +288,7 @@
     return `
       <div class="gs-dist">
         ${TIERS.map(t => `
-          <div class="chip" style="background:${t.bg};color:${t.fg}">
+          <div class="chip" data-tier="${t.key}" style="background:${t.bg};color:${t.fg}">
             <div class="tier">${t.label}</div>
             <div class="n">${stats.ratingCounts[t.key] || 0}</div>
           </div>
@@ -251,7 +308,7 @@
         ${stats.versionStats.map(v => {
           const tone = v.pct >= 70 ? '#5bd17a' : v.pct >= 40 ? '#ffb84d' : '#ff6b6b';
           return `
-            <div class="row">
+            <div class="row" data-version="${esc(v.ver)}">
               <span class="name">${esc(v.ver)}</span>
               <span class="count">${v.total}</span>
               <div class="bar"><div style="width:${v.pct}%;background:${tone}"></div></div>
@@ -285,16 +342,19 @@
 
   // --- assemble everything ---
 
+  // Returns { html, wire }. wire() runs after the html is injected so any
+  // chart helpers (hover targets, click-to-filter) can attach to live DOM
   function renderAll(appId, title, stats) {
     const sectionHead = (icon, title) => `<div class="gs-section-head">${icon}<span>${title}</span></div>`;
+    const chart = renderChart(stats.monthly);
 
-    return `
+    const html = `
       ${renderHeader(appId, title)}
       ${sectionHead(ICON.status, 'Current state')}
       ${renderStatusCards(stats)}
 
       ${sectionHead(ICON.chart, 'Monthly reports (last 5 years)')}
-      ${renderChart(stats.monthly)}
+      ${chart.html}
 
       ${sectionHead(ICON.dist, 'Rating distribution')}
       ${renderDistribution(stats)}
@@ -315,6 +375,23 @@
 
       <a class="gs-back" href="app.html#/app/${esc(appId)}">&larr; Back to game page</a>
     `;
+
+    const wire = () => {
+      chart.wire();
+      // Click rating chips to dispatch a tier filter event. Future work will
+      // listen for these on the report list below (task #73 follow-ups)
+      attachClickToFilter({
+        selector: '.gs-dist .chip',
+        getFilter: el => ({ key: 'tier', value: el.getAttribute('data-tier'), label: el.getAttribute('data-tier') }),
+      });
+      // Click a version row to filter
+      attachClickToFilter({
+        selector: '.gs-row-list .row[data-version]',
+        getFilter: el => ({ key: 'protonVersion', value: el.getAttribute('data-version'), label: el.getAttribute('data-version') }),
+      });
+    };
+
+    return { html, wire };
   }
 
   // --- entry point ---
@@ -361,7 +438,24 @@
     }
 
     const stats = computeGameStats(allReports, configs);
-    root.innerHTML = renderAll(appId, title, stats);
+
+    // Pull viewer hardware (real or Steam Deck preview fallback) so the
+    // page can both surface the banner and feed personalised match scoring
+    // into future sections (#74 will lean on this)
+    const myHw = typeof loadMyHardware === 'function' ? loadMyHardware() : null;
+    const previewBanner = (myHw && isPreviewHardware(myHw))
+      ? renderPreviewHardwareBanner() : '';
+
+    const { html, wire } = renderAll(appId, title, stats);
+    root.innerHTML = previewBanner + html;
+    // wire() must run AFTER innerHTML so the hover helper sees real DOM rects.
+    // Also surface the filter event for future consumers (a debug log for now)
+    wire();
+    onFilterChange(payload => {
+      console.debug('[game-stats] chart-filter', payload);
+      // Real list-filtering will land when we add the reports panel below
+      // the stats sections (task #74 + follow-ups)
+    });
   }
 
   run().catch(err => {

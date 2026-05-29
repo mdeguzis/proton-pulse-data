@@ -245,17 +245,19 @@
 .game-header-actions {
   display: flex;
   justify-content: flex-start;
-  gap: 10px;
+  gap: 6px;
   align-items: stretch;
   flex-wrap: wrap;
   width: 100%;
 }
 /* Icon-text action buttons grow to fill the row evenly. Without this, they
-   sit on the left at their natural width and leave a gap before the row wraps */
+   sit on the left at their natural width and leave a gap before the row wraps.
+   min-width: 0 lets them shrink as much as needed to stay on one line; the
+   submit-report-btn wraps to its own row below */
 .game-header-actions .info-btn-labeled,
 .game-header-actions .deck-status-btn {
   flex: 1 1 0;
-  min-width: 120px;
+  min-width: 0;
   justify-content: center;
 }
 /* Submit Report goes full-width on its own row below the icon buttons */
