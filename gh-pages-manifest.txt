@@ -5,6 +5,9 @@ app.js
 app-scoring.js
 app-search.js
 app-submit.js
+app-hardware.js
+app-game-stats.js
+app-chart-interactions.js
 app.css
 index.html
 index.js
@@ -23,6 +26,8 @@ stats.html
 stats.js
 scoring.html
 confidence.html
+game-stats.html
+game-stats.js
 submit.html
 supabase-client.js
 topbar.js
