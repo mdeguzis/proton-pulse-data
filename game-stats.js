@@ -1,6 +1,6 @@
 // Per-game stats page (game-stats.html). Reads ?app=APPID from the URL,
 // pulls the same CDN data the main app page uses, then renders a thoughtful
-// breakdown via computeGameStats() from app-game-stats.js.
+// breakdown via computeGameStats() from lib/scoring/gameStats.js.
 //
 // Same CDN base resolution as confidence.html so localhost dev preview works.
 

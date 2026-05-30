@@ -1,8 +1,8 @@
 /**
- * Tests for app-game-stats.js -- compute confidence, trend, working status,
+ * Tests for lib/scoring/gameStats.js -- compute confidence, trend, working status,
  * freshness, monthly buckets, and settings tips from synthetic report data.
  *
- * Loaded as a CommonJS module since app-game-stats.js exports via module.exports
+ * Loaded as a CommonJS module since gameStats.js exports via module.exports
  * when available (otherwise it just leaks globals for the browser script tag).
  */
 
@@ -15,7 +15,7 @@ const {
   computeSettingsTips,
   isPositive,
   isNegative,
-} = require(path.join(__dirname, '..', 'app-game-stats.js'));
+} = require(path.join(__dirname, '..', 'lib', 'scoring', 'gameStats.js'));
 
 const NOW = Math.floor(Date.now() / 1000);
 const DAY = 86400;
