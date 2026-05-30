@@ -166,30 +166,52 @@
         <svg class="nav-icon" aria-hidden="true"><use href="#icon-home"/></svg>
         <span>Home</span>
       </a>
-      <a href="app.html" data-page="app">
-        <svg class="nav-icon" aria-hidden="true"><use href="#icon-search"/></svg>
-        <span>Reports</span>
-      </a>
-      <a href="data-index.html" data-page="data-index">
-        <svg class="nav-icon" aria-hidden="true"><use href="#icon-database"/></svg>
-        <span>Data</span>
-      </a>
-      <a href="coverage.html" data-page="coverage">
-        <svg class="nav-icon" aria-hidden="true"><use href="#icon-chart"/></svg>
-        <span>Coverage</span>
-      </a>
-      <a href="stats.html" data-page="stats">
-        <svg class="nav-icon" aria-hidden="true"><use href="#icon-stats"/></svg>
-        <span>Stats</span>
-      </a>
-      <a href="scoring.html" data-page="scoring" title="How compatibility scores are calculated">
-        <svg class="nav-icon" aria-hidden="true"><use href="#icon-scoring"/></svg>
-        <span>Scoring</span>
-      </a>
-      <a href="https://github.com/mdeguzis/decky-proton-pulse" target="_blank" rel="noopener" title="Decky Loader plugin for Steam Deck">
-        <svg class="nav-icon" aria-hidden="true"><use href="#icon-gamepad"/></svg>
-        <span>Decky Plugin</span>
-      </a>
+      <!-- Browse dropdown: opens on hover (and focus-within for keyboard).
+           Reports/Data/Coverage/Stats all live behind here so the top row
+           stays compact. Parent button highlights if you're on any child -->
+      <div class="nav-dropdown" data-group="browse">
+        <button class="nav-dropdown-toggle" type="button" aria-haspopup="true" aria-expanded="false">
+          <svg class="nav-icon" aria-hidden="true"><use href="#icon-search"/></svg>
+          <span>Browse</span>
+          <svg class="nav-caret" aria-hidden="true" viewBox="0 0 10 6" width="10" height="6"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
+        </button>
+        <div class="nav-dropdown-panel">
+          <a href="app.html" data-page="app">
+            <svg class="nav-icon" aria-hidden="true"><use href="#icon-search"/></svg>
+            <span>Reports</span>
+          </a>
+          <a href="data-index.html" data-page="data-index">
+            <svg class="nav-icon" aria-hidden="true"><use href="#icon-database"/></svg>
+            <span>Data</span>
+          </a>
+          <a href="coverage.html" data-page="coverage">
+            <svg class="nav-icon" aria-hidden="true"><use href="#icon-chart"/></svg>
+            <span>Coverage</span>
+          </a>
+          <a href="stats.html" data-page="stats">
+            <svg class="nav-icon" aria-hidden="true"><use href="#icon-stats"/></svg>
+            <span>Stats</span>
+          </a>
+        </div>
+      </div>
+      <!-- Resources dropdown: scoring docs and the decky plugin live here -->
+      <div class="nav-dropdown" data-group="resources">
+        <button class="nav-dropdown-toggle" type="button" aria-haspopup="true" aria-expanded="false">
+          <svg class="nav-icon" aria-hidden="true"><use href="#icon-scoring"/></svg>
+          <span>Resources</span>
+          <svg class="nav-caret" aria-hidden="true" viewBox="0 0 10 6" width="10" height="6"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
+        </button>
+        <div class="nav-dropdown-panel">
+          <a href="scoring.html" data-page="scoring" title="How compatibility scores are calculated">
+            <svg class="nav-icon" aria-hidden="true"><use href="#icon-scoring"/></svg>
+            <span>Scoring</span>
+          </a>
+          <a href="https://github.com/mdeguzis/decky-proton-pulse" target="_blank" rel="noopener" title="Decky Loader plugin for Steam Deck">
+            <svg class="nav-icon" aria-hidden="true"><use href="#icon-gamepad"/></svg>
+            <span>Decky Plugin</span>
+          </a>
+        </div>
+      </div>
       <!-- GitHub issue chooser - shows Game Report / Missing ProtonDB / Plugin Issue / Blank etc. -->
       <a href="https://github.com/mdeguzis/decky-proton-pulse/issues/new/choose" target="_blank" rel="noopener" title="Report a bug, file a Game Report, or contact the maintainer">
         <svg class="nav-icon" aria-hidden="true"><use href="#icon-contact"/></svg>
@@ -296,6 +318,7 @@
     wireAuthIndicator();
     wireNavOverflow();
     wireThemeToggle();
+    wireDropdowns();
   }
 
   // ---- 3. Active link based on current page ----------------------------
@@ -306,6 +329,45 @@
     if (!page) page = 'index';
     document.querySelectorAll('[data-page]').forEach(function (a) {
       if (a.getAttribute('data-page') === page) a.classList.add('active');
+    });
+    // Lift active state up to the parent dropdown toggle so the user can
+    // tell at a glance which group the current page lives in
+    document.querySelectorAll('.nav-dropdown').forEach(function (dd) {
+      if (dd.querySelector('a.active')) dd.classList.add('has-active');
+    });
+  }
+
+  // ---- 3b. Dropdown click toggle (hover already handled in CSS) -------
+  //
+  // CSS gives us hover-to-open and focus-within-to-stay-open. Add click as
+  // a third path for touch + keyboard users who reach the toggle via tab
+  // and press Enter. Clicking outside any open dropdown closes it.
+
+  function wireDropdowns() {
+    const dropdowns = document.querySelectorAll('.nav-dropdown');
+    dropdowns.forEach(function (dd) {
+      const toggle = dd.querySelector('.nav-dropdown-toggle');
+      if (!toggle) return;
+      toggle.addEventListener('click', function (e) {
+        e.preventDefault();
+        const wasOpen = dd.classList.contains('is-open');
+        // close any other open dropdown first
+        dropdowns.forEach(function (other) {
+          if (other !== dd) other.classList.remove('is-open');
+        });
+        dd.classList.toggle('is-open', !wasOpen);
+        toggle.setAttribute('aria-expanded', String(!wasOpen));
+      });
+    });
+    document.addEventListener('click', function (e) {
+      // close all when clicking anywhere outside a dropdown
+      if (!e.target.closest('.nav-dropdown')) {
+        dropdowns.forEach(function (dd) {
+          dd.classList.remove('is-open');
+          const t = dd.querySelector('.nav-dropdown-toggle');
+          if (t) t.setAttribute('aria-expanded', 'false');
+        });
+      }
     });
   }
 
