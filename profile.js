@@ -509,6 +509,97 @@ async function patchUserConfig(reportId, fields, session) {
   if (!r.ok) throw new Error(`Update failed: HTTP ${r.status}`);
 }
 
+async function fetchCloudConfig(protonPulseUserId, appId, session) {
+  const url = `${SUPABASE_URL}/rest/v1/user_proton_configs`
+    + `?proton_pulse_user_id=eq.${encodeURIComponent(protonPulseUserId)}`
+    + `&app_id=eq.${encodeURIComponent(appId)}`
+    + `&select=id,app_id,app_name,config,is_published`
+    + `&limit=1`;
+  const r = await fetch(url, { headers: supabaseHeaders(session) });
+  if (!r.ok) throw new Error(`Fetch config failed: HTTP ${r.status}`);
+  const rows = await r.json();
+  return rows[0] ?? null;
+}
+
+async function patchCloudConfig(protonPulseUserId, appId, configPatch, session) {
+  const url = `${SUPABASE_URL}/rest/v1/user_proton_configs`
+    + `?proton_pulse_user_id=eq.${encodeURIComponent(protonPulseUserId)}`
+    + `&app_id=eq.${encodeURIComponent(appId)}`;
+  const r = await fetch(url, {
+    method: 'PATCH',
+    headers: { ...supabaseHeaders(session), Prefer: 'return=minimal' },
+    body: JSON.stringify({ config: configPatch }),
+  });
+  if (!r.ok) throw new Error(`Config update failed: HTTP ${r.status}`);
+}
+
+let _cloudEditModal = null;
+function getCloudEditModal() {
+  if (_cloudEditModal) return _cloudEditModal;
+  _cloudEditModal = document.createElement('dialog');
+  _cloudEditModal.className = 'edit-report-modal';
+  _cloudEditModal.innerHTML = `
+    <h2 class="edit-report-title">Edit Cloud Config</h2>
+    <div class="edit-report-fields">
+      <label class="edit-report-label">Launch Options
+        <input class="edit-report-input" type="text" name="launch_options" placeholder="e.g. DXVK_HUD=1 %command%">
+      </label>
+    </div>
+    <div class="edit-report-status"></div>
+    <div class="edit-report-actions">
+      <button type="button" class="edit-report-cancel">Cancel</button>
+      <button type="button" class="edit-report-save">Save Changes</button>
+    </div>
+  `;
+  document.body.appendChild(_cloudEditModal);
+  _cloudEditModal.querySelector('.edit-report-cancel').addEventListener('click', () => _cloudEditModal.close());
+  return _cloudEditModal;
+}
+
+async function showEditCloudConfigModal(protonPulseUserId, appId, session, onSaved) {
+  const modal = getCloudEditModal();
+  const status = modal.querySelector('.edit-report-status');
+  const saveBtn = modal.querySelector('.edit-report-save');
+  status.textContent = 'Loading config...';
+  saveBtn.disabled = true;
+  modal.showModal();
+
+  let record;
+  try {
+    record = await fetchCloudConfig(protonPulseUserId, appId, session);
+    console.debug('[profile] showEditCloudConfigModal: fetched', { appId, found: !!record });
+  } catch (e) {
+    status.textContent = e.message || 'Failed to load config';
+    console.warn('[profile] showEditCloudConfigModal: fetch failed', { appId, error: String(e) });
+    return;
+  }
+  if (!record) { status.textContent = 'Config not found.'; return; }
+
+  status.textContent = '';
+  saveBtn.disabled = false;
+  const cfg = record.config || {};
+  modal.querySelector('[name="launch_options"]').value = cfg.launchOptions || '';
+
+  saveBtn.onclick = async () => {
+    saveBtn.textContent = 'Saving...';
+    saveBtn.disabled = true;
+    status.textContent = '';
+    const newConfig = { ...cfg, launchOptions: modal.querySelector('[name="launch_options"]').value.trim() || '' };
+    try {
+      await patchCloudConfig(protonPulseUserId, appId, newConfig, session);
+      console.debug('[profile] showEditCloudConfigModal: saved', { appId });
+      modal.close();
+      onSaved?.();
+    } catch (e) {
+      status.textContent = e.message || 'Save failed';
+      console.warn('[profile] showEditCloudConfigModal: save failed', { appId, error: String(e) });
+    } finally {
+      saveBtn.textContent = 'Save Changes';
+      saveBtn.disabled = false;
+    }
+  };
+}
+
 let _editModal = null;
 function getEditModal() {
   if (_editModal) return _editModal;
@@ -1632,18 +1723,21 @@ const MOCK_REPORTS = [
 
     myConfigsTbody.innerHTML = rows.map(row => {
       const appLink = `app.html#/app/${encodeURIComponent(row.app_id)}`;
+      const reportAnchor = row.published_id ? `${appLink}#report-r${row.published_id}` : appLink;
       const name = row.title || `App ${row.app_id}`;
       const badges = getMyReportBadges(row).map((badge) => (
         `<span class="profile-configs-badge profile-configs-badge--${escapeHtml(badge.tone)}">${escapeHtml(badge.label)}</span>`
       )).join('');
       const actions = [
-        `<a class="profile-configs-view-link" href="${escapeHtml(appLink)}">View</a>`,
+        `<a class="profile-configs-view-link" href="${escapeHtml(reportAnchor)}">View</a>`,
         row.cloud && row.unpublished
           ? `<button type="button" class="profile-configs-action profile-configs-publish-btn" data-app-id="${escapeHtml(String(row.app_id))}">Publish</button>`
           : '',
         row.published && row.published_id
           ? `<button type="button" class="profile-configs-action profile-configs-edit-btn" data-report-id="${escapeHtml(String(row.published_id))}">Edit</button>`
-          : '',
+          : row.cloud
+            ? `<button type="button" class="profile-configs-action profile-configs-edit-btn" data-cloud-app-id="${escapeHtml(String(row.app_id))}">Edit</button>`
+            : '',
         `<button type="button" class="profile-configs-action profile-configs-delete-btn" data-app-id="${escapeHtml(String(row.app_id))}">Delete</button>`,
       ].filter(Boolean).join('');
       return `
@@ -1698,12 +1792,19 @@ const MOCK_REPORTS = [
       const cid = getWebClientIdProfile();
 
       if (action.classList.contains('profile-configs-edit-btn')) {
-        const reportId = action.dataset.reportId;
-        if (!reportId) return;
-        void showEditReportModal(reportId, s, async () => {
-          showMyConfigsStatus('Report updated', true);
-          await refreshMyConfigs();
-        });
+        const reportId    = action.dataset.reportId;
+        const cloudAppId  = action.dataset.cloudAppId;
+        if (reportId) {
+          void showEditReportModal(reportId, s, async () => {
+            showMyConfigsStatus('Report updated', true);
+            await refreshMyConfigs();
+          });
+        } else if (cloudAppId) {
+          void showEditCloudConfigModal(protonPulseUserId, cloudAppId, s, async () => {
+            showMyConfigsStatus('Config updated', true);
+            await refreshMyConfigs();
+          });
+        }
         return;
       }
 
