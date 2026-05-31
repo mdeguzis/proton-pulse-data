@@ -416,7 +416,7 @@ async function fetchMyUserConfigs(protonPulseUserId, clientId, session) {
   if (!filters.length) return [];
   const url = `${SUPABASE_URL}/rest/v1/user_configs`
     + `?or=(${filters.join(',')})`
-    + `&select=id,app_id,title,proton_version,rating,created_at`
+    + `&select=id,app_id,title,proton_version,rating,created_at,updated_at`
     + `&order=created_at.desc`;
   const r = await fetch(url, { headers: supabaseHeaders(session) });
   if (!r.ok) throw new Error(`Lookup failed: HTTP ${r.status}`);
@@ -478,6 +478,121 @@ async function deleteMyReportsEverywhere(protonPulseUserId, clientId, appId, ses
   if (failed) throw new Error(`Delete failed: HTTP ${failed.status}`);
 }
 
+async function fetchFullUserConfig(reportId, session) {
+  const url = `${SUPABASE_URL}/rest/v1/user_configs`
+    + `?id=eq.${encodeURIComponent(reportId)}`
+    + `&select=id,app_id,title,rating,proton_version,os,notes,config_key,created_at,updated_at`
+    + `&limit=1`;
+  const r = await fetch(url, { headers: supabaseHeaders(session) });
+  if (!r.ok) throw new Error(`Fetch report failed: HTTP ${r.status}`);
+  const rows = await r.json();
+  return rows[0] ?? null;
+}
+
+async function patchUserConfig(reportId, fields, session) {
+  const url = `${SUPABASE_URL}/rest/v1/user_configs?id=eq.${encodeURIComponent(reportId)}`;
+  const r = await fetch(url, {
+    method: 'PATCH',
+    headers: { ...supabaseHeaders(session), Prefer: 'return=minimal' },
+    body: JSON.stringify(fields),
+  });
+  if (!r.ok) throw new Error(`Update failed: HTTP ${r.status}`);
+}
+
+let _editModal = null;
+function getEditModal() {
+  if (_editModal) return _editModal;
+  _editModal = document.createElement('dialog');
+  _editModal.className = 'edit-report-modal';
+  _editModal.innerHTML = `
+    <h2 class="edit-report-title">Edit Report</h2>
+    <div class="edit-report-fields">
+      <label class="edit-report-label">Rating
+        <select class="edit-report-input" name="rating">
+          <option value="platinum">Platinum</option>
+          <option value="gold">Gold</option>
+          <option value="silver">Silver</option>
+          <option value="bronze">Bronze</option>
+          <option value="borked">Borked</option>
+        </select>
+      </label>
+      <label class="edit-report-label">Proton Version
+        <input class="edit-report-input" type="text" name="proton_version" placeholder="e.g. Proton 9.0">
+      </label>
+      <label class="edit-report-label">OS
+        <input class="edit-report-input" type="text" name="os" placeholder="e.g. SteamOS 3.6">
+      </label>
+      <label class="edit-report-label">Notes
+        <textarea class="edit-report-input" name="notes" rows="4" placeholder="Optional notes about your experience"></textarea>
+      </label>
+      <label class="edit-report-label">Launch Options
+        <input class="edit-report-input" type="text" name="config_key" placeholder="e.g. DXVK_HUD=1 %command%">
+      </label>
+    </div>
+    <div class="edit-report-status"></div>
+    <div class="edit-report-actions">
+      <button type="button" class="edit-report-cancel">Cancel</button>
+      <button type="button" class="edit-report-save">Save Changes</button>
+    </div>
+  `;
+  document.body.appendChild(_editModal);
+  _editModal.querySelector('.edit-report-cancel').addEventListener('click', () => _editModal.close());
+  return _editModal;
+}
+
+async function showEditReportModal(reportId, session, onSaved) {
+  const modal = getEditModal();
+  const status = modal.querySelector('.edit-report-status');
+  const saveBtn = modal.querySelector('.edit-report-save');
+  status.textContent = 'Loading report...';
+  saveBtn.disabled = true;
+  modal.showModal();
+
+  let record;
+  try {
+    record = await fetchFullUserConfig(reportId, session);
+    console.debug('[profile] showEditReportModal: fetched report', { reportId, found: !!record });
+  } catch (e) {
+    status.textContent = e.message || 'Failed to load report';
+    console.warn('[profile] showEditReportModal: fetch failed', { reportId, error: String(e) });
+    return;
+  }
+  if (!record) { status.textContent = 'Report not found.'; return; }
+
+  status.textContent = '';
+  saveBtn.disabled = false;
+  modal.querySelector('[name="rating"]').value = record.rating || 'gold';
+  modal.querySelector('[name="proton_version"]').value = record.proton_version || '';
+  modal.querySelector('[name="os"]').value = record.os || '';
+  modal.querySelector('[name="notes"]').value = record.notes || '';
+  modal.querySelector('[name="config_key"]').value = record.config_key || '';
+
+  saveBtn.onclick = async () => {
+    saveBtn.textContent = 'Saving...';
+    saveBtn.disabled = true;
+    status.textContent = '';
+    const fields = {
+      rating:         modal.querySelector('[name="rating"]').value,
+      proton_version: modal.querySelector('[name="proton_version"]').value.trim() || null,
+      os:             modal.querySelector('[name="os"]').value.trim() || null,
+      notes:          modal.querySelector('[name="notes"]').value.trim() || null,
+      config_key:     modal.querySelector('[name="config_key"]').value.trim() || null,
+    };
+    try {
+      await patchUserConfig(reportId, fields, session);
+      console.debug('[profile] showEditReportModal: saved', { reportId, fields });
+      modal.close();
+      onSaved?.();
+    } catch (e) {
+      status.textContent = e.message || 'Save failed';
+      console.warn('[profile] showEditReportModal: save failed', { reportId, error: String(e) });
+    } finally {
+      saveBtn.textContent = 'Save Changes';
+      saveBtn.disabled = false;
+    }
+  };
+}
+
 function getMyReportBadges(row) {
   const badges = [];
   if (row.cloud) badges.push({ label: 'Cloud', tone: 'cloud' });
@@ -497,6 +612,8 @@ function mergeMyReportRows(publishedRows, cloudRows) {
         rating: '',
         updated_at: '',
         published_at: '',
+        published_id: null,
+        created_at: '',
         cloud_updated_at: '',
         cloud_published: false,
         cloud: false,
@@ -513,8 +630,11 @@ function mergeMyReportRows(publishedRows, cloudRows) {
     mergedRow.rating = row.rating || mergedRow.rating;
     mergedRow.published = true;
     mergedRow.published_at = row.created_at || mergedRow.published_at;
-    if (!mergedRow.updated_at || new Date(row.created_at || 0).getTime() > new Date(mergedRow.updated_at || 0).getTime()) {
-      mergedRow.updated_at = row.created_at || mergedRow.updated_at;
+    mergedRow.published_id = mergedRow.published_id || row.id || null;
+    mergedRow.created_at = mergedRow.created_at || row.created_at || '';
+    const rowTime = row.updated_at || row.created_at || '';
+    if (rowTime && (!mergedRow.updated_at || new Date(rowTime).getTime() > new Date(mergedRow.updated_at || 0).getTime())) {
+      mergedRow.updated_at = rowTime;
     }
   }
 
@@ -1468,6 +1588,9 @@ const MOCK_REPORTS = [
         row.cloud && row.unpublished
           ? `<button type="button" class="profile-configs-action profile-configs-publish-btn" data-app-id="${escapeHtml(String(row.app_id))}">Publish</button>`
           : '',
+        row.published && row.published_id
+          ? `<button type="button" class="profile-configs-action profile-configs-edit-btn" data-report-id="${escapeHtml(String(row.published_id))}">Edit</button>`
+          : '',
         `<button type="button" class="profile-configs-action profile-configs-delete-btn" data-app-id="${escapeHtml(String(row.app_id))}">Delete</button>`,
       ].filter(Boolean).join('');
       return `
@@ -1513,15 +1636,27 @@ const MOCK_REPORTS = [
   myConfigsTbody?.addEventListener('click', (e) => {
     const target = e.target;
     if (!(target instanceof HTMLElement)) return;
-    const action = target.closest('.profile-configs-publish-btn, .profile-configs-delete-btn');
+    const action = target.closest('.profile-configs-publish-btn, .profile-configs-delete-btn, .profile-configs-edit-btn');
     if (!(action instanceof HTMLElement)) return;
-    const appId = action.dataset.appId;
-    if (!appId) return;
 
     void (async () => {
       const s = await SupaAuth.getSession();
       const protonPulseUserId = getProtonPulseUserIdFromSession(s);
       const cid = getWebClientIdProfile();
+
+      if (action.classList.contains('profile-configs-edit-btn')) {
+        const reportId = action.dataset.reportId;
+        if (!reportId) return;
+        void showEditReportModal(reportId, s, async () => {
+          showMyConfigsStatus('Report updated', true);
+          await refreshMyConfigs();
+        });
+        return;
+      }
+
+      const appId = action.dataset.appId;
+      if (!appId) return;
+
       if (action.classList.contains('profile-configs-publish-btn')) {
         action.textContent = 'Publishing...';
         await publishMyCloudConfig(protonPulseUserId, appId, s);
