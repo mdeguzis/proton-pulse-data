@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Submit Report — Proton Pulse</title>
+<meta name="color-scheme" content="dark">
+<link rel="stylesheet" href="site.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="supabase-client.js"></script>
+<script src="topbar.js"></script>
+<script src="app-scoring.js"></script>
+<script src="app-submit.js"></script>
+
+<div class="main-content">
+  <div class="main-inner" style="max-width:860px">
+
+    <div style="display:flex;align-items:flex-start;gap:18px;margin-bottom:24px;flex-wrap:wrap">
+      <a id="back-link" href="app.html" class="hub-link" style="flex-shrink:0;margin-top:4px">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" style="vertical-align:-2px"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+        Back to game
+      </a>
+      <div>
+        <div class="eyebrow">Submit a Report</div>
+        <h1 id="game-title" style="font-family:var(--font-display);font-size:1.6rem;font-weight:700;color:var(--strong);letter-spacing:-0.02em;margin:0;line-height:1.2">Loading...</h1>
+      </div>
+    </div>
+
+    <div id="auth-gate" hidden>
+      <div style="padding:32px;background:var(--s1);border:1px solid var(--border);text-align:center">
+        <p style="color:var(--muted);margin-bottom:14px">Sign in with Steam to submit a report</p>
+        <button class="gh-login-btn" id="login-btn" style="margin:0 auto">
+          <span class="gh-login-btn__badge"><img class="gh-login-btn__icon" src="assets/steam-logo-glyph.png" alt=""></span>
+          <span class="gh-login-btn__label">Login with Steam</span>
+        </button>
+      </div>
+    </div>
+
+    <div id="submit-form-content">Loading form...</div>
+
+  </div>
+</div>
+
+<script>
+(async function() {
+  const params = new URLSearchParams(window.location.search);
+  const appId = params.get('app');
+  const titleParam = params.get('title') || '';
+
+  if (!appId) {
+    document.getElementById('game-title').textContent = 'No app ID provided';
+    document.getElementById('submit-form-content').innerHTML =
+      '<div style="padding:24px;color:var(--muted)">Add ?app=APPID to the URL to submit a report.</div>';
+    return;
+  }
+
+  const backLink = document.getElementById('back-link');
+  backLink.href = `app.html#/app/${appId}`;
+
+  let title = titleParam;
+  if (!title) {
+    try {
+      const dataUrl = /^localhost/.test(location.host)
+        ? `https://www.proton-pulse.com/data/${appId}/`
+        : `data/${appId}/`;
+      const resp = await fetch(dataUrl);
+      if (resp.ok) {
+        const data = await resp.json();
+        title = data?.title || data?.name || '';
+      }
+    } catch {}
+    if (!title) title = `App ${appId}`;
+  }
+
+  document.getElementById('game-title').textContent = title;
+  document.title = `Submit Report: ${title} — Proton Pulse`;
+
+  // auth check
+  const session = await SupaAuth.getSession();
+  if (!session?.user) {
+    document.getElementById('auth-gate').hidden = false;
+    document.getElementById('submit-form-content').hidden = true;
+    document.getElementById('login-btn')?.addEventListener('click', () => {
+      window.location.href = SupaAuth.buildLoginPageUrl(window.location.href);
+    });
+    return;
+  }
+
+  // populate the form with error visibility
+  const el = document.querySelector('.main-inner');
+  try {
+    await populateSubmitForm(el);
+  } catch (err) {
+    console.error('[submit] populateSubmitForm failed:', err);
+    document.getElementById('submit-form-content').innerHTML =
+      `<div style="padding:24px;color:var(--red)">Failed to load form: ${err.message || err}</div>`;
+    return;
+  }
+  prefillSubmitFormFromMyHardware(el);
+
+  const titleInput = el.querySelector('input[name="gameTitle"]');
+  if (titleInput && !titleInput.value) titleInput.value = title;
+
+  const form = el.querySelector('#submit-report-form');
+  if (form) {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const statusEl = el.querySelector('#submit-status');
+      const submitBtn = form.querySelector('button[type="submit"]');
+
+      // highlight unanswered required questions
+      el.querySelectorAll('.sf-question.sf-needs-answer').forEach(q => q.classList.remove('sf-needs-answer'));
+      const state = form._formState || {};
+      const needsAnswer = [];
+      if (!state.canInstall) needsAnswer.push('q-canInstall');
+      if (state.canInstall === 'yes' && !state.canStart) needsAnswer.push('q-canStart');
+      if (state.canInstall === 'yes' && state.canStart === 'yes' && !state.canPlay) needsAnswer.push('q-canPlay');
+      const allYes = state.canInstall === 'yes' && state.canStart === 'yes' && state.canPlay === 'yes';
+      if (allYes && !state.verdict) needsAnswer.push('q-verdict');
+      if (allYes) {
+        for (const k of (typeof FAULT_KEYS_WEB !== 'undefined' ? FAULT_KEYS_WEB : [])) {
+          if (!state.faults?.[k]) needsAnswer.push('q-' + k);
+        }
+      }
+      for (const id of needsAnswer) {
+        const q = el.querySelector('#' + id);
+        if (q) q.classList.add('sf-needs-answer');
+      }
+      if (needsAnswer.length > 0) {
+        const first = el.querySelector('#' + needsAnswer[0]);
+        first?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+
+      if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Submitting...'; }
+      if (statusEl) { statusEl.textContent = 'Submitting...'; statusEl.style.color = 'var(--accent)'; }
+
+      try {
+        const result = await submitReport(appId, title, form);
+        if (result.ok) {
+          if (statusEl) { statusEl.textContent = 'Report submitted! Redirecting...'; statusEl.style.color = 'var(--green)'; }
+          setTimeout(() => { window.location.href = `app.html#/app/${appId}`; }, 1200);
+        } else {
+          if (statusEl) { statusEl.textContent = result.error || 'Submit failed'; statusEl.style.color = 'var(--red)'; }
+          if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Submit'; }
+        }
+      } catch (err) {
+        console.error('[submit] submitReport failed:', err);
+        if (statusEl) { statusEl.textContent = err.message || 'Submit failed'; statusEl.style.color = 'var(--red)'; }
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Submit'; }
+      }
+    });
+  }
+})().catch(err => {
+  console.error('[submit] page init failed:', err);
+  const fc = document.getElementById('submit-form-content');
+  if (fc) fc.innerHTML = `<div style="padding:24px;color:var(--red)">Page error: ${err.message || err}</div>`;
+});
+</script>
+</body>
+</html>
