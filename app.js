@@ -1835,6 +1835,14 @@ async function renderGamePage(appId) {
   }
 
   render();
+
+  // Scroll to a specific report if the URL has #report-{id} after the app hash
+  const anchorMatch = location.hash.match(/#(report-[a-z0-9]+)$/i);
+  if (anchorMatch) {
+    setTimeout(() => {
+      el.querySelector(`#${anchorMatch[1]}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 150);
+  }
 }
 
 // - Search --------------------------------------------
