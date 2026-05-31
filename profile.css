@@ -527,7 +527,13 @@
 .profile-configs-table td.col-action,
 .profile-configs-table th.col-action {
   text-align: right;
-  width: 210px;
+  /* 210px was tight: 4 buttons / 5px gaps left ~46px per button which
+     truncated Publish -> "Pu..." and Delete -> "Del..." on desktop.
+     min-width plus a max keeps the column generous on wide screens but
+     still flexible enough to share space when the table is squeezed */
+  min-width: 320px;
+  width: auto;
+  max-width: 360px;
 }
 .profile-configs-game-link {
   color: var(--text);
