@@ -1257,13 +1257,32 @@ async function renderGamePage(appId) {
   const el = document.getElementById('content');
   el.innerHTML = '<div class="state-box">Loading reports...</div>';
 
+  // Promise.all was hanging silently on Wukong (appId 2358720) when one of
+  // the six fetches stalled -- the page sat on "Loading reports..."
+  // forever. The individual fetch helpers already have try/catch + safe
+  // fallbacks, but a fetch() that never resolves (network blip,
+  // browser-level timeout much longer than user patience) would still
+  // block Promise.all. Wrap each one in a 10s timeout race so the worst
+  // case is a single missing data source, not a stuck page
+  const safeFetch = async (fn, label, fallback) => {
+    const TIMEOUT_MS = 10000;
+    try {
+      return await Promise.race([
+        fn(),
+        new Promise((_, rej) => setTimeout(() => rej(new Error(`${label} timed out after ${TIMEOUT_MS}ms`)), TIMEOUT_MS)),
+      ]);
+    } catch (e) {
+      console.warn(`[renderGamePage] ${label} failed for app ${appId}:`, e);
+      return fallback;
+    }
+  };
   const [cdn, configs, nativeReports, votes, userVotes, playtimeTotals] = await Promise.all([
-    fetchCdn(appId),
-    fetchSupabase(appId),
-    fetchNativeReports(appId),
-    fetchVotes(appId),
-    fetchUserVotes(appId),
-    fetchConfigPlaytimeTotals(appId),
+    safeFetch(() => fetchCdn(appId), 'fetchCdn', []),
+    safeFetch(() => fetchSupabase(appId), 'fetchSupabase', []),
+    safeFetch(() => fetchNativeReports(appId), 'fetchNativeReports', []),
+    safeFetch(() => fetchVotes(appId), 'fetchVotes', {}),
+    safeFetch(() => fetchUserVotes(appId), 'fetchUserVotes', {}),
+    safeFetch(() => fetchConfigPlaytimeTotals(appId), 'fetchConfigPlaytimeTotals', []),
   ]);
 
   // If CDN was empty but the user already clicked "Check ProtonDB Live" this
