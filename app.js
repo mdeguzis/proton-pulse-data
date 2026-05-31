@@ -393,7 +393,7 @@ async function fetchSupabase(appId) {
 async function fetchNativeReports(appId) {
   try {
     const r = await fetch(
-      `${SB_URL}/user_configs?app_id=eq.${appId}&select=id,client_id,app_id,title,cpu,gpu,gpu_driver,gpu_vendor,ram,os,kernel,proton_version,rating,duration,duration_minutes,notes,vram_mb,form_responses,config_key,game_owned,created_at,source&order=created_at.desc`,
+      `${SB_URL}/user_configs?app_id=eq.${appId}&select=id,client_id,app_id,title,cpu,gpu,gpu_driver,gpu_vendor,ram,os,kernel,proton_version,rating,duration,duration_minutes,notes,vram_mb,form_responses,config_key,game_owned,created_at,updated_at,source&order=created_at.desc`,
       { headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` } }
     );
     if (!r.ok) return [];
@@ -427,6 +427,7 @@ async function fetchNativeReports(appId) {
       configKey:         row.config_key || null,
       gameOwned:         row.game_owned ?? false,
       timestamp:         Math.floor(new Date(row.created_at).getTime() / 1000),
+      updatedAt:         row.updated_at ? Math.floor(new Date(row.updated_at).getTime() / 1000) : null,
       source:            row.source || 'proton-pulse',
     }));
   } catch { return []; }
@@ -1235,6 +1236,8 @@ function renderCard(r, votes, userVotes = {}, configPlaytimeTotals = []) {
       ${(() => { const fr = buildFormRows(r); return fr ? `<div class="all-details-panel fr-panel"><div class="fr-section">${fr}</div></div>` : ''; })()}
       ${r.reportId != null ? `<div class="row"><span class="label">Report ID</span><span style="font-family:monospace;font-size:0.8em;color:var(--muted)">#${r.reportId}</span></div>` : ''}
       <div class="row"><span class="label">Source</span><span>${isProtonDb ? 'ProtonDB' : isWeb ? 'Web submission' : 'Decky Proton Pulse'}</span></div>
+      ${!isProtonDb && r.timestamp ? `<div class="row"><span class="label">Submitted</span><span>${new Date(r.timestamp * 1000).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</span></div>` : ''}
+      ${!isProtonDb && r.updatedAt && r.updatedAt !== r.timestamp ? `<div class="row"><span class="label">Edited</span><span>${new Date(r.updatedAt * 1000).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</span></div>` : ''}
       <!-- All action buttons live in the footer in one uniform blue style:
            Show Report Responses (if there are any), All Hardware Details,
            Permalink, JSON. Delete only shows for the report owner. -->

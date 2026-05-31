@@ -601,6 +601,81 @@
   border-color: rgba(200,80,80,0.45);
 }
 
+/* Edit report modal */
+.edit-report-modal {
+  background: #1a2535;
+  color: #c8d4e0;
+  border: 1px solid #2a3f55;
+  border-radius: 8px;
+  padding: 24px;
+  min-width: 340px;
+  max-width: 520px;
+  width: 90vw;
+}
+.edit-report-modal::backdrop {
+  background: rgba(0,0,0,0.65);
+}
+.edit-report-title {
+  margin: 0 0 18px;
+  font-size: 1.1em;
+  color: #e8f0f8;
+}
+.edit-report-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.edit-report-label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 0.85em;
+  color: #8fa0b0;
+}
+.edit-report-input {
+  background: #0f1a25;
+  color: #c8d4e0;
+  border: 1px solid #2a3f55;
+  border-radius: 4px;
+  padding: 7px 10px;
+  font-size: 0.95em;
+  font-family: inherit;
+  resize: vertical;
+}
+.edit-report-input:focus {
+  outline: none;
+  border-color: #4a9fd0;
+}
+.edit-report-status {
+  min-height: 1.2em;
+  margin: 12px 0 0;
+  font-size: 0.85em;
+  color: #d76f6f;
+}
+.edit-report-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+}
+.edit-report-cancel,
+.edit-report-save {
+  padding: 7px 18px;
+  border-radius: 4px;
+  border: 1px solid #2a3f55;
+  cursor: pointer;
+  font-size: 0.9em;
+  background: transparent;
+  color: #8fa0b0;
+}
+.edit-report-cancel:hover { color: #c8d4e0; border-color: #4a5f70; }
+.edit-report-save {
+  color: #66c0f4;
+  border-color: rgba(74,159,208,0.5);
+}
+.edit-report-save:hover { background: rgba(74,159,208,0.12); }
+.edit-report-save:disabled { opacity: 0.5; cursor: not-allowed; }
+
 @media (max-width: 640px) {
   .profile-configs-table,
   .profile-configs-table thead,
