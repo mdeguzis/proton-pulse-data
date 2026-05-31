@@ -676,6 +676,58 @@
 .edit-report-save:hover { background: rgba(74,159,208,0.12); }
 .edit-report-save:disabled { opacity: 0.5; cursor: not-allowed; }
 
+.edit-report-history-section {
+  margin-top: 16px;
+  border-top: 1px solid #2a3f55;
+  padding-top: 12px;
+}
+.edit-report-history-toggle {
+  background: none;
+  border: none;
+  color: #4a9fd0;
+  cursor: pointer;
+  font-size: 0.82em;
+  padding: 0;
+  text-decoration: underline;
+}
+.edit-report-history-toggle:hover { color: #66c0f4; }
+.edit-report-history-panel {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.edit-report-history-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 8px 10px;
+  background: #0f1a25;
+  border-radius: 4px;
+  border-left: 3px solid #2a3f55;
+}
+.hist-date {
+  font-size: 0.78em;
+  color: #4a9fd0;
+  margin-bottom: 2px;
+}
+.hist-field {
+  font-size: 0.82em;
+  color: #8fa0b0;
+}
+.hist-field b { color: #c8d4e0; font-weight: 500; }
+.hist-notes {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.edit-report-history-empty {
+  font-size: 0.82em;
+  color: #4a5f70;
+  margin: 0;
+}
+
 @media (max-width: 640px) {
   .profile-configs-table,
   .profile-configs-table thead,
