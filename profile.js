@@ -541,8 +541,14 @@ function getCloudEditModal() {
   _cloudEditModal.innerHTML = `
     <h2 class="edit-report-title">Edit Cloud Config</h2>
     <div class="edit-report-fields">
+      <label class="edit-report-label">Proton Version
+        <input class="edit-report-input" type="text" name="proton_version" placeholder="e.g. Proton 9.0">
+      </label>
       <label class="edit-report-label">Launch Options
         <input class="edit-report-input" type="text" name="launch_options" placeholder="e.g. DXVK_HUD=1 %command%">
+      </label>
+      <label class="edit-report-label" title="One VAR=value per line">Environment Variables
+        <textarea class="edit-report-input" name="enabled_vars" rows="4" placeholder="DXVK_FRAME_RATE=60&#10;PROTON_USE_WINED3D=1"></textarea>
       </label>
     </div>
     <div class="edit-report-status"></div>
@@ -554,6 +560,23 @@ function getCloudEditModal() {
   document.body.appendChild(_cloudEditModal);
   _cloudEditModal.querySelector('.edit-report-cancel').addEventListener('click', () => _cloudEditModal.close());
   return _cloudEditModal;
+}
+
+function enabledVarsToText(vars) {
+  if (!vars || typeof vars !== 'object') return '';
+  return Object.entries(vars).map(([k, v]) => `${k}=${v}`).join('\n');
+}
+
+function textToEnabledVars(text) {
+  const result = {};
+  for (const line of text.split('\n')) {
+    const eq = line.indexOf('=');
+    if (eq < 1) continue;
+    const k = line.slice(0, eq).trim();
+    const v = line.slice(eq + 1).trim();
+    if (k) result[k] = v;
+  }
+  return result;
 }
 
 async function showEditCloudConfigModal(protonPulseUserId, appId, session, onSaved) {
@@ -578,13 +601,20 @@ async function showEditCloudConfigModal(protonPulseUserId, appId, session, onSav
   status.textContent = '';
   saveBtn.disabled = false;
   const cfg = record.config || {};
+  modal.querySelector('[name="proton_version"]').value = cfg.protonVersion || '';
   modal.querySelector('[name="launch_options"]').value = cfg.launchOptions || '';
+  modal.querySelector('[name="enabled_vars"]').value = enabledVarsToText(cfg.enabledVars);
 
   saveBtn.onclick = async () => {
     saveBtn.textContent = 'Saving...';
     saveBtn.disabled = true;
     status.textContent = '';
-    const newConfig = { ...cfg, launchOptions: modal.querySelector('[name="launch_options"]').value.trim() || '' };
+    const newConfig = {
+      ...cfg,
+      protonVersion:  modal.querySelector('[name="proton_version"]').value.trim(),
+      launchOptions:  modal.querySelector('[name="launch_options"]').value.trim(),
+      enabledVars:    textToEnabledVars(modal.querySelector('[name="enabled_vars"]').value),
+    };
     try {
       await patchCloudConfig(protonPulseUserId, appId, newConfig, session);
       console.debug('[profile] showEditCloudConfigModal: saved', { appId });
