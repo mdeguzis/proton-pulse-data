@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 48" fill="none">
+  <!-- atom mark -->
+  <ellipse cx="24" cy="24" rx="20" ry="7.3" stroke="#66c0f4" stroke-width="1.8"/>
+  <ellipse cx="24" cy="24" rx="20" ry="7.3" stroke="#66c0f4" stroke-width="1.8" transform="rotate(60 24 24)"/>
+  <ellipse cx="24" cy="24" rx="20" ry="7.3" stroke="#66c0f4" stroke-width="1.8" transform="rotate(-60 24 24)"/>
+  <circle cx="24" cy="24" r="4" fill="#66c0f4"/>
+  <!-- wordmark -->
+  <text x="54" y="30" font-family="'Space Grotesk', system-ui, sans-serif" font-size="22" font-weight="700" letter-spacing="0.03em" fill="#ffffff">Proton</text>
+  <text x="131" y="30" font-family="'Space Grotesk', system-ui, sans-serif" font-size="22" font-weight="700" letter-spacing="0.03em" fill="#66c0f4">Pulse</text>
+</svg>
