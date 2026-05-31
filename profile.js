@@ -489,6 +489,16 @@ async function fetchFullUserConfig(reportId, session) {
   return rows[0] ?? null;
 }
 
+async function fetchReportHistory(reportId, session) {
+  const url = `${SUPABASE_URL}/rest/v1/user_configs_history`
+    + `?config_id=eq.${encodeURIComponent(reportId)}`
+    + `&select=id,rating,proton_version,os,notes,config_key,recorded_at`
+    + `&order=recorded_at.desc`;
+  const r = await fetch(url, { headers: supabaseHeaders(session) });
+  if (!r.ok) throw new Error(`History fetch failed: HTTP ${r.status}`);
+  return await r.json();
+}
+
 async function patchUserConfig(reportId, fields, session) {
   const url = `${SUPABASE_URL}/rest/v1/user_configs?id=eq.${encodeURIComponent(reportId)}`;
   const r = await fetch(url, {
@@ -530,6 +540,10 @@ function getEditModal() {
       </label>
     </div>
     <div class="edit-report-status"></div>
+    <div class="edit-report-history-section">
+      <button type="button" class="edit-report-history-toggle">Show edit history</button>
+      <div class="edit-report-history-panel" hidden></div>
+    </div>
     <div class="edit-report-actions">
       <button type="button" class="edit-report-cancel">Cancel</button>
       <button type="button" class="edit-report-save">Save Changes</button>
@@ -540,12 +554,32 @@ function getEditModal() {
   return _editModal;
 }
 
+function renderHistoryPanel(entries) {
+  if (!entries.length) return '<p class="edit-report-history-empty">No edit history yet.</p>';
+  return entries.map(e => {
+    const date = formatSystemUpdated(e.recorded_at);
+    const parts = [
+      e.rating       ? `<span class="hist-field">Rating: <b>${escapeHtml(e.rating)}</b></span>`               : '',
+      e.proton_version ? `<span class="hist-field">Proton: <b>${escapeHtml(e.proton_version)}</b></span>`    : '',
+      e.os           ? `<span class="hist-field">OS: <b>${escapeHtml(e.os)}</b></span>`                       : '',
+      e.config_key   ? `<span class="hist-field">Launch opts: <b>${escapeHtml(e.config_key)}</b></span>`      : '',
+      e.notes        ? `<span class="hist-field hist-notes">Notes: ${escapeHtml(e.notes)}</span>`             : '',
+    ].filter(Boolean).join('');
+    return `<div class="edit-report-history-entry"><span class="hist-date">${escapeHtml(date)}</span>${parts}</div>`;
+  }).join('');
+}
+
 async function showEditReportModal(reportId, session, onSaved) {
   const modal = getEditModal();
   const status = modal.querySelector('.edit-report-status');
   const saveBtn = modal.querySelector('.edit-report-save');
+  const histToggle = modal.querySelector('.edit-report-history-toggle');
+  const histPanel = modal.querySelector('.edit-report-history-panel');
   status.textContent = 'Loading report...';
   saveBtn.disabled = true;
+  histPanel.hidden = true;
+  histPanel.innerHTML = '';
+  histToggle.textContent = 'Show edit history';
   modal.showModal();
 
   let record;
@@ -566,6 +600,25 @@ async function showEditReportModal(reportId, session, onSaved) {
   modal.querySelector('[name="os"]').value = record.os || '';
   modal.querySelector('[name="notes"]').value = record.notes || '';
   modal.querySelector('[name="config_key"]').value = record.config_key || '';
+
+  let histLoaded = false;
+  histToggle.onclick = async () => {
+    const open = !histPanel.hidden;
+    histPanel.hidden = open;
+    histToggle.textContent = open ? 'Show edit history' : 'Hide edit history';
+    if (!open && !histLoaded) {
+      histPanel.textContent = 'Loading...';
+      try {
+        const entries = await fetchReportHistory(reportId, session);
+        histPanel.innerHTML = renderHistoryPanel(entries);
+        histLoaded = true;
+        console.debug('[profile] showEditReportModal: history loaded', { reportId, count: entries.length });
+      } catch (e) {
+        histPanel.textContent = e.message || 'Failed to load history';
+        console.warn('[profile] showEditReportModal: history fetch failed', { reportId, error: String(e) });
+      }
+    }
+  };
 
   saveBtn.onclick = async () => {
     saveBtn.textContent = 'Saving...';
