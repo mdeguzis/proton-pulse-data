@@ -144,7 +144,13 @@ function getProtonPulseUserIdFromSession(session) {
 // authoritative cross-device source. getShowUsername reads local only;
 // showUser() syncs the authoritative value down on sign-in.
 function getShowUsername() {
-  return localStorage.getItem(SHOW_USERNAME_KEY) === 'true';
+  // Default to true for signed-in Pulse accounts: if the user took the
+  // step of linking their Steam account, the assumption is they want their
+  // username visible on reports. They can opt out via the toggle, which
+  // sets the key to the literal string 'false'.
+  const v = localStorage.getItem(SHOW_USERNAME_KEY);
+  if (v === null) return true;
+  return v === 'true';
 }
 
 function setShowUsername(val) {
@@ -1442,7 +1448,7 @@ const MOCK_REPORTS = [
           <label class="profile-systems-default-toggle" title="Set as default">
             <input type="checkbox" data-role="default" ${r.is_default ? 'checked' : ''}>
             <span class="profile-systems-default-switch" aria-hidden="true"></span>
-            <span class="profile-systems-default-text">${r.is_default ? 'Default' : ''}</span>
+            <span class="profile-systems-default-text">Default</span>
           </label>
         </td>
         <td class="col-delete">

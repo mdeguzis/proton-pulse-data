@@ -1319,17 +1319,18 @@ code {
 }
 .auth-username {
   /* Cap at 110px on narrow viewports so the username doesn't crowd the
-     hamburger toggle. On wide screens (where there's room) let it grow
-     to a sensible 220px so common Steam usernames fit without ellipsis */
+     hamburger toggle. Step it up on wider screens where there's clearly
+     room -- the screenshot shows "ProfessorK..." truncated at 1920px even
+     though the topbar has hundreds of pixels of empty space next to it */
   max-width: 110px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-weight: 500;
 }
-@media (min-width: 1100px) {
-  .auth-username { max-width: 220px; }
-}
+@media (min-width: 1100px) { .auth-username { max-width: 220px; } }
+@media (min-width: 1400px) { .auth-username { max-width: 320px; } }
+@media (min-width: 1700px) { .auth-username { max-width: none; } }
 
 .gh-login-btn {
   --steam-btn-bg-top: #21324a;

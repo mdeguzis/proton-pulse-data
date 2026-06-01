@@ -374,6 +374,13 @@
   vertical-align: middle;
   width: 80px;
 }
+/* Default column needs more room since the toggle now reserves space for
+   the "Default" text whether or not the row is the current default (so the
+   switches in every row line up vertically at the same x position) */
+.profile-systems-table td.col-default,
+.profile-systems-table th.col-default {
+  width: 110px;
+}
 .profile-systems-label-input {
   background: transparent;
   border: 1px dashed transparent;
@@ -461,9 +468,17 @@
 .profile-systems-default-text {
   font-size: 0.7rem;
   color: var(--muted);
+  /* Always reserve "Default" worth of horizontal space so the switch sits
+     at the same x position whether the row is the current default or not.
+     visibility:hidden keeps the layout but skips the text rendering when
+     the row isn't default */
+  visibility: hidden;
+  min-width: 48px;
+  text-align: left;
 }
 .profile-systems-default-toggle input:checked ~ .profile-systems-default-text {
   color: #e6c160;
+  visibility: visible;
 }
 .profile-systems-details-row td {
   padding-top: 0;
