@@ -732,7 +732,7 @@ function renderConfigCard(c, idx, votes = {}, userVotes = {}) {
         <span class="config-lbl">Env Vars</span>
         <span class="config-vars">${vars.map(([k]) => `<span class="var-tag">${esc(k)}</span>`).join('')}</span>
       </div>` : ''}
-      ${renderFormResponses(c)}
+      ${(() => { const fr = buildFormRows(c); return fr ? `<div class="fr-section">${fr}</div>` : ''; })()}
       <div class="config-hw">
         <div class="config-hw-label">Hardware</div>
         <div class="config-row"><span class="config-lbl">GPU</span><span>${cfgNa(esc(c.gpu))}</span></div>
@@ -1896,13 +1896,18 @@ async function renderGamePage(appId) {
 }
 
 // - Search --------------------------------------------
+//
+// topbar.js injects #search at DOMContentLoaded, so these can be null at
+// script-load time. Defer wiring until the DOM is ready so we don't throw
+// "addEventListener of null" and break renderGamePage.
 
-const searchInput   = document.getElementById('search');
-const searchResults = document.getElementById('search-results');
+let searchInput   = document.getElementById('search');
+let searchResults = document.getElementById('search-results');
 
-
-
-
+function wireSearch() {
+  searchInput   = searchInput   || document.getElementById('search');
+  searchResults = searchResults || document.getElementById('search-results');
+  if (!searchInput) return;
 
 
 searchInput.addEventListener('input', onSearchInput);
@@ -1943,8 +1948,15 @@ document.addEventListener('click', e => {
 });
 
 window.addEventListener('resize', () => {
-  if (searchResults.classList.contains('open')) positionSearchResults();
+  if (searchResults && searchResults.classList.contains('open')) positionSearchResults();
 });
+} // end wireSearch
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', wireSearch);
+} else {
+  wireSearch();
+}
 
 // Sidebar toggle + auth chip wiring moved to topbar.js (shared across all pages).
 
