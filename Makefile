@@ -10,10 +10,24 @@ WATCH_ALL_WORKFLOWS ?= true
 
 .PHONY: help setup install install-pg test lint lint-py lint-pylint lint-sh test-py init-submodules fetch-steam-catalog backup-supabase install-docker \
 	gh-run gh-pages-only gh-backfill-apps gh-coverage-backfill gh-run-watch gh-check \
-	build serve
+	build serve smoke smoke-live
 
 build:
 	@bash scripts/cache-bust.sh
+
+# Render-path smoke test: serves a staged copy of the site (with an error
+# catcher injected at the top of every <head>) and drives headless Firefox
+# through home + reference game pages. Catches ReferenceErrors inside
+# render() that pass jest but break the live site. Run before pushing
+# changes to renderGamePage / renderCard / renderConfigCard / search wiring.
+smoke:
+	@bash scripts/smoke.sh
+
+# Same harness pointed at the production site -- skips the local staging
+# step (so no error-catcher injection; DOM-state assertions only) and
+# catches deploy issues like a stale cache buster.
+smoke-live:
+	@BASE_URL=https://www.proton-pulse.com bash scripts/smoke.sh
 
 help:
 	@echo "Usage: make <target>"
@@ -21,6 +35,8 @@ help:
 	@echo "  build               Update app.html cache buster (?v=hash) to match app.js"
 	@echo "  install             Install node deps (vite + jest) via pnpm"
 	@echo "  serve               Run vite dev server with CSS HMR (http://localhost:5173)"
+	@echo "  smoke               Render-path smoke test against a local staged copy"
+	@echo "  smoke-live          Same harness pointed at https://www.proton-pulse.com"
 	@echo "  sync-runtime        Pull scoring-info.json and form-schema.json from plugin repo"
 	@echo "  setup               Bootstrap local dev tools and Python dependencies"
 	@echo "  install-pg          Install pg_dump (postgresql) via pkg (Termux/Debian)"
