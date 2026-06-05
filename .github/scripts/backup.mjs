@@ -37,12 +37,22 @@ function hmac(value) {
   return createHmac('sha256', HMAC_SECRET).update(String(value)).digest('hex');
 }
 
-async function fetchAll(table, select = '*') {
+// Redact anything that looks like an absolute file path to avoid leaking OS usernames.
+function redactPaths(str) {
+  if (!str) return str;
+  return str
+    .replace(/\/home\/[^/\s]+/g, '/home/[redacted]')
+    .replace(/\/Users\/[^/\s]+/g, '/Users/[redacted]')
+    .replace(/C:\\Users\\[^\\\s]+/gi, 'C:\\Users\\[redacted]')
+    .replace(/\/root/g, '/root');
+}
+
+async function fetchAll(table, select = '*', extraFilter = '') {
   const rows = [];
   let offset = 0;
   const limit = 1000;
   while (true) {
-    const url = `${SUPABASE_URL}/rest/v1/${table}?select=${encodeURIComponent(select)}&limit=${limit}&offset=${offset}&order=id.asc`;
+    const url = `${SUPABASE_URL}/rest/v1/${table}?select=${encodeURIComponent(select)}${extraFilter}&limit=${limit}&offset=${offset}&order=id.asc`;
     const res = await fetch(url, { headers: HEADERS });
     if (!res.ok) throw new Error(`Fetch ${table} failed: ${res.status} ${await res.text()}`);
     const batch = await res.json();
@@ -91,7 +101,7 @@ function sanitizeUserConfig(row) {
     title: row.title,
     rating: row.rating,
     proton_version: row.proton_version,
-    launch_options: row.launch_options,
+    launch_options: redactPaths(row.launch_options),
     cpu: row.cpu,
     gpu: row.gpu,
     gpu_driver: row.gpu_driver,
@@ -148,7 +158,8 @@ async function run(type) {
   }
 
   if (type === 'user_configs') {
-    const rows = await fetchAll('user_configs');
+    // Exclude hidden reports - they were hidden for a reason (flagged/banned).
+    const rows = await fetchAll('user_configs', '*', '&is_hidden=eq.false');
     const sanitized = rows.map(sanitizeUserConfig);
     writeFileSync(join(workDir, `user_configs-${DATE}.json`), JSON.stringify(sanitized, null, 2));
     console.log(`[user_configs] exported ${sanitized.length} rows`);
