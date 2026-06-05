@@ -1332,30 +1332,12 @@ code {
 @media (min-width: 1400px) { .auth-username { max-width: 320px; } }
 @media (min-width: 1700px) { .auth-username { max-width: none; } }
 
-.auth-admin-chip {
-  display: none; /* hidden on mobile; shown on wider screens below */
+.auth-admin-navlink {
+  color: #e88a8a !important;
+  font-weight: 600;
 }
-@media (min-width: 760px) {
-  .auth-admin-chip {
-    display: inline-flex;
-    align-items: center;
-    padding: 2px 8px;
-    margin-left: 6px;
-    font-size: 0.7rem;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: #e88a8a;
-    background: rgba(220, 80, 80, 0.15);
-    border: 1px solid rgba(220, 80, 80, 0.35);
-    border-radius: 4px;
-    text-decoration: none;
-    white-space: nowrap;
-  }
-  .auth-admin-chip:hover {
-    background: rgba(220, 80, 80, 0.28);
-    color: #f4a8a8;
-  }
+.auth-admin-navlink:hover {
+  color: #f4a8a8 !important;
 }
 
 .gh-login-btn {

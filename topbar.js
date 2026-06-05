@@ -685,18 +685,18 @@
         const rawName = (user.user_metadata && user.user_metadata.name) || user.email || '';
         if (nameEl)    nameEl.textContent = rawName.length > 10 ? rawName.slice(0, 10) + '\u2026' : rawName;
 
-        // Show admin chip next to the signed-in username if the user is an admin.
+        // Add Admin nav link if the user is an admin.
         checkIsAdmin(state.session).then(function (admin) {
           var existing = document.getElementById('topbar-admin-link');
           if (admin && !existing) {
             var link = document.createElement('a');
             link.id = 'topbar-admin-link';
             link.href = 'admin.html';
-            link.className = 'auth-admin-chip';
+            link.className = 'topnav-link auth-admin-navlink';
             link.textContent = 'Admin';
             link.title = 'Open admin panel';
-            var chip = document.getElementById('gh-auth-chip');
-            if (chip) chip.appendChild(link);
+            var nav = document.getElementById('primary-nav');
+            if (nav) nav.appendChild(link);
           } else if (!admin && existing) {
             existing.remove();
           }
