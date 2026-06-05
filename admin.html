@@ -126,14 +126,28 @@
 
       <!-- Admins -->
       <section id="tab-admins" class="admin-section" hidden>
+        <div class="admin-filters" id="add-admin-form">
+          <input type="text" id="new-admin-uuid" class="admin-input" placeholder="User UUID" maxlength="36">
+          <input type="text" id="new-admin-username" class="admin-input" placeholder="Steam username">
+          <select id="new-admin-role" class="admin-select">
+            <option value="moderator">Moderator</option>
+            <option value="super_admin">Super Admin</option>
+          </select>
+          <button class="admin-btn" id="add-admin-btn">Add Admin</button>
+        </div>
+        <div id="add-admin-status" class="admin-field-hint" style="margin-bottom:8px"></div>
+
         <div id="admins-loading" class="admin-loading">Loading...</div>
         <div id="admins-empty" class="admin-empty" hidden>No admins found.</div>
+        <div id="admins-error" class="admin-error" hidden></div>
 
         <table class="admin-table" id="admins-table" hidden>
           <thead>
             <tr>
               <th>Username</th>
+              <th>Role</th>
               <th>Added</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody id="admins-tbody"></tbody>

@@ -111,10 +111,36 @@ async function fetchBannedUsers(session, { search } = {}) {
 }
 
 async function fetchAdmins(session) {
-  const url = `${SUPABASE_URL}/rest/v1/admins?select=proton_pulse_user_id,steam_username,added_at&order=added_at.asc`;
+  const url = `${SUPABASE_URL}/rest/v1/admins?select=proton_pulse_user_id,steam_username,role,added_at&order=added_at.asc`;
   const res = await fetch(url, { headers: supabaseHeaders(session) });
   if (!res.ok) throw new Error(`Fetch admins failed: ${res.status}`);
   return res.json();
+}
+
+async function addAdmin(session, { uuid, username, role }) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/admins`, {
+    method: 'POST',
+    headers: supabaseHeaders(session, { Prefer: 'return=minimal' }),
+    body: JSON.stringify({ proton_pulse_user_id: uuid, steam_username: username, role }),
+  });
+  if (!res.ok) throw new Error(`Add admin failed: ${res.status} ${await res.text()}`);
+}
+
+async function removeAdmin(session, uuid) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/admins?proton_pulse_user_id=eq.${uuid}`, {
+    method: 'DELETE',
+    headers: supabaseHeaders(session, { Prefer: 'return=minimal' }),
+  });
+  if (!res.ok) throw new Error(`Remove admin failed: ${res.status}`);
+}
+
+async function updateAdminRole(session, uuid, role) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/admins?proton_pulse_user_id=eq.${uuid}`, {
+    method: 'PATCH',
+    headers: supabaseHeaders(session, { Prefer: 'return=minimal' }),
+    body: JSON.stringify({ role }),
+  });
+  if (!res.ok) throw new Error(`Update role failed: ${res.status}`);
 }
 
 async function fetchAllUsers(session, { search } = {}) {
@@ -377,11 +403,23 @@ function renderAdmins(rows) {
   empty.hidden = true;
   table.hidden = false;
 
-  tbody.innerHTML = rows.map(r => `
-    <tr>
-      <td>${escapeHtml(r.steam_username)}</td>
+  tbody.innerHTML = rows.map(r => {
+    const uid = escapeHtml(r.proton_pulse_user_id);
+    const name = escapeHtml(r.steam_username);
+    const isSuperAdmin = r.role === 'super_admin';
+    const roleSelect = `
+      <select class="admin-select admin-select--sm" data-action="change-role" data-uuid="${uid}">
+        <option value="moderator" ${r.role === 'moderator' ? 'selected' : ''}>Moderator</option>
+        <option value="super_admin" ${isSuperAdmin ? 'selected' : ''}>Super Admin</option>
+      </select>`;
+    const removeBtn = `<button class="admin-btn admin-btn--danger admin-btn--sm" data-action="remove-admin" data-uuid="${uid}" data-name="${name}">Remove</button>`;
+    return `<tr>
+      <td>${name}</td>
+      <td>${roleSelect}</td>
       <td>${escapeHtml(fmtDate(r.added_at))}</td>
-    </tr>`).join('');
+      <td>${removeBtn}</td>
+    </tr>`;
+  }).join('');
 }
 
 function renderUsers(rows) {
@@ -676,6 +714,54 @@ function wireEvents() {
   document.getElementById('ban-cancel-btn').addEventListener('click', closeBanModal);
   document.getElementById('ban-modal').addEventListener('click', e => {
     if (e.target === e.currentTarget) closeBanModal();
+  });
+
+  // Add admin form
+  document.getElementById('add-admin-btn').addEventListener('click', async () => {
+    const uuid     = document.getElementById('new-admin-uuid').value.trim();
+    const username = document.getElementById('new-admin-username').value.trim();
+    const role     = document.getElementById('new-admin-role').value;
+    const status   = document.getElementById('add-admin-status');
+    if (!uuid || !username) { status.textContent = 'UUID and username are required.'; status.style.color = 'var(--red)'; return; }
+    try {
+      await addAdmin(currentSession, { uuid, username, role });
+      status.textContent = `Added ${username}.`;
+      status.style.color = 'var(--green)';
+      document.getElementById('new-admin-uuid').value = '';
+      document.getElementById('new-admin-username').value = '';
+      loadAdmins();
+    } catch (e) {
+      status.textContent = e.message;
+      status.style.color = 'var(--red)';
+    }
+  });
+
+  // Admins table: remove + role change (delegated)
+  document.getElementById('admins-tbody').addEventListener('click', async e => {
+    const btn = e.target.closest('[data-action="remove-admin"]');
+    if (!btn) return;
+    if (!confirm(`Remove ${btn.dataset.name} as admin?`)) return;
+    btn.disabled = true; btn.textContent = '...';
+    try {
+      await removeAdmin(currentSession, btn.dataset.uuid);
+      btn.closest('tr').remove();
+    } catch (err) {
+      btn.disabled = false; btn.textContent = 'Remove';
+      alert(`Error: ${err.message}`);
+    }
+  });
+
+  document.getElementById('admins-tbody').addEventListener('change', async e => {
+    const sel = e.target.closest('[data-action="change-role"]');
+    if (!sel) return;
+    const origVal = sel.dataset.currentRole || sel.value;
+    try {
+      sel.dataset.currentRole = sel.value;
+      await updateAdminRole(currentSession, sel.dataset.uuid, sel.value);
+    } catch (err) {
+      sel.value = origVal;
+      alert(`Error: ${err.message}`);
+    }
   });
 }
 
