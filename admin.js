@@ -118,49 +118,56 @@ async function fetchAdmins(session) {
 }
 
 async function fetchAllUsers(session, { search } = {}) {
-  // Pull all user_configs rows (admin bypasses RLS) to build a complete user list.
-  // Use pagination to handle large tables.
-  const limit = 1000;
-  let offset = 0;
-  let allConfigs = [];
-  while (true) {
-    const url = `${SUPABASE_URL}/rest/v1/user_configs`
-      + `?select=proton_pulse_user_id,client_id,updated_at`
-      + `&limit=${limit}&offset=${offset}&order=updated_at.desc`;
-    const res = await fetch(url, { headers: supabaseHeaders(session) });
-    if (!res.ok) throw new Error(`Fetch users failed: ${res.status}`);
-    const batch = await res.json();
-    allConfigs.push(...batch);
-    if (batch.length < limit) break;
-    offset += limit;
+  async function fetchAllRows(table, select) {
+    const limit = 1000;
+    let offset = 0, rows = [];
+    while (true) {
+      const url = `${SUPABASE_URL}/rest/v1/${table}?select=${select}&limit=${limit}&offset=${offset}&order=updated_at.desc`;
+      const res = await fetch(url, { headers: supabaseHeaders(session) });
+      if (!res.ok) throw new Error(`Fetch ${table} failed: ${res.status}`);
+      const batch = await res.json();
+      rows.push(...batch);
+      if (batch.length < limit) break;
+      offset += limit;
+    }
+    return rows;
   }
 
-  // Aggregate per unique identity (proton_pulse_user_id or client_id).
+  // Pull from both tables — user_configs = submitted reports, user_proton_configs = cloud configs.
+  const [configs, protonConfigs] = await Promise.all([
+    fetchAllRows('user_configs', 'proton_pulse_user_id,client_id,updated_at'),
+    fetchAllRows('user_proton_configs', 'proton_pulse_user_id,installation_id,updated_at'),
+  ]);
+
+  // Aggregate per unique identity across both tables.
   const byUser = new Map();
-  for (const row of allConfigs) {
-    const key = row.proton_pulse_user_id || row.client_id;
-    if (!key) continue;
+
+  function merge(protonPulseUserId, clientId, updatedAt, isReport) {
+    const key = protonPulseUserId || clientId;
+    if (!key) return;
     if (!byUser.has(key)) {
       byUser.set(key, {
-        proton_pulse_user_id: row.proton_pulse_user_id || null,
-        client_id: row.client_id || null,
+        proton_pulse_user_id: protonPulseUserId || null,
+        client_id: clientId || null,
         report_count: 0,
-        last_active: row.updated_at,
+        last_active: updatedAt,
         display_name: null,
       });
     }
     const u = byUser.get(key);
-    u.report_count++;
-    if (row.updated_at > u.last_active) u.last_active = row.updated_at;
-    if (!u.client_id && row.client_id) u.client_id = row.client_id;
+    if (isReport) u.report_count++;
+    if (updatedAt > u.last_active) u.last_active = updatedAt;
+    if (!u.proton_pulse_user_id && protonPulseUserId) u.proton_pulse_user_id = protonPulseUserId;
+    if (!u.client_id && clientId) u.client_id = clientId;
   }
 
-  // Fetch display names from author_avatars for known user IDs.
+  for (const r of configs) merge(r.proton_pulse_user_id, r.client_id, r.updated_at, true);
+  for (const r of protonConfigs) merge(r.proton_pulse_user_id, r.installation_id, r.updated_at, false);
+
+  // Enrich with display names from author_avatars.
   const uuids = [...byUser.values()].map(u => u.proton_pulse_user_id).filter(Boolean);
   if (uuids.length) {
-    const avatarUrl = `${SUPABASE_URL}/rest/v1/author_avatars`
-      + `?select=proton_pulse_user_id,display_name`
-      + `&proton_pulse_user_id=in.(${uuids.join(',')})`;
+    const avatarUrl = `${SUPABASE_URL}/rest/v1/author_avatars?select=proton_pulse_user_id,display_name&proton_pulse_user_id=in.(${uuids.join(',')})`;
     const avatarRes = await fetch(avatarUrl, { headers: supabaseHeaders(session) });
     if (avatarRes.ok) {
       const avatars = await avatarRes.json();
@@ -168,6 +175,16 @@ async function fetchAllUsers(session, { search } = {}) {
         const u = byUser.get(a.proton_pulse_user_id);
         if (u) u.display_name = a.display_name || null;
       }
+    }
+  }
+
+  // Also check admins table for display names.
+  const adminsRes = await fetch(`${SUPABASE_URL}/rest/v1/admins?select=proton_pulse_user_id,steam_username`, { headers: supabaseHeaders(session) });
+  if (adminsRes.ok) {
+    const admins = await adminsRes.json();
+    for (const a of admins) {
+      const u = byUser.get(a.proton_pulse_user_id);
+      if (u && !u.display_name) u.display_name = a.steam_username;
     }
   }
 
