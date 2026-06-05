@@ -118,33 +118,71 @@ async function fetchAdmins(session) {
 }
 
 async function fetchAllUsers(session, { search } = {}) {
-  // Aggregate per user from author_avatars + user_configs counts.
-  const avatarUrl = `${SUPABASE_URL}/rest/v1/author_avatars?select=proton_pulse_user_id,display_name,cached_at&order=cached_at.desc`;
-  const avatarRes = await fetch(avatarUrl, { headers: supabaseHeaders(session) });
-  if (!avatarRes.ok) throw new Error(`Fetch users failed: ${avatarRes.status}`);
-  let avatars = await avatarRes.json();
-
-  if (search) {
-    const q = search.toLowerCase();
-    avatars = avatars.filter(r =>
-      (r.display_name || '').toLowerCase().includes(q) ||
-      (r.proton_pulse_user_id || '').toLowerCase().includes(q)
-    );
+  // Pull all user_configs rows (admin bypasses RLS) to build a complete user list.
+  // Use pagination to handle large tables.
+  const limit = 1000;
+  let offset = 0;
+  let allConfigs = [];
+  while (true) {
+    const url = `${SUPABASE_URL}/rest/v1/user_configs`
+      + `?select=proton_pulse_user_id,client_id,updated_at`
+      + `&limit=${limit}&offset=${offset}&order=updated_at.desc`;
+    const res = await fetch(url, { headers: supabaseHeaders(session) });
+    if (!res.ok) throw new Error(`Fetch users failed: ${res.status}`);
+    const batch = await res.json();
+    allConfigs.push(...batch);
+    if (batch.length < limit) break;
+    offset += limit;
   }
 
-  // Fetch report counts per user in one query.
-  const ids = avatars.map(r => r.proton_pulse_user_id).filter(Boolean);
-  let countMap = {};
-  if (ids.length) {
-    const countUrl = `${SUPABASE_URL}/rest/v1/user_configs?select=proton_pulse_user_id&proton_pulse_user_id=in.(${ids.map(encodeURIComponent).join(',')})`;
-    const countRes = await fetch(countUrl, { headers: supabaseHeaders(session) });
-    if (countRes.ok) {
-      const configs = await countRes.json();
-      configs.forEach(c => { countMap[c.proton_pulse_user_id] = (countMap[c.proton_pulse_user_id] || 0) + 1; });
+  // Aggregate per unique identity (proton_pulse_user_id or client_id).
+  const byUser = new Map();
+  for (const row of allConfigs) {
+    const key = row.proton_pulse_user_id || row.client_id;
+    if (!key) continue;
+    if (!byUser.has(key)) {
+      byUser.set(key, {
+        proton_pulse_user_id: row.proton_pulse_user_id || null,
+        client_id: row.client_id || null,
+        report_count: 0,
+        last_active: row.updated_at,
+        display_name: null,
+      });
+    }
+    const u = byUser.get(key);
+    u.report_count++;
+    if (row.updated_at > u.last_active) u.last_active = row.updated_at;
+    if (!u.client_id && row.client_id) u.client_id = row.client_id;
+  }
+
+  // Fetch display names from author_avatars for known user IDs.
+  const uuids = [...byUser.values()].map(u => u.proton_pulse_user_id).filter(Boolean);
+  if (uuids.length) {
+    const avatarUrl = `${SUPABASE_URL}/rest/v1/author_avatars`
+      + `?select=proton_pulse_user_id,display_name`
+      + `&proton_pulse_user_id=in.(${uuids.join(',')})`;
+    const avatarRes = await fetch(avatarUrl, { headers: supabaseHeaders(session) });
+    if (avatarRes.ok) {
+      const avatars = await avatarRes.json();
+      for (const a of avatars) {
+        const u = byUser.get(a.proton_pulse_user_id);
+        if (u) u.display_name = a.display_name || null;
+      }
     }
   }
 
-  return avatars.map(r => ({ ...r, report_count: countMap[r.proton_pulse_user_id] || 0 }));
+  let rows = [...byUser.values()].sort((a, b) => (b.last_active || '') > (a.last_active || '') ? 1 : -1);
+
+  if (search) {
+    const q = search.toLowerCase();
+    rows = rows.filter(r =>
+      (r.display_name || '').toLowerCase().includes(q) ||
+      (r.proton_pulse_user_id || '').toLowerCase().includes(q) ||
+      (r.client_id || '').toLowerCase().includes(q)
+    );
+  }
+
+  return rows;
 }
 
 async function reinstateReport(session, id) {
@@ -350,11 +388,13 @@ function renderUsers(rows) {
 
   tbody.innerHTML = rows.map(r => {
     const uid = escapeHtml(r.proton_pulse_user_id || '');
+    const cid = escapeHtml(r.client_id || '');
     const name = escapeHtml(r.display_name || '(anonymous)');
-    const lastActive = escapeHtml(fmtDate(r.cached_at));
+    const lastActive = escapeHtml(fmtDate(r.last_active));
     return `<tr>
       <td>${name}</td>
-      <td><code class="admin-uid">${uid}</code></td>
+      <td><code class="admin-uid">${uid || '—'}</code></td>
+      <td><code class="admin-uid">${cid || '—'}</code></td>
       <td>${r.report_count}</td>
       <td>${lastActive}</td>
       <td>
