@@ -662,7 +662,7 @@ describe('fetchMyUserConfigs', () => {
     expect(url).toBe(
       `${SUPABASE_URL}/rest/v1/user_configs`
       + `?or=(proton_pulse_user_id.eq.${encodeURIComponent(reportOwnerId)},client_id.eq.${encodeURIComponent(clientId)})`
-      + `&select=id,app_id,title,proton_version,rating,created_at`
+      + `&select=id,app_id,title,proton_version,rating,created_at,updated_at,is_flagged,is_hidden,flagged_reason`
       + `&order=created_at.desc`,
     );
   });
@@ -781,7 +781,7 @@ describe('mergeMyReportRows', () => {
     ]);
   });
 
-  test('marks newer cloud rows as unpublished even when a published report exists', async () => {
+  test('marks cloud row as published (not unpublished) when a published report also exists', async () => {
     const { ctx } = makeCtx(null);
     await flush();
 
@@ -791,19 +791,20 @@ describe('mergeMyReportRows', () => {
       { app_id: 1091500, app_name: 'Cyberpunk 2077', updated_at: '2026-04-20T12:00:00Z', config: { appName: 'Cyberpunk 2077' } },
     ]);
 
+    // A row that has both a published report AND a cloud config is treated as
+    // published. unpublished=true only applies to cloud-only rows with no report.
     expect(rows).toEqual([
       expect.objectContaining({
         app_id: 1091500,
         published: true,
         cloud: true,
-        unpublished: true,
+        unpublished: false,
         updated_at: '2026-04-20T12:00:00Z',
       }),
     ]);
     expect(ctx.__getMyReportBadges(rows[0])).toEqual([
       { label: 'Cloud', tone: 'cloud' },
       { label: 'Published', tone: 'published' },
-      { label: 'Unpublished', tone: 'unpublished' },
     ]);
   });
 

@@ -45,11 +45,15 @@ let sortDir = 'desc';
 
 async function isAdmin(session) {
   if (!session?.user?.id) return false;
-  const url = `${SUPABASE_URL}/rest/v1/admins?proton_pulse_user_id=eq.${encodeURIComponent(session.user.id)}&select=proton_pulse_user_id&limit=1`;
-  const res = await fetch(url, { headers: supabaseHeaders(session) });
-  if (!res.ok) return false;
-  const rows = await res.json();
-  return Array.isArray(rows) && rows.length > 0;
+  try {
+    const url = `${SUPABASE_URL}/rest/v1/admins?proton_pulse_user_id=eq.${encodeURIComponent(session.user.id)}&select=proton_pulse_user_id&limit=1`;
+    const res = await fetch(url, { headers: supabaseHeaders(session) });
+    if (!res.ok) return false;
+    const rows = await res.json();
+    return Array.isArray(rows) && rows.length > 0;
+  } catch {
+    return false;
+  }
 }
 
 async function fetchFlaggedReports(session, { search, type, dateFrom, dateTo } = {}) {
