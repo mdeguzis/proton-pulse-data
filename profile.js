@@ -796,22 +796,23 @@ const FIELD_LABELS = {
 function flaggedMessageHtml(flaggedReason) {
   if (!flaggedReason) return 'This report was flagged for review. Edit and resubmit to have it restored.';
 
+  const discordLink = `<a href="https://discord.gg/3XskyBRswp" target="_blank" rel="noopener">Discord</a>`;
+
   if (flaggedReason.startsWith('wordlist:')) {
-    // format: "wordlist:term in field"
     const match = flaggedReason.match(/^wordlist:.+ in (.+)$/);
     const fieldKey = match?.[1] ?? '';
     const fieldLabel = FIELD_LABELS[fieldKey] || fieldKey.replace('form_responses.', '').replace(/([A-Z])/g, ' $1').toLowerCase().trim();
-    return `A flagged word was detected in ${escapeHtml(fieldLabel)}. Edit your report to remove it and resubmit.`;
+    return `A flagged word was detected in ${escapeHtml(fieldLabel)}. Edit your report to remove it and resubmit. If you think this is a mistake, reach out on ${discordLink}.`;
   }
 
   if (flaggedReason.startsWith('openai:')) {
     const categories = flaggedReason.replace('openai:', '').split(',').map(c =>
       c.replace(/-/g, ' ').replace(/\//g, ' / ')
     ).join(', ');
-    return `Content was flagged for: ${escapeHtml(categories)}. Edit your report and resubmit.`;
+    return `Content was flagged for: ${escapeHtml(categories)}. Edit your report and resubmit. If you think this is a mistake, reach out on ${discordLink}.`;
   }
 
-  return 'This report was flagged for review. Edit and resubmit to have it restored.';
+  return `This report was flagged for review. Edit and resubmit to have it restored. If you think this is a mistake, reach out on ${discordLink}.`;
 }
 
 function mergeMyReportRows(publishedRows, cloudRows) {
