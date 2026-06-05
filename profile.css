@@ -597,7 +597,24 @@
   color: #e88a8a;
   border-color: rgba(220,80,80,0.4);
   background: rgba(220,80,80,0.1);
-  cursor: help;
+}
+.profile-configs-flagged-details {
+  margin-top: 6px;
+  font-size: 0.75rem;
+}
+.profile-configs-flagged-details summary {
+  cursor: pointer;
+  color: #e88a8a;
+  user-select: none;
+}
+.profile-configs-flagged-details summary:hover {
+  text-decoration: underline;
+}
+.profile-configs-flagged-details p {
+  margin: 4px 0 0;
+  color: var(--text-muted, #aaa);
+  line-height: 1.4;
+  max-width: 280px;
 }
 .profile-configs-actions {
   display: flex;

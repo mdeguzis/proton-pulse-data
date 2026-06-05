@@ -778,8 +778,40 @@ function getMyReportBadges(row) {
   if (row.cloud) badges.push({ label: 'Cloud', tone: 'cloud' });
   if (row.published) badges.push({ label: 'Published', tone: 'published' });
   if (row.unpublished) badges.push({ label: 'Unpublished', tone: 'unpublished' });
-  if (row.flagged) badges.push({ label: 'Flagged', tone: 'flagged', title: row.flagged_reason || 'Flagged for review' });
+  if (row.flagged) badges.push({ label: 'Flagged', tone: 'flagged' });
   return badges;
+}
+
+const FIELD_LABELS = {
+  notes: 'your notes',
+  title: 'the game title',
+  launch_options: 'the launch options',
+  'form_responses.onlineMultiplayerNotes': 'the online multiplayer notes',
+  'form_responses.localMultiplayerNotes': 'the local multiplayer notes',
+  'form_responses.framegenNotes': 'the frame generation notes',
+  'form_responses.offlineNotes': 'the offline notes',
+  'form_responses.generalNotes': 'the general notes',
+};
+
+function flaggedMessageHtml(flaggedReason) {
+  if (!flaggedReason) return 'This report was flagged for review. Edit and resubmit to have it restored.';
+
+  if (flaggedReason.startsWith('wordlist:')) {
+    // format: "wordlist:term in field"
+    const match = flaggedReason.match(/^wordlist:.+ in (.+)$/);
+    const fieldKey = match?.[1] ?? '';
+    const fieldLabel = FIELD_LABELS[fieldKey] || fieldKey.replace('form_responses.', '').replace(/([A-Z])/g, ' $1').toLowerCase().trim();
+    return `A flagged word was detected in ${escapeHtml(fieldLabel)}. Edit your report to remove it and resubmit.`;
+  }
+
+  if (flaggedReason.startsWith('openai:')) {
+    const categories = flaggedReason.replace('openai:', '').split(',').map(c =>
+      c.replace(/-/g, ' ').replace(/\//g, ' / ')
+    ).join(', ');
+    return `Content was flagged for: ${escapeHtml(categories)}. Edit your report and resubmit.`;
+  }
+
+  return 'This report was flagged for review. Edit and resubmit to have it restored.';
 }
 
 function mergeMyReportRows(publishedRows, cloudRows) {
@@ -1768,8 +1800,14 @@ const MOCK_REPORTS = [
       const viewHref = reportAnchor || appLink;
       const name = row.title || `App ${row.app_id}`;
       const badges = getMyReportBadges(row).map((badge) => (
-        `<span class="profile-configs-badge profile-configs-badge--${escapeHtml(badge.tone)}"${badge.title ? ` title="${escapeHtml(badge.title)}"` : ''}>${escapeHtml(badge.label)}</span>`
+        `<span class="profile-configs-badge profile-configs-badge--${escapeHtml(badge.tone)}">${escapeHtml(badge.label)}</span>`
       )).join('');
+      const flaggedNote = row.flagged
+        ? `<details class="profile-configs-flagged-details">
+            <summary>Why was this flagged?</summary>
+            <p>${flaggedMessageHtml(row.flagged_reason)}</p>
+          </details>`
+        : '';
       const actions = [
         viewHref
           ? `<a class="profile-configs-view-link" href="${escapeHtml(viewHref)}">View</a>`
@@ -1803,7 +1841,7 @@ const MOCK_REPORTS = [
             <div class="profile-configs-appid">App ${escapeHtml(String(row.app_id))}</div>
           </td>
           <td>${escapeHtml(row.rating || '—')}</td>
-          <td><div class="profile-configs-status">${badges}</div></td>
+          <td><div class="profile-configs-status">${badges}</div>${flaggedNote}</td>
           <td>${escapeHtml(formatSystemUpdated(row.updated_at))}</td>
           <td class="col-action"><div class="profile-configs-actions">${actions}</div></td>
         </tr>`;
