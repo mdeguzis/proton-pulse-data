@@ -285,3 +285,14 @@
   max-width: 180px;
   display: inline-block;
 }
+
+/* Hide ID columns on narrow screens to keep the table usable */
+@media (max-width: 700px) {
+  .admin-table .col-uid,
+  .admin-table th:nth-child(2),
+  .admin-table td:nth-child(2),
+  .admin-table th:nth-child(3),
+  .admin-table td:nth-child(3) {
+    display: none;
+  }
+}

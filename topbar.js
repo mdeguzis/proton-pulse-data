@@ -217,6 +217,10 @@
         <svg class="nav-icon" aria-hidden="true"><use href="#icon-contact"/></svg>
         <span>Contact</span>
       </a>
+      <!-- Admin link: hidden until checkIsAdmin confirms the signed-in user is an admin -->
+      <a href="admin.html" id="topbar-admin-link" class="auth-admin-navlink" hidden>
+        <span>Admin</span>
+      </a>
       <!-- Overflow "More" button. Hidden by default; topbar resize observer
            reveals it and migrates trailing items into the panel when the nav
            gets squeezed (typical between 760 and ~1280px) -->
@@ -685,27 +689,16 @@
         const rawName = (user.user_metadata && user.user_metadata.name) || user.email || '';
         if (nameEl)    nameEl.textContent = rawName.length > 10 ? rawName.slice(0, 10) + '\u2026' : rawName;
 
-        // Add Admin nav link if the user is an admin.
+        // Show/hide the pre-rendered admin nav link based on admin status.
         checkIsAdmin(state.session).then(function (admin) {
-          var existing = document.getElementById('topbar-admin-link');
-          if (admin && !existing) {
-            var link = document.createElement('a');
-            link.id = 'topbar-admin-link';
-            link.href = 'admin.html';
-            link.className = 'topnav-link auth-admin-navlink';
-            link.textContent = 'Admin';
-            link.title = 'Open admin panel';
-            var nav = document.getElementById('primary-nav');
-            if (nav) nav.appendChild(link);
-          } else if (!admin && existing) {
-            existing.remove();
-          }
+          var link = document.getElementById('topbar-admin-link');
+          if (link) link.hidden = !admin;
         });
       } else {
         if (signedOut) signedOut.hidden = false;
         if (signedIn)  signedIn.hidden  = true;
         var adminLink = document.getElementById('topbar-admin-link');
-        if (adminLink) adminLink.remove();
+        if (adminLink) adminLink.hidden = true;
       }
     });
   }
