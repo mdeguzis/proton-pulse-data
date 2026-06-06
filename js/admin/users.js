@@ -1,6 +1,10 @@
 import { SUPABASE_URL } from './config.js';
 import { supabaseHeaders, escapeHtml, fmtDate } from './utils.js';
 
+// Roles live in the admins table; everyone else is a plain user.
+const ROLE_LABELS = { super_admin: 'Super Admin', moderator: 'Moderator' };
+function roleLabel(role) { return ROLE_LABELS[role] || 'User'; }
+
 export async function fetchAllUsers(session, { search } = {}) {
   async function fetchAllRows(table, select) {
     const limit = 1000;
@@ -36,6 +40,7 @@ export async function fetchAllUsers(session, { search } = {}) {
         report_count: 0,
         last_active: updatedAt,
         display_name: null,
+        role: null,
       });
     }
     const u = byUser.get(key);
@@ -62,13 +67,16 @@ export async function fetchAllUsers(session, { search } = {}) {
     }
   }
 
-  // Also check admins table for display names.
-  const adminsRes = await fetch(`${SUPABASE_URL}/rest/v1/admins?select=proton_pulse_user_id,steam_username`, { headers: supabaseHeaders(session) });
+  // Also check admins table for display names and roles.
+  const adminsRes = await fetch(`${SUPABASE_URL}/rest/v1/admins?select=proton_pulse_user_id,steam_username,role`, { headers: supabaseHeaders(session) });
   if (adminsRes.ok) {
     const admins = await adminsRes.json();
     for (const a of admins) {
       const u = byUser.get(a.proton_pulse_user_id);
-      if (u && !u.display_name) u.display_name = a.steam_username;
+      if (u) {
+        if (!u.display_name) u.display_name = a.steam_username;
+        u.role = a.role || null;
+      }
     }
   }
 
@@ -79,7 +87,8 @@ export async function fetchAllUsers(session, { search } = {}) {
     rows = rows.filter(r =>
       (r.display_name || '').toLowerCase().includes(q) ||
       (r.proton_pulse_user_id || '').toLowerCase().includes(q) ||
-      (r.client_id || '').toLowerCase().includes(q)
+      (r.client_id || '').toLowerCase().includes(q) ||
+      roleLabel(r.role).toLowerCase().includes(q)
     );
   }
 
@@ -110,12 +119,16 @@ export function renderUsers(rows, { currentUserId } = {}) {
     const cid = escapeHtml(r.client_id || '');
     const name = escapeHtml(r.display_name || '(anonymous)');
     const lastActive = escapeHtml(fmtDate(r.last_active));
+    // Only known roles get a modifier class; everyone else is the neutral "User" badge.
+    const roleMod = ROLE_LABELS[r.role] ? ` admin-role-badge--${r.role}` : '';
+    const roleCell = `<span class="admin-role-badge${roleMod}">${escapeHtml(roleLabel(r.role))}</span>`;
     const isSelf = currentUserId && r.proton_pulse_user_id === currentUserId;
     const banBtn = isSelf
       ? `<button class="admin-btn admin-btn--danger admin-btn--sm" disabled title="Cannot ban yourself">Ban</button>`
       : `<button class="admin-btn admin-btn--danger admin-btn--sm" data-action="ban-user" data-userid="${uid}" data-username="${name}">Ban</button>`;
     return `<tr>
       <td>${name}</td>
+      <td>${roleCell}</td>
       <td><code class="admin-uid">${uid || '—'}</code></td>
       <td><code class="admin-uid">${cid || '—'}</code></td>
       <td>${r.report_count}</td>
