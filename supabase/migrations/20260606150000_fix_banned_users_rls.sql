@@ -10,6 +10,11 @@
 
 DROP POLICY IF EXISTS "hide banned user configs" ON public.user_configs;
 
+-- Also drop "admins read all configs" which had the same nested-RLS problem:
+-- user_configs -> admins -> admins (self-referential), causing 500 for authed users.
+-- Redundant anyway since "public read" (qual: true) already covers all rows.
+DROP POLICY IF EXISTS "admins read all configs" ON public.user_configs;
+
 -- Trigger: when a row is inserted into banned_users, hide all that user's
 -- user_configs rows so they are removed from public view immediately.
 CREATE OR REPLACE FUNCTION public.hide_configs_on_ban()
