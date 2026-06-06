@@ -96,6 +96,59 @@ describeIfCreds('Supabase RLS policy linter', () => {
   });
 });
 
+describeIfCreds('Supabase admin table RLS smoke', () => {
+  // The admins table previously caused PostgreSQL 42P17 (infinite recursion) for
+  // authenticated users due to a self-referential SELECT policy. These tests verify
+  // that SECURITY DEFINER functions broke the cycle and all admin tables are queryable.
+
+  const FAKE_JWT = '{"sub":"00000000-0000-0000-0000-000000000001","role":"authenticated","aud":"authenticated"}';
+
+  async function queryAsAuth(sql) {
+    return queryDB(
+      `SET LOCAL ROLE authenticated; SET LOCAL "request.jwt.claims" = '${FAKE_JWT}'; ${sql}`
+    );
+  }
+
+  test('admins SELECT returns results without error for authenticated user', async () => {
+    const rows = await queryAsAuth('SELECT proton_pulse_user_id FROM public.admins LIMIT 1;');
+    expect(Array.isArray(rows)).toBe(true);
+  }, 10000);
+
+  test('is_current_user_admin() is callable and returns a boolean', async () => {
+    const rows = await queryAsAuth('SELECT public.is_current_user_admin() AS result;');
+    expect(Array.isArray(rows)).toBe(true);
+    expect(typeof rows[0].result).toBe('boolean');
+  }, 10000);
+
+  test('is_current_user_super_admin() is callable and returns a boolean', async () => {
+    const rows = await queryAsAuth('SELECT public.is_current_user_super_admin() AS result;');
+    expect(Array.isArray(rows)).toBe(true);
+    expect(typeof rows[0].result).toBe('boolean');
+  }, 10000);
+
+  test('banned_users has no_self_ban CHECK constraint', async () => {
+    const rows = await queryDB(`
+      SELECT conname FROM pg_constraint
+      WHERE conrelid = 'public.banned_users'::regclass
+        AND contype = 'c'
+        AND conname = 'no_self_ban';
+    `);
+    expect(rows).toHaveLength(1);
+  }, 10000);
+
+  test('self-ban insert is rejected by no_self_ban constraint', async () => {
+    // proton_pulse_user_id = banned_by violates the constraint.
+    await expect(queryDB(`
+      INSERT INTO public.banned_users (proton_pulse_user_id, banned_by, steam_username)
+      VALUES (
+        '00000000-0000-0000-0000-000000000099',
+        '00000000-0000-0000-0000-000000000099',
+        'ci-self-ban-test'
+      );
+    `)).rejects.toThrow(/no_self_ban/);
+  }, 10000);
+});
+
 describeIfCreds('Supabase live endpoint smoke', () => {
   // Verify the queries profile.js makes return 200 for anon and authenticated users.
   // For authenticated we simulate via a Management API transaction that sets

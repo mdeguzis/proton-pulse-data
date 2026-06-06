@@ -1042,6 +1042,57 @@ describe('renderUsers', () => {
     ctx.__renderUsers([]);
     expect(els['users-error'].hidden).toBe(true);
   });
+
+  test('ban button is disabled and has no data-action when row matches currentUserId', () => {
+    const { ctx, els } = makeDocCtx();
+    ctx.__renderUsers([{
+      proton_pulse_user_id: ADMIN_USER_ID,
+      client_id: null,
+      display_name: 'ProfessorKaos64',
+      report_count: 0,
+      last_active: null,
+    }], { currentUserId: ADMIN_USER_ID });
+    const html = els['users-tbody'].innerHTML;
+    expect(html).toContain('disabled');
+    expect(html).not.toContain('data-action="ban-user"');
+  });
+
+  test('ban button is active for a different user even when currentUserId is set', () => {
+    const { ctx, els } = makeDocCtx();
+    ctx.__renderUsers([{
+      proton_pulse_user_id: OTHER_USER_ID,
+      client_id: null,
+      display_name: 'someuser',
+      report_count: 0,
+      last_active: null,
+    }], { currentUserId: ADMIN_USER_ID });
+    expect(els['users-tbody'].innerHTML).toContain('data-action="ban-user"');
+    expect(els['users-tbody'].innerHTML).not.toContain('disabled');
+  });
+
+  test('ban button is active for all rows when currentUserId is not provided', () => {
+    const { ctx, els } = makeDocCtx();
+    ctx.__renderUsers([{
+      proton_pulse_user_id: ADMIN_USER_ID,
+      client_id: null,
+      display_name: 'ProfessorKaos64',
+      report_count: 0,
+      last_active: null,
+    }]);
+    expect(els['users-tbody'].innerHTML).toContain('data-action="ban-user"');
+  });
+
+  test('ban button for anonymous (null proton_pulse_user_id) row is never disabled by currentUserId', () => {
+    const { ctx, els } = makeDocCtx();
+    ctx.__renderUsers([{
+      proton_pulse_user_id: null,
+      client_id: 'anon-xyz',
+      display_name: null,
+      report_count: 1,
+      last_active: null,
+    }], { currentUserId: ADMIN_USER_ID });
+    expect(els['users-tbody'].innerHTML).toContain('data-action="ban-user"');
+  });
 });
 
 // ---------------------------------------------------------------------------
