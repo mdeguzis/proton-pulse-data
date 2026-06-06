@@ -23,8 +23,16 @@ profile.html
 profile.js
 profile.css
 admin.html
-admin.js
 admin.css
+js/admin/config.js
+js/admin/utils.js
+js/admin/wordlist.js
+js/admin/flagged.js
+js/admin/banned.js
+js/admin/users.js
+js/admin/admins.js
+js/admin/phrases.js
+js/admin/main.js
 stats.html
 stats.js
 scoring.html

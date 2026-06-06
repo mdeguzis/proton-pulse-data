@@ -20,7 +20,24 @@ const vm   = require('vm');
 const fs   = require('fs');
 const path = require('path');
 
-const ADMIN_SRC = fs.readFileSync(path.join(__dirname, '..', 'admin.js'), 'utf8');
+// Load ES module files, strip import/export lines, concatenate for VM harness.
+const ADMIN_MODULE_FILES = [
+  'js/admin/config.js',
+  'js/admin/utils.js',
+  'js/admin/wordlist.js',
+  'js/admin/flagged.js',
+  'js/admin/banned.js',
+  'js/admin/users.js',
+  'js/admin/admins.js',
+  'js/admin/phrases.js',
+  'js/admin/main.js',
+];
+
+const ADMIN_SRC = ADMIN_MODULE_FILES
+  .map(f => fs.readFileSync(path.join(__dirname, '..', f), 'utf8'))
+  .map(src => src.replace(/^(import|export\s+\{[^}]*\}\s+from|export\s+default)\s.*$/gm, '')
+                 .replace(/^export\s+(async\s+)?(function|class|const|let|var)\s/gm, '$1$2 '))
+  .join('\n');
 
 const SUPABASE_URL      = 'https://test.supabase.co';
 const SUPABASE_ANON_KEY = 'test-anon-key';
@@ -74,10 +91,7 @@ function makeCtx(fetchImpl) {
     var location = ctx.location;
     var history = ctx.history;
     var navigator = ctx.navigator;
-    var SUPABASE_URL = ${JSON.stringify(SUPABASE_URL)};
-    var SUPABASE_ANON_KEY = ${JSON.stringify(SUPABASE_ANON_KEY)};
     var fetch = ctx.fetch;
-    var SupaAuth = ctx.SupaAuth;
     var document = ctx.document;
     var alert = ctx.alert;
     var confirm = ctx.confirm;

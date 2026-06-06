@@ -144,3 +144,8 @@ const SupaAuth = (() => {
 
   return { buildLoginPageUrl, getSession, loginWithSteam, logout, onStateChange, authHeaders, updateUserMeta };
 })();
+
+// Expose for ES module consumers (import via js/admin/config.js)
+window.SUPABASE_URL      = SUPABASE_URL;
+window.SUPABASE_ANON_KEY = SUPABASE_ANON_KEY;
+window.SupaAuth          = SupaAuth;

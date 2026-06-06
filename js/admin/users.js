@@ -1,0 +1,125 @@
+import { SUPABASE_URL } from './config.js';
+import { supabaseHeaders, escapeHtml, fmtDate } from './utils.js';
+
+export async function fetchAllUsers(session, { search } = {}) {
+  async function fetchAllRows(table, select) {
+    const limit = 1000;
+    let offset = 0, rows = [];
+    while (true) {
+      const url = `${SUPABASE_URL}/rest/v1/${table}?select=${select}&limit=${limit}&offset=${offset}&order=updated_at.desc`;
+      const res = await fetch(url, { headers: supabaseHeaders(session) });
+      if (!res.ok) throw new Error(`Fetch ${table} failed: ${res.status}`);
+      const batch = await res.json();
+      rows.push(...batch);
+      if (batch.length < limit) break;
+      offset += limit;
+    }
+    return rows;
+  }
+
+  // Pull from both tables -- user_configs = submitted reports, user_proton_configs = cloud configs.
+  const [configs, protonConfigs] = await Promise.all([
+    fetchAllRows('user_configs', 'proton_pulse_user_id,client_id,updated_at'),
+    fetchAllRows('user_proton_configs', 'proton_pulse_user_id,installation_id,updated_at'),
+  ]);
+
+  // Aggregate per unique identity across both tables.
+  const byUser = new Map();
+
+  function merge(protonPulseUserId, clientId, updatedAt, isReport) {
+    const key = protonPulseUserId || clientId;
+    if (!key) return;
+    if (!byUser.has(key)) {
+      byUser.set(key, {
+        proton_pulse_user_id: protonPulseUserId || null,
+        client_id: clientId || null,
+        report_count: 0,
+        last_active: updatedAt,
+        display_name: null,
+      });
+    }
+    const u = byUser.get(key);
+    if (isReport) u.report_count++;
+    if (updatedAt > u.last_active) u.last_active = updatedAt;
+    if (!u.proton_pulse_user_id && protonPulseUserId) u.proton_pulse_user_id = protonPulseUserId;
+    if (!u.client_id && clientId) u.client_id = clientId;
+  }
+
+  for (const r of configs) merge(r.proton_pulse_user_id, r.client_id, r.updated_at, true);
+  for (const r of protonConfigs) merge(r.proton_pulse_user_id, r.installation_id, r.updated_at, false);
+
+  // Enrich with display names from author_avatars.
+  const uuids = [...byUser.values()].map(u => u.proton_pulse_user_id).filter(Boolean);
+  if (uuids.length) {
+    const avatarUrl = `${SUPABASE_URL}/rest/v1/author_avatars?select=proton_pulse_user_id,display_name&proton_pulse_user_id=in.(${uuids.join(',')})`;
+    const avatarRes = await fetch(avatarUrl, { headers: supabaseHeaders(session) });
+    if (avatarRes.ok) {
+      const avatars = await avatarRes.json();
+      for (const a of avatars) {
+        const u = byUser.get(a.proton_pulse_user_id);
+        if (u) u.display_name = a.display_name || null;
+      }
+    }
+  }
+
+  // Also check admins table for display names.
+  const adminsRes = await fetch(`${SUPABASE_URL}/rest/v1/admins?select=proton_pulse_user_id,steam_username`, { headers: supabaseHeaders(session) });
+  if (adminsRes.ok) {
+    const admins = await adminsRes.json();
+    for (const a of admins) {
+      const u = byUser.get(a.proton_pulse_user_id);
+      if (u && !u.display_name) u.display_name = a.steam_username;
+    }
+  }
+
+  let rows = [...byUser.values()].sort((a, b) => (b.last_active || '') > (a.last_active || '') ? 1 : -1);
+
+  if (search) {
+    const q = search.toLowerCase();
+    rows = rows.filter(r =>
+      (r.display_name || '').toLowerCase().includes(q) ||
+      (r.proton_pulse_user_id || '').toLowerCase().includes(q) ||
+      (r.client_id || '').toLowerCase().includes(q)
+    );
+  }
+
+  return rows;
+}
+
+export function renderUsers(rows) {
+  const loading = document.getElementById('users-loading');
+  const empty   = document.getElementById('users-empty');
+  const table   = document.getElementById('users-table');
+  const tbody   = document.getElementById('users-tbody');
+  const err     = document.getElementById('users-error');
+
+  loading.hidden = true;
+  err.hidden = true;
+
+  if (!rows.length) {
+    empty.hidden = false;
+    table.hidden = true;
+    return;
+  }
+
+  empty.hidden = true;
+  table.hidden = false;
+
+  tbody.innerHTML = rows.map(r => {
+    const uid = escapeHtml(r.proton_pulse_user_id || '');
+    const cid = escapeHtml(r.client_id || '');
+    const name = escapeHtml(r.display_name || '(anonymous)');
+    const lastActive = escapeHtml(fmtDate(r.last_active));
+    return `<tr>
+      <td>${name}</td>
+      <td><code class="admin-uid">${uid || '—'}</code></td>
+      <td><code class="admin-uid">${cid || '—'}</code></td>
+      <td>${r.report_count}</td>
+      <td>${lastActive}</td>
+      <td>
+        <button class="admin-btn admin-btn--danger admin-btn--sm"
+          data-action="ban-user" data-userid="${uid}" data-username="${name}">Ban</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
