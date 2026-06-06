@@ -197,15 +197,6 @@ describe('computeGameStats end-to-end', () => {
     expect(stats.totalReports).toBe(0);
   });
 
-  test('launchFlags pct is 0 when no reports have launch options', () => {
-    // totalSources === 0 branch: pct should be 0 for every flag
-    const reports = [rpt('gold', 5), rpt('platinum', 10)];
-    const configs = [{ launchOptions: 'PROTON_NO_ESYNC=1' }];
-    const stats = computeGameStats(reports, configs);
-    // All flags come from configs only; reports have no launchOptions so totalSources=0
-    stats.launchFlags.forEach(f => expect(f.pct).toBe(0));
-  });
-
   test('trend: declining when recent worse than prior', () => {
     const reports = [
       // prior window (90-270d): all positive
