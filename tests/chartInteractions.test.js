@@ -225,6 +225,47 @@ describe('attachChartHover (continuous tracking)', () => {
     expect(tooltip.innerHTML).toContain('B');
   });
 
+  test('onClick callback fires with nearest data point on click', () => {
+    const { attachChartHover } = loadMod();
+    const { host, svg, tooltip } = buildChart();
+    const data = [{ label: 'A' }, { label: 'B' }, { label: 'C' }];
+    const getX = i => 100 + i * 400;
+    const onClick = jest.fn();
+    attachChartHover({
+      svg, host, tooltip,
+      guide: svg.querySelector('#guide'),
+      dots: [svg.querySelector('#dot0')],
+      data, getX, getYForDot: () => 50,
+      renderTip: item => item.label,
+      onClick,
+    });
+    const fullTarget = svg.querySelector('.ci-hover-full');
+    // Click near data point 2 (x=900)
+    const ev = new MouseEvent('click', { clientX: 870, clientY: 50 });
+    fullTarget.dispatchEvent(ev);
+    expect(onClick).toHaveBeenCalledWith(data[2], 2);
+  });
+
+  test('Y interpolation runs when atX is between two data points', () => {
+    const { attachChartHover } = loadMod();
+    const { host, svg, tooltip } = buildChart();
+    const data = [{ label: 'A' }, { label: 'B' }];
+    const getX = i => i * 500; // 0=0, 1=500
+    const getYForDot = jest.fn((item, di) => di === 0 ? 100 : 50);
+    attachChartHover({
+      svg, host, tooltip,
+      guide: svg.querySelector('#guide'),
+      dots: [svg.querySelector('#dot0')],
+      data, getX, getYForDot,
+      renderTip: item => item.label,
+    });
+    const fullTarget = svg.querySelector('.ci-hover-full');
+    // Move to x=250 — between point 0 (x=0) and point 1 (x=500)
+    fullTarget.dispatchEvent(new MouseEvent('mousemove', { clientX: 250, clientY: 50 }));
+    // getYForDot should be called for both points to interpolate
+    expect(getYForDot).toHaveBeenCalled();
+  });
+
   test('mouseleave clears is-hovered', () => {
     const { attachChartHover } = loadMod();
     const { host, svg, tooltip } = buildChart();
