@@ -1,5 +1,7 @@
 // game-page (components) for the app page. Relocated from app.js.
 
+import { populateScoringTooltip, pulseTierFromReports, tierFromReports } from '../../shared/scoring.js';
+import { getWebClientId } from '../../shared/submit.js';
 import { fetchDeckStatusForApp, fetchMinRequirements } from '../api/deck-status.js';
 import { _protonDbLiveCache, fetchCdn, fetchProtonDbLive } from '../api/protondb.js';
 import { fetchConfigPlaytimeTotals, fetchNativeReports, fetchSupabase } from '../api/supabase.js';

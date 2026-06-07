@@ -100,18 +100,16 @@ function makeContext() {
   return ctx;
 }
 
-// app.js was split into js/app/ ES modules. The scoring/submit companions are
-// still classic global scripts; the js/app modules use import/export, so we
-// strip those lines and concatenate everything into one vm scope (same approach
-// as adminAuth.test.js). Classic files load first so the config bridge captures
-// their globals via window.
+// app.js was split into js/app/ ES modules, and scoring/submit are now js/shared/
+// modules. supabase-client/gh-gist stay classic globals. The module files use
+// import/export, so we strip those lines and concatenate everything into one vm
+// scope (same approach as adminAuth.test.js).
 const CLASSIC_FILES = [
   'supabase-client.js',
   'gh-gist.js',
-  'app-scoring.js',
-  'app-submit.js',
 ];
 const APP_MODULE_FILES = [
+  'js/shared/config.js', 'js/shared/scoring.js', 'js/shared/submit.js',
   'js/app/config.js', 'js/app/utils.js',
   'js/app/api/supabase.js', 'js/app/api/protondb.js', 'js/app/api/votes.js',
   'js/app/api/reports.js', 'js/app/api/deck-status.js', 'js/app/api/author.js',

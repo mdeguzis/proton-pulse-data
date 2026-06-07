@@ -37,18 +37,3 @@ export const RATING_TEXT = {
   platinum: '#0a0c10', gold: '#0a0c10', silver: '#0a0c10',
   bronze: '#0a0c10', borked: '#fff', pending: '#c8d4e0'
 };
-
-// ---------------------------------------------------------------------------
-// TEMPORARY Phase-A bridge: re-export symbols defined in the classic-script
-// siblings (app-scoring.js, app-submit.js) that app.js calls as bare globals.
-// These re-exports work because the siblings are loaded as plain <script> tags
-// (not type="module") before the ES module entry, so the browser attaches their
-// top-level function declarations to window automatically. Remove this entire
-// block in Phase B when those files are converted to ES modules and imported
-// directly.
-// ---------------------------------------------------------------------------
-export const estimateScore           = window.estimateScore;
-export const getWebClientId          = window.getWebClientId;
-export const populateScoringTooltip  = window.populateScoringTooltip;
-export const pulseTierFromReports    = window.pulseTierFromReports;
-export const tierFromReports         = window.tierFromReports;

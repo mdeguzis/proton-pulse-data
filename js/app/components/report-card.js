@@ -1,5 +1,7 @@
 // report-card (components) for the app page. Relocated from app.js.
 
+import { estimateScore } from '../../shared/scoring.js';
+import { getWebClientId } from '../../shared/submit.js';
 import { renderAuthorBlock } from './author.js';
 import { buildFormRows } from './config-cards.js';
 import { renderSignalStrip } from './signals.js';
