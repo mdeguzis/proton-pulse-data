@@ -6,7 +6,9 @@
  * when available (otherwise it just leaks globals for the browser script tag).
  */
 
-const path = require('path');
+// gameStats.js is now an ES module; load it into a vm scope (pure compute, only
+// needs standard globals) and pull the named exports off the context.
+const { loadEsm } = require('./_esm-vm.js');
 const {
   computeGameStats,
   computeMonthlyReports,
@@ -15,7 +17,7 @@ const {
   computeSettingsTips,
   isPositive,
   isNegative,
-} = require(path.join(__dirname, '..', 'lib', 'scoring', 'gameStats.js'));
+} = loadEsm(['lib/scoring/gameStats.js'], { Math, Object, Array, Date, JSON, console });
 
 const NOW = Math.floor(Date.now() / 1000);
 const DAY = 86400;

@@ -1,11 +1,6 @@
 # Static shell files copied from main to gh-pages.
 # For intentionally excluded files, see gh-pages-exclude-manifest.txt.
 app.html
-app-scoring.js
-app-submit.js
-app-hardware.js
-app-game-stats.js
-app-chart-interactions.js
 js/app/config.js
 js/app/utils.js
 js/app/router.js
@@ -24,6 +19,14 @@ js/app/components/signals.js
 js/app/components/deck-status.js
 js/app/components/author.js
 js/app/components/search.js
+js/shared/config.js
+js/shared/scoring.js
+js/shared/submit.js
+js/shared/hardware.js
+js/shared/chart-interactions.js
+js/submit/main.js
+js/confidence/main.js
+js/game-stats/main.js
 app.css
 index.html
 index.js
@@ -59,7 +62,6 @@ stats.js
 scoring.html
 confidence.html
 game-stats.html
-game-stats.js
 submit.html
 supabase-client.js
 topbar.js

@@ -8,13 +8,15 @@
  * the nearest data index from a mousemove event.
  */
 
-const path = require('path');
+const { loadEsm } = require('./_esm-vm.js');
 
-const MOD_PATH = path.join(__dirname, '..', 'app-chart-interactions.js');
-
+// chart-interactions.js is now an ES module (js/shared/chart-interactions.js).
 function loadMod() {
-  delete require.cache[require.resolve(MOD_PATH)];
-  return require(MOD_PATH);
+  return loadEsm(['js/shared/chart-interactions.js'], {
+    document: global.document, window: global.window,
+    CustomEvent: global.CustomEvent, console, Math, Object, Array,
+    setTimeout, requestAnimationFrame: global.requestAnimationFrame || (cb => setTimeout(cb, 0)),
+  });
 }
 
 // Minimal CustomEvent shim if not present

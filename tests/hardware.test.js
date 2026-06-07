@@ -17,15 +17,16 @@ function makeStorage() {
   };
 }
 
-// require() the module, then patch the localStorage global the script
-// expects. The module checks `localStorage` directly at call time so we
-// can swap it per test.
-const HW_MOD_PATH = path.join(__dirname, '..', 'app-hardware.js');
+// hardware.js is now an ES module (js/shared/hardware.js). Load it into a vm
+// scope. localStorage is a getter so the helpers read whatever
+// global.localStorage each test installs at call time.
+const { loadEsm } = require('./_esm-vm.js');
 
 function loadMod() {
-  // Clear require cache so each test starts fresh
-  delete require.cache[require.resolve(HW_MOD_PATH)];
-  return require(HW_MOD_PATH);
+  return loadEsm(['js/shared/hardware.js'], {
+    get localStorage() { return global.localStorage; },
+    JSON, Object, Array, console,
+  });
 }
 
 describe('loadMyHardware', () => {

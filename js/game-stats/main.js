@@ -1,3 +1,8 @@
+// Entry module for game-stats.html. Migrated from game-stats.js.
+import { computeGameStats } from '../../lib/scoring/gameStats.js';
+import { isPreviewHardware, loadMyHardware, renderPreviewHardwareBanner } from '../shared/hardware.js';
+import { attachChartHover, attachClickToFilter, dispatchFilter, onFilterChange } from '../shared/chart-interactions.js';
+
 // Per-game stats page (game-stats.html). Reads ?app=APPID from the URL,
 // pulls the same CDN data the main app page uses, then renders a thoughtful
 // breakdown via computeGameStats() from lib/scoring/gameStats.js.

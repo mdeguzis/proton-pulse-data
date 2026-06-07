@@ -60,6 +60,31 @@ PAGES = [
         "required_any": ["profile-unsigned", "profile-signed-in"],
         "content_selector": "body",
     },
+    {
+        # submit page (module entry js/submit/main.js). Signed-out shows the auth
+        # gate; main value here is catching JS errors in the module load path.
+        "path": "/submit.html?app=1091500&title=Cyberpunk%202077",
+        "label": "submit",
+        "forbidden": [],
+        "required_any": ["back-link"],
+        "content_selector": "body",
+    },
+    {
+        # game-stats page (module entry js/game-stats/main.js)
+        "path": "/game-stats.html?app=1091500",
+        "label": "game-stats",
+        "forbidden": [],
+        "required_any": ["gs-root"],
+        "content_selector": "body",
+    },
+    {
+        # confidence breakdown page (module entry js/confidence/main.js)
+        "path": "/confidence.html?app=1091500",
+        "label": "confidence",
+        "forbidden": [],
+        "required_any": ["cb-root"],
+        "content_selector": "body",
+    },
 ]
 
 

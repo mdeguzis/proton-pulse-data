@@ -10,8 +10,11 @@ const vm = require('vm');
 const fs = require('fs');
 const path = require('path');
 
-const SCORING_SRC = fs.readFileSync(path.join(__dirname, '..', 'app-scoring.js'), 'utf8');
-const SUBMIT_SRC  = fs.readFileSync(path.join(__dirname, '..', 'app-submit.js'), 'utf8');
+// scoring/submit are now ES modules (js/shared/); strip import/export so they
+// can be vm-evaluated as classic source in one shared scope.
+const { stripModuleSyntax } = require('./_esm-vm.js');
+const SCORING_SRC = stripModuleSyntax(fs.readFileSync(path.join(__dirname, '..', 'js', 'shared', 'scoring.js'), 'utf8'));
+const SUBMIT_SRC  = stripModuleSyntax(fs.readFileSync(path.join(__dirname, '..', 'js', 'shared', 'submit.js'), 'utf8'));
 
 const SAFE_FETCH = { ok: false, status: 500, json: async () => [] };
 
