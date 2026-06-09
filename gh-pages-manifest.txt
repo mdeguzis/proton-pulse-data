@@ -33,6 +33,7 @@ js/index/main.js
 css/index/index.css
 css/shared/site.css
 about.html
+most_played.json
 auth.html
 js/auth/main.js
 css/auth/auth.css

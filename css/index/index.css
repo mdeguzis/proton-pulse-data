@@ -208,6 +208,72 @@
 }
 .welcome-learn-more a { color: var(--accent); }
 
+/* Popular games on Steam: wide-card list (boxart | title + peak | rating).
+   Capped width so the rows read as a list, not a stretched banner. */
+.popular-games { margin-top: 38px; }
+.popular-games-sub {
+  font-size: 0.84rem;
+  color: var(--muted);
+  margin: 0 0 14px;
+}
+.pg-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 760px;
+}
+.pg-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 14px 8px 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
+  text-decoration: none;
+  transition: border-color 0.15s, background 0.15s, transform 0.05s;
+}
+.pg-card:hover { border-color: var(--accent); }
+.pg-card:active { transform: translateY(1px); }
+.pg-thumb {
+  width: 92px;
+  height: 43px;
+  object-fit: cover;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+.pg-info { flex: 1 1 auto; min-width: 0; }
+.pg-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--strong);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pg-sub {
+  font-size: 0.78rem;
+  color: #c8a050;
+  margin-top: 2px;
+  font-family: var(--mono);
+}
+.pg-badge {
+  flex-shrink: 0;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--border);
+  color: var(--muted);
+}
+.pg-platinum { background: #b4c7dc; color: #0a0c10; }
+.pg-gold     { background: #c8a050; color: #111; }
+.pg-silver   { background: #8fa0b0; color: #111; }
+.pg-bronze   { background: #b07040; color: #fff; }
+.pg-borked   { background: #c85050; color: #fff; }
+
 /* quick-actions row removed - the topnav covers those links now */
 
 /* explore grid - explicit column count per breakpoint so rows are always uniform

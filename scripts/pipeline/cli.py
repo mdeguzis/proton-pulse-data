@@ -9,6 +9,7 @@ from .backfill import run_backfill, run_coverage_backfill, run_probe_backfill
 from .catalog import get_steam_api_key, load_steam_game_catalog
 from .common import clone_repo, log, set_debug
 from .finalize import build_probe_chunk_plan, finalize_output, reindex_apps, update_protondb_probe_cache
+from .most_played import build_most_played
 from .process import process_reports, seed_official_dump_metadata
 
 
@@ -111,6 +112,15 @@ def build_parser():
 
     subparsers.add_parser("steam-catalog", help="Fetch and cache the Steam game catalog using STEAM_API_KEY")
 
+    most_played_parser = subparsers.add_parser(
+        "most-played",
+        help="Build most_played.json (Steam's most-played games we have a tier for)",
+    )
+    most_played_parser.add_argument(
+        "--limit", type=int, default=15, help="Max games to include (default: 15)"
+    )
+    add_shared_output_arg(most_played_parser)
+
     run_parser = subparsers.add_parser("run", help="Run process, backfill, and finalize in sequence")
     run_parser.add_argument("input_dir", nargs="?", help="Local directory containing JSON/tar.gz report files")
     run_parser.add_argument("--url", help="Git repo URL to clone as data source (e.g. https://github.com/bdefore/protondb-data)")
@@ -160,6 +170,10 @@ def main():
 
     if command == "probe":
         update_protondb_probe_cache(args.output_dir)
+        return
+
+    if command == "most-played":
+        build_most_played(args.output_dir, limit=getattr(args, "limit", 15))
         return
 
     if command == "probe-plan":
