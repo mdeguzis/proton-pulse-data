@@ -197,6 +197,11 @@
           </a>
         </div>
       </div>
+      <!-- About: top-level so it's visible without opening a dropdown -->
+      <a href="about.html" data-page="about" title="What Proton Pulse is and how it compares to ProtonDB">
+        <svg class="nav-icon" aria-hidden="true"><use href="#icon-info"/></svg>
+        <span>About</span>
+      </a>
       <!-- Resources dropdown: scoring docs and the decky plugin live here -->
       <div class="nav-dropdown" data-group="resources">
         <button class="nav-dropdown-toggle" type="button" aria-haspopup="true" aria-expanded="false">
@@ -205,10 +210,6 @@
           <svg class="nav-caret" aria-hidden="true" viewBox="0 0 10 6" width="10" height="6"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
         </button>
         <div class="nav-dropdown-panel">
-          <a href="about.html" data-page="about" title="What Proton Pulse is and how it compares to ProtonDB">
-            <svg class="nav-icon" aria-hidden="true"><use href="#icon-info"/></svg>
-            <span>About</span>
-          </a>
           <a href="scoring.html" data-page="scoring" title="How compatibility scores are calculated">
             <svg class="nav-icon" aria-hidden="true"><use href="#icon-scoring"/></svg>
             <span>Scoring</span>

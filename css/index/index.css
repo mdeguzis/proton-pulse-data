@@ -180,22 +180,23 @@
   display: inline-flex;
   align-items: center;
   padding: 11px 20px;
-  border: 1px solid var(--border);
+  border: 1px solid transparent;
   border-radius: 8px;
   font-size: 0.9rem;
   font-weight: 600;
-  color: var(--strong);
-  background: var(--card);
+  color: #0b1622;
+  /* secondary CTA: blue fill so it reads as a real button, not an outline */
+  background: linear-gradient(90deg, var(--accent), var(--accent-hi) 92%);
   text-decoration: none;
-  transition: border-color 0.15s, background 0.15s, transform 0.05s;
+  transition: filter 0.15s, transform 0.05s, box-shadow 0.15s;
 }
 .cta-btn:hover {
-  border-color: var(--accent);
+  filter: brightness(1.08);
+  box-shadow: 0 0 16px var(--accent-glow);
 }
 .cta-btn:active { transform: translateY(1px); }
+/* primary CTA: green gradient + glow so it stays the dominant action */
 .cta-primary {
-  border-color: transparent;
-  color: #0b1622;
   background: linear-gradient(90deg, var(--accent-hi), var(--green-hi) 80%);
   box-shadow: 0 0 20px var(--accent-glow);
 }
