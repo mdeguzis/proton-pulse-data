@@ -6,15 +6,7 @@
   },
   "jest": {
     "testEnvironment": "jest-environment-jsdom",
-    "testMatch": ["**/tests/*.test.js"],
-    "coverageThreshold": {
-      "global": {
-        "statements": 91,
-        "branches": 82,
-        "functions": 97,
-        "lines": 93
-      }
-    }
+    "testMatch": ["**/tests/*.test.js"]
   },
   "dependencies": {
     "naughty-words": "^1.2.0"

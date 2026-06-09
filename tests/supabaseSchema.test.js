@@ -1,5 +1,11 @@
 /**
+ * @jest-environment node
+ *
  * Supabase schema/RLS integration tests.
+ *
+ * Runs in the node environment (not jsdom) because it makes live HTTPS calls
+ * to the Supabase Management API and needs Node's global `fetch`; jsdom does
+ * not provide one. There is no DOM in this suite.
  *
  * These tests require SUPABASE_TOKEN (Supabase personal access token) and
  * SUPABASE_URL to be set. In CI they are injected as secrets. Locally they
