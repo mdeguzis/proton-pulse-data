@@ -247,7 +247,7 @@ wheels = [
 ]
 
 [[package]]
-name = "proton-pulse-data"
+name = "proton-pulse-web"
 version = "0.2.0"
 source = { virtual = "." }
 dependencies = [

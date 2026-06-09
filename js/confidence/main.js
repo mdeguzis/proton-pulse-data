@@ -11,7 +11,7 @@ import { attachChartHover } from '../shared/chart-interactions.js';
   // on localhost dev preview without local data
   const SITE_BASE = (() => {
     const parts = location.pathname.split('/').filter(Boolean);
-    return parts[0] === 'proton-pulse-data' ? '/proton-pulse-data' : '';
+    return parts[0] === 'proton-pulse-web' ? '/proton-pulse-web' : '';
   })();
   const IS_LOCAL_DEV = ['localhost', '127.0.0.1', '0.0.0.0'].includes(location.hostname);
   const CDN_BASE = IS_LOCAL_DEV

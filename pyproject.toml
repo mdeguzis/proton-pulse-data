@@ -1,5 +1,5 @@
 [project]
-name = "proton-pulse-data"
+name = "proton-pulse-web"
 version = "0.2.0"
 description = "Add your description here"
 readme = "README.md"

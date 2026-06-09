@@ -1,4 +1,4 @@
-# proton-pulse-data — Makefile
+# proton-pulse-web — Makefile
 
 UV_CACHE_DIR ?= /tmp/uv-cache
 GITHUB_WORKFLOW ?= update-data.yml

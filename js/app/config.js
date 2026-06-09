@@ -4,12 +4,12 @@
 export const SB_URL = 'https://ilsgdshkaocrmibwdezk.supabase.co/rest/v1';
 export const SB_KEY = 'sb_publishable_3Oqhm4JneafJNQw9BuUaxw_L9qZa-5V';
 export const STEAM_IMG = id => `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${id}/header.jpg`;
-// On github.io project page the URL is /proton-pulse-data/..., on the custom
+// On github.io project page the URL is /proton-pulse-web/..., on the custom
 // domain (www.proton-pulse.com) it serves from root. Keep SITE_BASE empty on
 // the custom domain so links don't get a bogus prefix.
 export const SITE_BASE = (() => {
   const parts = window.location.pathname.split('/').filter(Boolean);
-  return parts[0] === 'proton-pulse-data' ? '/proton-pulse-data' : '';
+  return parts[0] === 'proton-pulse-web' ? '/proton-pulse-web' : '';
 })();
 // On localhost the local /data directory is gitignored + empty (real data
 // comes from the pipeline running in CI). Fetch from the production CDN

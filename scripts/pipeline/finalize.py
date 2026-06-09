@@ -101,7 +101,7 @@ def generate_app_indexes(index_keys: set, data_output_path: Path) -> None:
         html = (
             f'<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">'
             f'<meta name="color-scheme" content="dark">'
-            f"<title>{display_name} - proton-pulse-data</title>"
+            f"<title>{display_name} - proton-pulse-web</title>"
             f"<style>"
             f"body {{ background: #101418; color: #d0dae6; font: 15px/1.6 system-ui, sans-serif; margin: 2rem; }}"
             f"a {{ color: #4a9fd0; }} h1 {{ color: #f0f4f8; }}"
@@ -1009,7 +1009,7 @@ updateSortIndicator();
     # Emit a tiny coverage-summary.json next to coverage.html so the homepage
     # (and any other consumer) can grab the headline numbers without parsing
     # 100KB of HTML. Keep this lean - only stats the landing page actually uses.
-    # See proton-pulse-data/index.js: loadCoverageStats()
+    # See proton-pulse-web/js/index/main.js: loadCoverageStats()
     summary = {
         "generated_at": now,
         "steam_games":      steam_count,
