@@ -459,6 +459,18 @@ code {
      will continue but rings stop. acceptable trade-off */
 }
 
+/* Site option: animations off (set on <html> by topbar.js from the user's
+   choice on options.html, defaulting to prefers-reduced-motion). Kills all CSS
+   animations + transitions site-wide; topbar.js also pauses SMIL motion. This
+   is the main lever for the CPU/GPU cost of the hero atom + banner on low-power
+   hardware. */
+html[data-motion="off"] *,
+html[data-motion="off"] *::before,
+html[data-motion="off"] *::after {
+  animation: none !important;
+  transition: none !important;
+}
+
 .topbar-brand {
   position: relative;
   z-index: 1;

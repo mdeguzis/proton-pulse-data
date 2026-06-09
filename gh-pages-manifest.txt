@@ -33,6 +33,9 @@ js/index/main.js
 css/index/index.css
 css/shared/site.css
 about.html
+options.html
+js/options/main.js
+css/options/options.css
 most_played.json
 auth.html
 js/auth/main.js

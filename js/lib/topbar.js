@@ -140,6 +140,11 @@
     </a>
 
     <div class="topbar-banner-actions">
+      <!-- Site options (gear): page for non-profile settings, starting with
+           an animations on/off toggle. -->
+      <a class="banner-icon-link" href="options.html" data-page="options" title="Site options" aria-label="Site options">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </a>
       <!-- Theme toggle - sun/moon icon flips between dark (default) and light.
            Persists to localStorage so it survives page reloads. Respects
            prefers-color-scheme on first visit when no preference is saved -->
@@ -308,9 +313,34 @@
     update();
   }
 
-  // Apply theme BEFORE inject so the first paint is the right mode
-  // (avoids a dark->light flash)
+  // Site option: animations on/off. When off (explicit choice, or the OS
+  // prefers-reduced-motion with no saved choice), set data-motion=off so CSS
+  // disables animations/transitions, and pause SMIL (<animateMotion>), which CSS
+  // cannot stop. Saved by the options page under proton-pulse:motion.
+  function motionDisabled() {
+    const stored = localStorage.getItem('proton-pulse:motion'); // 'on' | 'off' | null
+    if (stored === 'off') return true;
+    if (stored === 'on') return false;
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }
+  function pauseSmilAnimations() {
+    document.querySelectorAll('svg').forEach(function (svg) {
+      if (typeof svg.pauseAnimations === 'function') {
+        try { svg.pauseAnimations(); } catch (e) { /* ignore */ }
+      }
+    });
+  }
+  function initMotion() {
+    if (motionDisabled()) {
+      document.documentElement.setAttribute('data-motion', 'off');
+      pauseSmilAnimations();
+    }
+  }
+
+  // Apply theme + motion prefs BEFORE inject so the first paint is correct
+  // (avoids a flash of the wrong mode / running animations).
   initTheme();
+  initMotion();
 
   // inject favicon if the page doesn't already have one
   if (!document.querySelector('link[rel="icon"]')) {
