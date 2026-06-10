@@ -13,8 +13,9 @@ const path = require('path');
 // scoring/submit are now ES modules (js/shared/); strip import/export so they
 // can be vm-evaluated as classic source in one shared scope.
 const { stripModuleSyntax } = require('./_esm-vm.js');
-const SCORING_SRC = stripModuleSyntax(fs.readFileSync(path.join(__dirname, '..', 'js', 'shared', 'scoring.js'), 'utf8'));
-const SUBMIT_SRC  = stripModuleSyntax(fs.readFileSync(path.join(__dirname, '..', 'js', 'shared', 'submit.js'), 'utf8'));
+const SCORING_SRC  = stripModuleSyntax(fs.readFileSync(path.join(__dirname, '..', 'js', 'shared', 'scoring.js'), 'utf8'));
+const GPU_ARCH_SRC = stripModuleSyntax(fs.readFileSync(path.join(__dirname, '..', 'js', 'lib', 'gpu-arch-detector.js'), 'utf8'));
+const SUBMIT_SRC   = stripModuleSyntax(fs.readFileSync(path.join(__dirname, '..', 'js', 'shared', 'submit.js'), 'utf8'));
 
 const SAFE_FETCH = { ok: false, status: 500, json: async () => [] };
 
@@ -88,6 +89,8 @@ function makeCtx(sessionOverride) {
   vm.createContext(ctx);
   // load scoring first (provides FAULT_KEYS_WEB, deriveRatingFromState, etc)
   vm.runInContext(SCORING_SRC, ctx);
+  // load gpu arch detector (provides detectGpuArch, used by submit)
+  vm.runInContext(GPU_ARCH_SRC, ctx);
   // then submit (provides submitReport, parseSteamSystemInfo, etc)
   vm.runInContext(SUBMIT_SRC, ctx);
   return { ctx, fetchMock, SupaAuth };

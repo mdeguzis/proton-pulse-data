@@ -43,7 +43,7 @@ export async function fetchSupabase(appId) {
 export async function fetchNativeReports(appId) {
   try {
     const r = await fetch(
-      `${SB_URL}/user_configs?app_id=eq.${appId}&select=id,client_id,app_id,title,cpu,gpu,gpu_driver,gpu_vendor,ram,os,kernel,proton_version,rating,duration,duration_minutes,notes,vram_mb,form_responses,config_key,game_owned,created_at,updated_at,source&order=created_at.desc`,
+      `${SB_URL}/user_configs?app_id=eq.${appId}&select=id,client_id,app_id,title,cpu,gpu,gpu_driver,gpu_vendor,gpu_architecture,ram,os,kernel,proton_version,rating,duration,duration_minutes,notes,vram_mb,form_responses,config_key,game_owned,created_at,updated_at,source&order=created_at.desc`,
       { headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` } }
     );
     if (!r.ok) return [];
@@ -64,6 +64,7 @@ export async function fetchNativeReports(appId) {
       gpu:               row.gpu || '',
       gpuDriver:         row.gpu_driver || '',
       gpuVendor:         row.gpu_vendor || '',
+      gpuArchitecture:   row.gpu_architecture || '',
       ram:               row.ram || '',
       os:                row.os || '',
       kernel:            row.kernel || '',

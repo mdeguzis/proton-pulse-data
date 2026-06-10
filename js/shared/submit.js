@@ -2,6 +2,7 @@
 
 import { SupaAuth } from './config.js';
 import { FAULT_KEYS_WEB, deriveRatingFromState, inferProtonType } from './scoring.js';
+import { detectGpuArch } from '../lib/gpu-arch-detector.js';
 
 // Form submission + populate-submit-form -- factored out of app.js.
 // Loaded as a classic script BEFORE app.js so its globals
@@ -54,6 +55,8 @@ export function parseSteamSystemInfo(text) {
     if (gl.includes('nvidia') || gl.includes('geforce') || gl.includes('rtx') || gl.includes('gtx')) out.gpuVendor = 'nvidia';
     else if (gl.includes('amd') || gl.includes('radeon') || gl.includes('vangogh') || gl.includes('0405')) out.gpuVendor = 'amd';
     else if (gl.includes('intel') || gl.includes('iris') || gl.includes('uhd')) out.gpuVendor = 'intel';
+    const arch = detectGpuArch(out.gpu);
+    if (arch) out.gpuArch = arch;
   }
   return out;
 }
@@ -180,6 +183,7 @@ export async function submitReport(appId, title, form, editReportId = null) {
     gpu: form.gpu.value,
     gpu_driver: form.gpuDriver.value,
     gpu_vendor: form.gpuVendor.value,
+    gpu_architecture: detectGpuArch(form.gpu.value) || null,
     ram: normalizeRam(form.ram.value),
     os: (form.os.value + (form.osVersion.value ? ' ' + form.osVersion.value.trim() : '')),
     kernel: form.kernel.value,

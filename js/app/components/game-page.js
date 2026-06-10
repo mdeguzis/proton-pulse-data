@@ -1,5 +1,6 @@
 // game-page (components) for the app page. Relocated from app.js.
 
+import { detectGpuArch } from '../../lib/gpu-arch-detector.js';
 import { populateScoringTooltip, pulseTierFromReports, tierFromReports } from '../../shared/scoring.js';
 import { getWebClientId } from '../../shared/submit.js';
 import { fetchDeckStatusForApp, fetchMinRequirements } from '../api/deck-status.js';
@@ -132,6 +133,7 @@ export async function renderGamePage(appId) {
   })();
 
   let filterGpu    = persistedFilters.gpu    || '';
+  let filterArch   = persistedFilters.arch   || '';
   let filterOs     = persistedFilters.os     || '';
   let filterRating = persistedFilters.rating || '';
   // 'deck-lcd' / 'deck-oled' / 'deck-any' / 'desktop' / ''
@@ -144,7 +146,7 @@ export async function renderGamePage(appId) {
   function saveFiltersIfEnabled() {
     if (!persistFilters) return;
     try {
-      const snapshot = { gpu: filterGpu, os: filterOs, rating: filterRating, device: filterDevice, minPlaytime: filterMinPlaytime };
+      const snapshot = { gpu: filterGpu, arch: filterArch, os: filterOs, rating: filterRating, device: filterDevice, minPlaytime: filterMinPlaytime };
       localStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(snapshot));
     } catch { /* quota / disabled - ignore */ }
   }
@@ -182,9 +184,14 @@ export async function renderGamePage(appId) {
   });
   const combined = [...taggedConfigs, ...taggedReports];
 
+  // Resolve architecture: use stored gpuArchitecture field when available,
+  // fall back to detecting from the gpu model string for older reports.
+  const gpuArch = r => r.gpuArchitecture || detectGpuArch(r.gpu);
+
   const filtered = () => {
     let arr = [...combined];
     if (filterGpu)    arr = arr.filter(r => gpuVendor(r.gpu) === filterGpu);
+    if (filterArch)   arr = arr.filter(r => gpuArch(r) === filterArch);
     if (filterOs)     arr = arr.filter(r => osBase(r.os) === filterOs);
     if (filterDevice) {
       arr = arr.filter(r => {
@@ -407,6 +414,7 @@ export async function renderGamePage(appId) {
           const RATING_ORDER = ['platinum','gold','silver','bronze','borked'];
 
           const availGpus    = [...new Set(combined.map(r => gpuVendor(r.gpu)).filter(Boolean))];
+          const availArchs   = [...new Set(combined.map(r => gpuArch(r)).filter(Boolean))].sort();
           const availOs      = [...new Set(combined.map(r => osBase(r.os)).filter(Boolean))].sort();
           const availRatings = RATING_ORDER.filter(rt => taggedReports.some(r => r.rating === rt));
           const availSrcs    = SRC_ORDER.filter(b => combined.some(r => r._bucket === b));
@@ -416,6 +424,12 @@ export async function renderGamePage(appId) {
             <select id="fGpu">
               <option value="">Any</option>
               ${availGpus.map(v => `<option value="${v}" ${filterGpu===v?'selected':''}>${GPU_LABEL[v]||v}</option>`).join('')}
+            </select>` : '';
+          const archSel   = availArchs.length > 1 ? `
+            <label>Architecture</label>
+            <select id="fArch">
+              <option value="">Any</option>
+              ${availArchs.map(v => `<option value="${esc(v)}" ${filterArch===v?'selected':''}>${esc(v)}</option>`).join('')}
             </select>` : '';
           const osSel     = availOs.length > 0 ? `
             <label>OS</label>
@@ -471,8 +485,8 @@ export async function renderGamePage(appId) {
               <span>Save filters</span>
             </label>`;
 
-          const anyActive = filterGpu || filterOs || filterRating || filterSource || filterDevice || filterMinPlaytime;
-          return gpuSel + osSel + ratingSel + srcSel + deviceSel + playtimeSel + persistChk +
+          const anyActive = filterGpu || filterArch || filterOs || filterRating || filterSource || filterDevice || filterMinPlaytime;
+          return gpuSel + archSel + osSel + ratingSel + srcSel + deviceSel + playtimeSel + persistChk +
             (anyActive ? `<span class="filter-count">${reps.length} of ${combined.length}</span>` : '');
         })()}
       </div>
@@ -513,6 +527,7 @@ export async function renderGamePage(appId) {
       if (tip?.classList.contains('open')) await populateScoringTooltip(el);
     });
     el.querySelector('#fGpu')?.addEventListener('change', e => { filterGpu    = e.target.value; saveFiltersIfEnabled(); render(); });
+    el.querySelector('#fArch')?.addEventListener('change', e => { filterArch   = e.target.value; saveFiltersIfEnabled(); render(); });
     el.querySelector('#fOs')?.addEventListener('change',  e => { filterOs     = e.target.value; saveFiltersIfEnabled(); render(); });
     el.querySelector('#fRating')?.addEventListener('change', e => { filterRating = e.target.value; saveFiltersIfEnabled(); render(); });
     el.querySelector('#fSource')?.addEventListener('change', e => { filterSource = e.target.value; saveFiltersIfEnabled(); render(); });
