@@ -470,6 +470,12 @@ html[data-motion="off"] *::after {
   animation: none !important;
   transition: none !important;
 }
+/* SMIL <animateMotion> is not a CSS animation so animation:none won't stop it.
+   Hiding the particle group via CSS is the only reliable way to suppress it on
+   page load before JS has a chance to call pauseAnimations(). */
+html[data-motion="off"] .banner-atoms {
+  display: none;
+}
 
 .topbar-brand {
   position: relative;
