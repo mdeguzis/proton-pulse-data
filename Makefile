@@ -97,8 +97,7 @@ sync-runtime:
 # live preview of the static site with CSS hot-module reload
 # vite picks up every .html in the repo root as its own page route
 serve:
-	@[ -d node_modules/vite ] || { echo "error: deps not installed, run 'make install' first" >&2; exit 1; }
-	pnpm run dev
+	@if [ -d node_modules/vite ]; then pnpm run dev; else npx vite --host --port 5173; fi
 
 install-pg:
 	@if command -v pg_dump >/dev/null 2>&1; then \
