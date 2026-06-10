@@ -17,6 +17,7 @@ function animationsOn() {
 // is paused/unpaused directly since CSS cannot stop it.
 function applyAnimations(on) {
   const svgs = document.querySelectorAll('svg');
+  console.log('[options] applyAnimations: on=' + on + ' SVGs found=' + svgs.length + ' data-motion before=' + (document.documentElement.getAttribute('data-motion') || 'unset'));
   if (on) {
     document.documentElement.removeAttribute('data-motion');
     svgs.forEach((s) => { try { s.unpauseAnimations && s.unpauseAnimations(); } catch (e) { /* ignore */ } });
@@ -24,13 +25,19 @@ function applyAnimations(on) {
     document.documentElement.setAttribute('data-motion', 'off');
     svgs.forEach((s) => { try { s.pauseAnimations && s.pauseAnimations(); } catch (e) { /* ignore */ } });
   }
+  console.log('[options] applyAnimations: data-motion after=' + (document.documentElement.getAttribute('data-motion') || 'unset'));
 }
 
 const toggle = document.getElementById('opt-animations');
 if (toggle) {
-  toggle.checked = animationsOn();
+  const initial = animationsOn();
+  console.log('[options] init: stored=' + localStorage.getItem(MOTION_KEY) + ' animationsOn=' + initial);
+  toggle.checked = initial;
   toggle.addEventListener('change', () => {
-    localStorage.setItem(MOTION_KEY, toggle.checked ? 'on' : 'off');
+    const val = toggle.checked ? 'on' : 'off';
+    console.log('[options] toggle changed: saving ' + MOTION_KEY + '=' + val);
+    localStorage.setItem(MOTION_KEY, val);
     applyAnimations(toggle.checked);
+    console.log('[options] localStorage now:', localStorage.getItem(MOTION_KEY));
   });
 }
