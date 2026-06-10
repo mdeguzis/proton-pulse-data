@@ -333,6 +333,7 @@ jobs:
         env:
           STAGING_DEPLOY_TOKEN: ${{ secrets.STAGING_DEPLOY_TOKEN }}
         run: |
+          git config --local credential.helper ''
           git remote add staging https://x-access-token:${{ secrets.STAGING_DEPLOY_TOKEN }}@github.com/mdeguzis/proton-pulse-web-staging.git
           git push staging gh-pages-new:gh-pages --force
 
@@ -399,6 +400,7 @@ jobs:
           STAGING_DEPLOY_TOKEN: ${{ secrets.STAGING_DEPLOY_TOKEN }}
         run: |
           cd gh-pages-data
+          git config --local credential.helper ''
           git remote add staging https://x-access-token:${{ secrets.STAGING_DEPLOY_TOKEN }}@github.com/mdeguzis/proton-pulse-web-staging.git
           git push staging HEAD:gh-pages --force
 
@@ -855,5 +857,6 @@ jobs:
       - name: Push to staging
         run: |
           cd gh-pages-data
+          git config --local credential.helper ''
           git remote add staging https://x-access-token:${{ secrets.STAGING_DEPLOY_TOKEN }}@github.com/mdeguzis/proton-pulse-web-staging.git
           git push staging HEAD:gh-pages --force
