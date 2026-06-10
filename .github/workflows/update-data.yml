@@ -45,7 +45,7 @@ jobs:
 
   # ── Stage 1: process reports, backfill, compute probe plan ─────────
   build:
-    if: inputs.pages_only != true && inputs.backfill_app_ids == '' && inputs.coverage_backfill_issue_type == ''
+    if: inputs.pages_only != true && inputs.staging_only != true && inputs.backfill_app_ids == '' && inputs.coverage_backfill_issue_type == ''
     runs-on: ubuntu-24.04
     outputs:
       chunk_count: ${{ steps.plan.outputs.chunk_count }}
@@ -339,7 +339,7 @@ jobs:
 
   # ── Pages-only redeploy: refresh app/index shell files on gh-pages ─────────
   pages-only:
-    if: inputs.pages_only == true
+    if: inputs.pages_only == true && inputs.staging_only != true
     runs-on: ubuntu-24.04
     permissions:
       contents: write
