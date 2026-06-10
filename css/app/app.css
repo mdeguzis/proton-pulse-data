@@ -1181,17 +1181,14 @@ a.card:hover { text-decoration: none; }
   min-width: 72px;
   flex-shrink: 0;
 }
-/* Home feed activity cards: pg-card-style compact rows */
-.activity-card { align-items: center; padding: 8px 14px 8px 8px; gap: 12px; }
+/* Home feed activity cards: always-row pg-card-style layout */
+.activity-card { flex-direction: row !important; align-items: center !important; padding: 8px 14px 8px 8px; gap: 12px; }
 .activity-thumb { width: 92px; height: 43px; object-fit: cover; flex-shrink: 0; border-radius: 6px; border: 1px solid var(--border); }
 .activity-info { flex: 1 1 auto; min-width: 0; }
 .activity-title { font-size: 0.95rem; font-weight: 600; color: var(--strong); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .activity-sub { font-size: 0.78rem; color: var(--muted); margin-top: 2px; font-family: var(--mono); }
-.activity-badge { flex-shrink: 0; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; padding: 4px 10px; border-radius: 999px; white-space: nowrap; }
-/* Keep activity cards in row mode on mobile even though .card goes column */
-@media (max-width: 640px) {
-  .activity-card { flex-direction: row !important; align-items: center !important; }
-}
+.activity-sources { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 5px; }
+.activity-badge { flex-shrink: 0; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; padding: 4px 10px; border-radius: 999px; white-space: nowrap; align-self: center; }
 /* card-rating-row now shows confidence pill (left) and rating badge (right)
    side-by-side in a horizontal row. Matches the plugin's "78% GOLD" layout */
 .card-rating-row { display: flex; flex-direction: row; align-items: center; gap: 6px; margin-top: 4px; flex-wrap: wrap; justify-content: flex-end; }

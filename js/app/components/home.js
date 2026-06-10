@@ -121,17 +121,21 @@ export function renderActivityCard(kind, row, protonDbAppIds) {
   const rating = isReport ? String(row.rating || '').toLowerCase() : '';
   const rc = RATING_COLORS[rating] || '';
   const rt = RATING_TEXT[rating] || '';
-  const badgeHtml = rating && rc
+  const ratingBadge = rating && rc
     ? `<span class="activity-badge" style="background:${rc};color:${rt}">${rating.toUpperCase()}</span>`
     : '';
+  const pulseBadge = `<span class="source-badge pulse"><img src="https://raw.githubusercontent.com/mdeguzis/decky-proton-pulse/main/assets/logo.png" alt="">Pulse</span>`;
+  const protonDbBadge = hasProtonDb ? '<span class="source-badge protondb">ProtonDB</span>' : '';
+  const sourceBadge = isNonSteam ? '<span class="source-badge non-steam-game">Non-Steam</span>' : '<span class="source-badge steam-game">Steam</span>';
   return `
     <a class="card activity-card" href="#/app/${appId}" style="text-decoration:none">
       <img src="${STEAM_IMG(appId)}" onerror="this.style.display='none'" alt="" class="activity-thumb">
       <div class="activity-info">
         <div class="activity-title">${esc(title)}</div>
         <div class="activity-sub">${esc(hwLine)}${hwLine && age ? ' &middot; ' : ''}${age}</div>
+        <div class="activity-sources">${pulseBadge}${protonDbBadge}${sourceBadge}</div>
       </div>
-      ${badgeHtml}
+      ${ratingBadge}
     </a>`;
 }
 
@@ -147,6 +151,7 @@ export function renderPulseReportCards(rows) {
       <div class="activity-info">
         <div class="activity-title">${esc(row.title || `App ${row.app_id}`)}</div>
         <div class="activity-sub">${sub}</div>
+        <div class="activity-sources"><span class="source-badge pulse"><img src="https://raw.githubusercontent.com/mdeguzis/decky-proton-pulse/main/assets/logo.png" alt="">Pulse</span></div>
       </div>
       ${rc ? `<span class="activity-badge" style="background:${rc};color:${rt}">${rating.toUpperCase()}</span>` : ''}
     </a>`;
