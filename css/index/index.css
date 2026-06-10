@@ -181,17 +181,21 @@
   align-items: center;
   justify-content: center;
   flex: 1 1 140px;
-  padding: 11px 20px;
+  padding: 8px 14px;
   border: 1px solid transparent;
   border-radius: 8px;
-  font-size: 0.9rem;
+  font-size: 0.82rem;
   font-weight: 600;
   color: #0b1622;
+  white-space: nowrap;
   /* secondary CTA: blue fill so it reads as a real button, not an outline */
   background: linear-gradient(90deg, var(--accent), var(--accent-hi) 92%);
   text-decoration: none;
   transition: filter 0.15s, transform 0.05s, box-shadow 0.15s;
   text-align: center;
+}
+@media (min-width: 480px) {
+  .cta-btn { padding: 11px 20px; font-size: 0.9rem; }
 }
 .cta-btn:hover {
   filter: brightness(1.08);
