@@ -857,6 +857,10 @@ jobs:
           done < gh-pages-manifest.txt
           curl -sL https://raw.githubusercontent.com/mdeguzis/decky-proton-pulse/main/src/data/scoring-info.json -o ./scoring-info.json
           curl -sL https://raw.githubusercontent.com/mdeguzis/decky-proton-pulse/main/src/data/form-schema.json -o ./form-schema.json
+          VERSION=$(cat ../repo/package.json | python3 -c "import json,sys; print(json.load(sys.stdin).get('version','0.0.0'))")
+          SHA=$(cd ../repo && git rev-parse --short HEAD)
+          printf '{"version":"%s","sha":"%s","deployed_at":"%s","repo":"mdeguzis/proton-pulse-web"}\n' "$VERSION" "$SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > version.json
+          git add version.json
           if git diff --quiet && git diff --cached --quiet; then
             echo "No changes vs current staging."
           else
