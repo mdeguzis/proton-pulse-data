@@ -329,7 +329,9 @@ jobs:
           git push origin gh-pages-new:gh-pages --force
 
       - name: Sync to staging
-        if: ${{ secrets.STAGING_DEPLOY_TOKEN != '' }}
+        if: env.STAGING_DEPLOY_TOKEN != ''
+        env:
+          STAGING_DEPLOY_TOKEN: ${{ secrets.STAGING_DEPLOY_TOKEN }}
         run: |
           git remote add staging https://x-access-token:${{ secrets.STAGING_DEPLOY_TOKEN }}@github.com/mdeguzis/proton-pulse-web-staging.git
           git push staging gh-pages-new:gh-pages --force
@@ -392,7 +394,9 @@ jobs:
           git push origin gh-pages
 
       - name: Sync to staging
-        if: ${{ secrets.STAGING_DEPLOY_TOKEN != '' }}
+        if: env.STAGING_DEPLOY_TOKEN != ''
+        env:
+          STAGING_DEPLOY_TOKEN: ${{ secrets.STAGING_DEPLOY_TOKEN }}
         run: |
           cd gh-pages-data
           git remote add staging https://x-access-token:${{ secrets.STAGING_DEPLOY_TOKEN }}@github.com/mdeguzis/proton-pulse-web-staging.git
