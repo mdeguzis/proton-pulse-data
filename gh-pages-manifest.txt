@@ -93,3 +93,4 @@ CNAME
 .nojekyll
 gh-pages-manifest.txt
 gh-pages-exclude-manifest.txt
+js/about/version.js
