@@ -1,7 +1,7 @@
 // home (components) for the app page. Relocated from app.js.
 
 import { fetchRecentPulseReports } from '../api/reports.js?v=7c5d0e92';
-import { loadSearchIndex, searchIndex } from './search.js?v=d9a0646d';
+import { loadSearchIndex, searchIndex } from './search.js?v=6c404624';
 import { SB_KEY, SB_URL, isNonSteamAppId } from '../config.js?v=f75c43ba';
 import { daysAgo, latestPerApp } from '../utils.js?v=d4fea298';
 import { renderGameCard } from '../lib/card.js?v=47333258';
@@ -10,10 +10,7 @@ const LIMIT = 25;
 
 function _popularSub(g) {
   const total = (g.protondbCount || 0) + (g.pulseCount || 0);
-  const parts = [];
-  if (total > 0) parts.push(`${total.toLocaleString()} report${total === 1 ? '' : 's'}`);
-  if (g.peak) parts.push(`${g.peak.toLocaleString()} peak players`);
-  return parts.join(' \u00b7 ') || 'Popular on Steam';
+  return total > 0 ? `${total.toLocaleString()} compatibility report${total === 1 ? '' : 's'}` : 'Popular on Steam';
 }
 
 export async function renderHomePage() {
