@@ -1,7 +1,7 @@
 // home (components) for the app page. Relocated from app.js.
 
 import { fetchRecentPulseReports } from '../api/reports.js?v=8d32e6b7';
-import { loadSearchIndex, searchIndex } from './search.js?v=00f17960';
+import { loadSearchIndex, searchIndex } from './search.js?v=c456c3cf';
 import { SB_KEY, SB_URL, isNonSteamAppId } from '../config.js?v=f75c43ba';
 import { daysAgo, latestPerApp } from '../utils.js?v=d4fea298';
 import { renderGameCard } from '../lib/card.js?v=9b7180ee';
@@ -19,13 +19,13 @@ function _loadMoreBtn(sectionId) {
   return `<button class="load-more-btn" data-section="${sectionId}">Load more</button>`;
 }
 
-function _appendCards(sectionId, queue, countsByApp) {
+function _appendCards(sectionId, queue) {
   const cardsEl = document.getElementById(`cards-${sectionId}`);
   const btnEl = document.getElementById(`load-more-${sectionId}`);
   if (!cardsEl || !queue.length) { if (btnEl) btnEl.remove(); return; }
   const batch = queue.splice(0, PAGE_SIZE);
-  const html = sectionId === 'pulse'
-    ? batch.map(row => renderActivityCard('report', row, countsByApp.get(String(row.app_id)) || {})).join('')
+  const html = sectionId === 'recent'
+    ? batch.map(_recentCardHtml).join('')
     : batch.map(g => renderGameCard({
         href: `#/app/${g.appId}`, appId: g.appId, imgUrl: g.headerImage || undefined,
         title: g.title, sub: _popularSub(g),
@@ -35,24 +35,36 @@ function _appendCards(sectionId, queue, countsByApp) {
   if (!queue.length && btnEl) btnEl.remove();
 }
 
+function _recentCardHtml(r) {
+  return renderGameCard({
+    href: `#/app/${r.appId}`,
+    appId: r.appId,
+    title: r.title,
+    sub: _popularSub(r),
+    tier: String(r.tier || '').toLowerCase() || undefined,
+    sourceLabel: 'Steam',
+  });
+}
+
 export async function renderHomePage() {
   const el = document.getElementById('content');
   el.innerHTML = '<div class="state-box">Loading recent reports...</div>';
   try {
-    const [pulseReports, mostPlayedResp] = await Promise.all([
-      fetchRecentPulseReports(),
+    const [recentResp, mostPlayedResp] = await Promise.all([
+      fetch('recent-reports.json').catch(() => null),
       fetch('most_played.json').catch(() => null),
-      loadSearchIndex(),
     ]);
 
-    pulseReports.sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
-    const countsByApp = new Map((searchIndex || []).map(r => [String(r[0]), { protondbCount: r[3] || 0, pulseCount: r[4] || 0 }]));
+    let recentReports = [];
+    if (recentResp && recentResp.ok) {
+      recentReports = await recentResp.json().catch(() => []);
+    }
 
-    const pulseQueue = pulseReports.slice(PAGE_SIZE);
-    const pulseInitial = pulseReports.slice(0, PAGE_SIZE);
-    const pulseHtml = pulseInitial.map(row => renderActivityCard('report', row, countsByApp.get(String(row.app_id)) || {})).join('');
+    const recentQueue = recentReports.slice(PAGE_SIZE);
+    const recentInitial = recentReports.slice(0, PAGE_SIZE);
+    const recentHtml = recentInitial.map(_recentCardHtml).join('');
 
-    const seenIds = new Set(pulseReports.map(r => String(r.app_id)));
+    const seenIds = new Set(recentReports.map(r => String(r.appId)));
     let mostPlayed = [];
     if (mostPlayedResp && mostPlayedResp.ok) {
       mostPlayed = (await mostPlayedResp.json().catch(() => [])).filter(g => !seenIds.has(String(g.appId)));
@@ -67,16 +79,16 @@ export async function renderHomePage() {
 
     el.innerHTML = `
       <p class="section-label" style="margin-bottom:10px">Recent Reports</p>
-      <div class="cards" id="cards-pulse">${pulseHtml}</div>
-      ${pulseQueue.length ? `<div id="load-more-pulse">${_loadMoreBtn('pulse')}</div>` : ''}
+      <div class="cards" id="cards-recent">${recentHtml || '<div class="state-box">No reports yet.</div>'}</div>
+      ${recentQueue.length ? `<div id="load-more-recent">${_loadMoreBtn('recent')}</div>` : ''}
       <p class="section-label" style="margin-top:24px;margin-bottom:10px">Popular on Steam</p>
       <div class="cards" id="cards-popular">${popularHtml}</div>
       ${popularQueue.length ? `<div id="load-more-popular">${_loadMoreBtn('popular')}</div>` : ''}`;
 
-    document.getElementById('load-more-pulse')?.querySelector('button')
-      ?.addEventListener('click', () => _appendCards('pulse', pulseQueue, countsByApp));
+    document.getElementById('load-more-recent')?.querySelector('button')
+      ?.addEventListener('click', () => _appendCards('recent', recentQueue, null));
     document.getElementById('load-more-popular')?.querySelector('button')
-      ?.addEventListener('click', () => _appendCards('popular', popularQueue, countsByApp));
+      ?.addEventListener('click', () => _appendCards('popular', popularQueue, null));
   } catch {
     el.innerHTML = '<div class="state-box">Search for a game above or navigate to <code>#/app/{appId}</code></div>';
   }

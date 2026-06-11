@@ -631,6 +631,65 @@ def _compute_game_summary(app_dir: Path) -> tuple[str, int, int]:
     return (_score_to_tier(score_pct), protondb_count, pulse_count)
 
 
+def generate_recent_reports(data_output_path: Path, output_path: Path, limit: int = 100) -> None:
+    """Generate recent-reports.json: top games sorted by most recent report timestamp.
+
+    Shape: [{appId, title, tier, lastReportDate, protondbCount, pulseCount}, ...]
+    Reads every game directory, finds the latest report timestamp from year bucket files,
+    sorts descending, and emits the top `limit` entries.
+    """
+    from datetime import datetime, timezone
+
+    search_index_path = output_path / "search-index.json"
+    index: dict[str, list] = {}
+    if search_index_path.exists():
+        for row in json.loads(search_index_path.read_text(encoding="utf-8")):
+            if isinstance(row, list) and len(row) >= 3:
+                index[str(row[0])] = row
+
+    results = []
+    for app_dir in data_output_path.iterdir():
+        if not app_dir.is_dir():
+            continue
+        app_id = app_dir.name
+        year_files = sorted(
+            (f for f in app_dir.glob("*.json") if f.stem not in {"latest", "index", "votes", "metadata"}),
+            key=lambda p: p.stem,
+        )
+        if not year_files:
+            continue
+        try:
+            rows = json.loads(year_files[-1].read_text(encoding="utf-8"))
+            if not isinstance(rows, list):
+                continue
+            latest_ts = max((int(r.get("timestamp", 0)) for r in rows if r.get("timestamp")), default=0)
+            if not latest_ts:
+                continue
+            last_date = datetime.fromtimestamp(latest_ts, tz=timezone.utc).strftime("%Y-%m-%d")
+        except Exception:
+            continue
+        row = index.get(app_id, [])
+        title = row[1] if len(row) > 1 else ""
+        if not title:
+            continue
+        tier = row[2] if len(row) > 2 else ""
+        pdb_count = row[3] if len(row) > 3 else 0
+        pulse_count = row[4] if len(row) > 4 else 0
+        results.append({
+            "appId": app_id,
+            "title": title,
+            "tier": tier,
+            "lastReportDate": last_date,
+            "protondbCount": pdb_count,
+            "pulseCount": pulse_count,
+        })
+
+    results.sort(key=lambda r: r["lastReportDate"], reverse=True)
+    out_path = output_path / "recent-reports.json"
+    out_path.write_text(json.dumps(results[:limit], separators=(",", ":")) + "\n", encoding="utf-8")
+    log(f"[recent-reports] wrote {len(results[:limit])} entries to {out_path}")
+
+
 def generate_search_index(index_keys: set, data_output_path: Path, output_path: Path) -> None:
     """Generate search-index.json with overall tier + report counts per game.
 
@@ -1231,6 +1290,7 @@ def finalize_output(output_dir, skip_probe: bool = False):
     # /stats.html page. Tiny output regardless of dataset size since everything
     # is pre-aggregated. See scripts/pipeline/stats.py
     write_stats_json(data_output_path, output_path)
+    generate_recent_reports(data_output_path, output_path)
     build_game_images(output_path)
     log_summary(state["parsed_count"], data_output_path, output_path, pipeline_start, state["backfilled_keys"])
     flush_steam_title_cache()
