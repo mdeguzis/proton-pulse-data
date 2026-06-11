@@ -25,12 +25,16 @@ function loadGameImages() {
   return _gameImagesPromise;
 }
 
+// Called from onerror when both akamai and cloudflare CDN paths fail.
+// fb=1 means akamai failed, fb2=1 means cloudflare failed + lookup fired.
 window.__steamImgLookup = async (el, appId) => {
   const map = await loadGameImages();
   const url = map[String(appId)];
   if (url) {
+    console.log(`[steam-img] appId=${appId} route=game-images-json`);
     el.src = url;
   } else {
+    console.warn(`[steam-img] appId=${appId} route=missing all CDN paths exhausted`);
     el.onerror = null;
     el.style.display = 'none';
     el.insertAdjacentHTML('afterend', '<div class="game-card-thumb game-card-thumb--missing">Box art missing</div>');
@@ -44,8 +48,10 @@ window.__steamImgLookup = async (el, appId) => {
 export function renderGameCard({ href, appId, title, sub, tier, badge, badgeBg, badgeColor, imgUrl }) {
   const primarySrc = imgUrl || (appId ? STEAM_IMG(appId) : '');
   const cdn2Src = appId ? STEAM_IMG_CDN2(appId) : '';
+  // appId is always numeric - use bare number to avoid double-quote injection into onerror=""
+  const aid = appId != null ? String(appId) : '';
   const thumbHtml = primarySrc
-    ? `<img class="game-card-thumb" src="${primarySrc}" alt="" loading="lazy" onerror="if(!this.dataset.fb){this.dataset.fb=1;this.src='${cdn2Src}'}else if(!this.dataset.fb2){this.dataset.fb2=1;window.__steamImgLookup(this,${JSON.stringify(String(appId))})}else{this.onerror=null;this.style.display='none';this.insertAdjacentHTML('afterend','<div class=\\'game-card-thumb game-card-thumb--missing\\'>Box art missing</div>')}">`
+    ? `<img class="game-card-thumb" src="${primarySrc}" alt="" loading="lazy" onerror="if(!this.dataset.fb){this.dataset.fb=1;console.log('[steam-img] appId=${aid} route=cdn2-cloudflare akamai-failed');this.src='${cdn2Src}'}else if(!this.dataset.fb2){this.dataset.fb2=1;window.__steamImgLookup(this,${aid})}else{this.onerror=null;this.style.display='none';this.insertAdjacentHTML('afterend','<div class=\\'game-card-thumb game-card-thumb--missing\\'>Box art missing</div>')}">`
     : `<div class="game-card-thumb game-card-thumb--missing">Box art missing</div>`;
 
   const label = tier ? tier.toUpperCase() : (badge || '');
