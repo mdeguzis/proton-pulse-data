@@ -1,7 +1,7 @@
 // home (components) for the app page. Relocated from app.js.
 
 import { fetchRecentPulseReports } from '../api/reports.js?v=7c5d0e92';
-import { loadSearchIndex, searchIndex } from './search.js?v=8da085b1';
+import { loadSearchIndex, searchIndex } from './search.js?v=952fab6b';
 import { SB_KEY, SB_URL, isNonSteamAppId } from '../config.js?v=f75c43ba';
 import { daysAgo, latestPerApp } from '../utils.js?v=d4fea298';
 import { renderGameCard } from '../lib/card.js?v=9b7180ee';
@@ -91,7 +91,7 @@ export function renderActivityCard(kind, row) {
   let title, hwLine, age, isNonSteam = false;
   if (isReport) {
     title = row.title || `App ${appId}`;
-    hwLine = [row.rating, row.proton_version].filter(Boolean).join(' | ');
+    hwLine = row.proton_version || '';
     age = daysAgo(Math.floor(new Date(row.created_at).getTime() / 1000));
     isNonSteam = isNonSteamAppId(appId);
   } else {
