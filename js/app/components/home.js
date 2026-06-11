@@ -1,7 +1,7 @@
 // home (components) for the app page. Relocated from app.js.
 
 import { fetchRecentPulseReports } from '../api/reports.js?v=7c5d0e92';
-import { loadSearchIndex, searchIndex } from './search.js?v=86868142';
+import { loadSearchIndex, searchIndex } from './search.js?v=d9a0646d';
 import { SB_KEY, SB_URL, isNonSteamAppId } from '../config.js?v=f75c43ba';
 import { daysAgo, latestPerApp } from '../utils.js?v=d4fea298';
 import { renderGameCard } from '../lib/card.js?v=47333258';
@@ -35,6 +35,8 @@ export async function renderHomePage() {
       for (const g of (Array.isArray(mostPlayed) ? mostPlayed : [])) {
         if (pulseReports.length + popularCards.length >= LIMIT) break;
         if (seenIds.has(String(g.appId))) continue;
+        const popChips = ['<span class="source-badge steam-game">Steam</span>'];
+        if ((g.protondbCount || 0) > 0) popChips.push('<span class="source-badge protondb">ProtonDB</span>');
         popularCards.push(renderGameCard({
           href: `#/app/${g.appId}`,
           appId: g.appId,
@@ -42,6 +44,7 @@ export async function renderHomePage() {
           title: g.title,
           sub: _popularSub(g),
           tier: String(g.rating || '').toLowerCase() || undefined,
+          chips: popChips,
         }));
       }
     }
