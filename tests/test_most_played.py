@@ -20,7 +20,11 @@ def test_keeps_rated_games_in_rank_order_and_skips_untracked(tmp_path):
     out = build_most_played(tmp_path, ranks=ranks)
 
     assert [g["appId"] for g in out] == [570, 730]  # rank order preserved
-    assert out[0] == {"appId": 570, "title": "Dota 2", "peak": 600000, "rating": "platinum"}
+    assert out[0]["appId"] == 570
+    assert out[0]["title"] == "Dota 2"
+    assert out[0]["peak"] == 600000
+    assert out[0]["rating"] == "platinum"
+    assert out[0]["protondbCount"] == 50
     # file on disk matches the returned rows
     assert json.loads((tmp_path / "most_played.json").read_text(encoding="utf-8")) == out
 
@@ -41,4 +45,8 @@ def test_respects_limit(tmp_path):
 def test_handles_non_int_peak(tmp_path):
     _write_index(tmp_path, [["730", "CS2", "gold", 10, 0]])
     out = build_most_played(tmp_path, ranks=[{"appid": 730, "peak_in_game": None}])
-    assert out == [{"appId": 730, "title": "CS2", "peak": None, "rating": "gold"}]
+    assert out[0]["appId"] == 730
+    assert out[0]["title"] == "CS2"
+    assert out[0]["peak"] is None
+    assert out[0]["rating"] == "gold"
+    assert out[0]["protondbCount"] == 10
