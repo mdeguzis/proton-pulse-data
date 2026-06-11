@@ -38,7 +38,6 @@ js/options/main.js
 css/options/options.css
 most_played.json
 game-images.json
-recent-reports.json
 auth.html
 js/auth/main.js
 css/auth/auth.css
