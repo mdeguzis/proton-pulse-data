@@ -299,6 +299,7 @@ jobs:
           cp /tmp/protondb-output/coverage-summary.json . 2>/dev/null || true
           cp /tmp/protondb-output/stats.json . 2>/dev/null || true
           cp /tmp/protondb-output/recent-reports.json . 2>/dev/null || true
+          cp /tmp/protondb-output/game-images.json . 2>/dev/null || true
           git show main:gh-pages-manifest.txt > gh-pages-manifest.txt
           while IFS= read -r path; do
             [ -z "$path" ] && continue
@@ -318,7 +319,7 @@ jobs:
           git add data/ data-index.html coverage.html search-index.json scoring-info.json form-schema.json badges/
           # add optional pipeline outputs (skip silently if a fresh checkout
           # didn't have them yet, e.g. first run after introducing the file)
-          for f in coverage-summary.json stats.json recent-reports.json; do
+          for f in coverage-summary.json stats.json recent-reports.json game-images.json; do
             [ -f "$f" ] && git add "$f"
           done
           while IFS= read -r path; do
@@ -543,6 +544,7 @@ jobs:
           cp /tmp/protondb-output/coverage-summary.json . 2>/dev/null || true
           cp /tmp/protondb-output/stats.json . 2>/dev/null || true
           cp /tmp/protondb-output/recent-reports.json . 2>/dev/null || true
+          cp /tmp/protondb-output/game-images.json . 2>/dev/null || true
           git show main:gh-pages-manifest.txt > gh-pages-manifest.txt
           while IFS= read -r path; do
             [ -z "$path" ] && continue
@@ -562,7 +564,7 @@ jobs:
           git add data/ data-index.html coverage.html search-index.json scoring-info.json form-schema.json badges/
           # add optional pipeline outputs (skip silently if a fresh checkout
           # didn't have them yet, e.g. first run after introducing the file)
-          for f in coverage-summary.json stats.json recent-reports.json; do
+          for f in coverage-summary.json stats.json recent-reports.json game-images.json; do
             [ -f "$f" ] && git add "$f"
           done
           while IFS= read -r path; do
@@ -742,6 +744,7 @@ jobs:
           cp /tmp/protondb-output/coverage-summary.json . 2>/dev/null || true
           cp /tmp/protondb-output/stats.json . 2>/dev/null || true
           cp /tmp/protondb-output/recent-reports.json . 2>/dev/null || true
+          cp /tmp/protondb-output/game-images.json . 2>/dev/null || true
           git show main:gh-pages-manifest.txt > gh-pages-manifest.txt
           while IFS= read -r path; do
             [ -z "$path" ] && continue
@@ -761,7 +764,7 @@ jobs:
           git add data/ data-index.html coverage.html search-index.json scoring-info.json form-schema.json badges/
           # add optional pipeline outputs (skip silently if a fresh checkout
           # didn't have them yet, e.g. first run after introducing the file)
-          for f in coverage-summary.json stats.json recent-reports.json; do
+          for f in coverage-summary.json stats.json recent-reports.json game-images.json; do
             [ -f "$f" ] && git add "$f"
           done
           while IFS= read -r path; do
