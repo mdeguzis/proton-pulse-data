@@ -691,6 +691,31 @@ def generate_recent_reports(data_output_path: Path, output_path: Path, limit: in
     log(f"[recent-reports] wrote {len(results[:limit])} entries to {out_path}")
 
 
+def _backfill_most_played_header_images(output_path: Path, overrides: dict) -> None:
+    """Populate headerImage in most_played.json from game-images.json overrides.
+
+    most_played.py sets headerImage: None as a placeholder because it runs
+    before game_images.py. This step fills them in after both have run.
+    """
+    mp_path = output_path / "most_played.json"
+    if not mp_path.exists() or not overrides:
+        return
+    try:
+        data = json.loads(mp_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        log(f"[game-images] WARN: could not read most_played.json for header backfill: {exc}")
+        return
+    changed = 0
+    for entry in data:
+        app_id = str(entry.get("appId", ""))
+        if app_id in overrides and not entry.get("headerImage"):
+            entry["headerImage"] = overrides[app_id]
+            changed += 1
+    if changed:
+        mp_path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+        log(f"[game-images] backfilled {changed} headerImage(s) in most_played.json")
+
+
 def generate_search_index(index_keys: set, data_output_path: Path, output_path: Path) -> None:
     """Generate search-index.json with overall tier + report counts per game.
 
@@ -1293,7 +1318,8 @@ def finalize_output(output_dir, skip_probe: bool = False):
     write_stats_json(data_output_path, output_path)
     generate_recent_reports(data_output_path, output_path)
     build_most_played(output_path)
-    build_game_images(output_path)
+    overrides = build_game_images(output_path)
+    _backfill_most_played_header_images(output_path, overrides)
     log_summary(state["parsed_count"], data_output_path, output_path, pipeline_start, state["backfilled_keys"])
     flush_steam_title_cache()
     log("Done finalizing output.")

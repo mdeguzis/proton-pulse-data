@@ -1382,6 +1382,7 @@ a.card:hover { text-decoration: none; }
   color: #c85050;
 }
 .action-btn-danger:hover { background: rgba(200,80,80,0.12); color: #ff8a7a; }
+.action-btn-icon { padding: 5px 10px; }
 /* Permalink button used in the footer alongside the other action buttons -
    inherits .action-btn styling, just adds the chain icon */
 .card-footer .permalink-btn {

@@ -433,3 +433,37 @@ def test_finalize_output_steam_catalog_load_error(tmp_path):
         patch("scripts.pipeline.finalize.flush_steam_title_cache"),
     ):
         finalize_output(str(tmp_path), skip_probe=True)
+
+
+# ── _backfill_most_played_header_images (new function) ───────────────────────
+
+from scripts.pipeline.finalize import _backfill_most_played_header_images
+
+
+def test_backfill_most_played_header_images_fills_missing(tmp_path):
+    mp = tmp_path / "most_played.json"
+    mp.write_text(json.dumps([{"appId": 730, "headerImage": None}, {"appId": 570, "headerImage": None}]))
+    _backfill_most_played_header_images(tmp_path, {"730": "https://cdn.example.com/730.jpg"})
+    data = json.loads(mp.read_text())
+    assert data[0]["headerImage"] == "https://cdn.example.com/730.jpg"
+    assert data[1]["headerImage"] is None
+
+
+def test_backfill_most_played_header_images_skips_existing(tmp_path):
+    mp = tmp_path / "most_played.json"
+    mp.write_text(json.dumps([{"appId": 730, "headerImage": "https://existing.com/img.jpg"}]))
+    _backfill_most_played_header_images(tmp_path, {"730": "https://cdn.example.com/730.jpg"})
+    data = json.loads(mp.read_text())
+    assert data[0]["headerImage"] == "https://existing.com/img.jpg"
+
+
+def test_backfill_most_played_header_images_no_file_noop(tmp_path):
+    _backfill_most_played_header_images(tmp_path, {"730": "https://cdn.example.com/730.jpg"})
+
+
+def test_backfill_most_played_header_images_empty_overrides_noop(tmp_path):
+    mp = tmp_path / "most_played.json"
+    mp.write_text(json.dumps([{"appId": 730, "headerImage": None}]))
+    _backfill_most_played_header_images(tmp_path, {})
+    data = json.loads(mp.read_text())
+    assert data[0]["headerImage"] is None
