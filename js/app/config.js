@@ -15,13 +15,13 @@ export const SITE_BASE = (() => {
 // comes from the pipeline running in CI). Fetch from the production CDN
 // instead so any searched game works during local dev preview.
 export const IS_LOCAL_DEV = ['localhost', '127.0.0.1', '0.0.0.0'].includes(window.location.hostname);
-export const CDN = IS_LOCAL_DEV
+// Staging (github.io) has no data directory -- read from the production CDN
+// just like local dev does.
+const _usesProdData = IS_LOCAL_DEV || (window.location.hostname || '').endsWith('.github.io');
+export const CDN = _usesProdData
   ? 'https://www.proton-pulse.com/data'
   : `${window.location.origin}${SITE_BASE}/data`;
-// Data Files link points at the same place we fetch data from - so localhost
-// users browse the prod data directory rather than 404'ing on a missing
-// local one
-export const dataFilesHref = appId => IS_LOCAL_DEV
+export const dataFilesHref = appId => _usesProdData
   ? `https://www.proton-pulse.com/data/${appId}/`
   : `${SITE_BASE}/data/${appId}/`;
 // Steam app IDs are sequentially assigned and currently top out ~3 million.
