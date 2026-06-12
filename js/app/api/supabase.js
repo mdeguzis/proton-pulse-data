@@ -1,6 +1,6 @@
 // supabase (api) for the app page. Relocated from app.js.
 
-import { SB_KEY, SB_URL } from '../config.js?v=f75c43ba';
+import { SB_KEY, SB_URL } from '../config.js?v=9970759a';
 import { configKey, latestPerClient } from '../utils.js?v=d4fea298';
 
 export async function fetchSupabase(appId) {

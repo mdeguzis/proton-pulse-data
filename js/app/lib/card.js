@@ -1,6 +1,6 @@
 // Unified game card renderer. Single source of truth for the
 // thumbnail | title + sub | badge card layout used everywhere.
-import { STEAM_IMG } from '../config.js?v=c7c1e9ec';
+import { STEAM_IMG, USES_PROD_DATA } from '../config.js?v=9970759a';
 import { esc } from '../utils.js?v=d4fea298';
 
 const STEAM_IMG_CDN2 = id => `https://cdn.cloudflare.steamstatic.com/steam/apps/${id}/header.jpg`;
@@ -15,10 +15,13 @@ const TIER_COLORS = {
 
 // Lazy-loaded map of appId -> headerImageUrl from pipeline-generated game-images.json.
 // Covers newer Steam games where the standard /header.jpg path is hashed.
+const _GAME_IMAGES_URL = USES_PROD_DATA
+  ? 'https://www.proton-pulse.com/game-images.json'
+  : 'game-images.json';
 let _gameImagesPromise = null;
 function loadGameImages() {
   if (!_gameImagesPromise) {
-    _gameImagesPromise = fetch('game-images.json')
+    _gameImagesPromise = fetch(_GAME_IMAGES_URL)
       .then(r => r.ok ? r.json() : {})
       .catch(() => ({}));
   }

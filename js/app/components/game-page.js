@@ -4,15 +4,15 @@ import { detectGpuArch } from '../../lib/gpu-arch-detector.js?v=1f02f4a6';
 import { populateScoringTooltip, pulseTierFromReports, tierFromReports } from '../../shared/scoring.js?v=2787ec1d';
 import { getWebClientId } from '../../shared/submit.js?v=4543b1fc';
 import { fetchDeckStatusForApp, fetchMinRequirements } from '../api/deck-status.js?v=50bed91c';
-import { _protonDbLiveCache, fetchCdn, fetchProtonDbLive } from '../api/protondb.js?v=4787eca6';
-import { fetchConfigPlaytimeTotals, fetchNativeReports, fetchSupabase } from '../api/supabase.js?v=a9655755';
-import { castVote, fetchUserVotes, fetchVotes } from '../api/votes.js?v=ed60efc9';
-import { enhanceAuthorBlocks } from './author.js?v=988a8537';
-import { renderConfigCard } from './config-cards.js?v=f2ffbcc8';
+import { _protonDbLiveCache, fetchCdn, fetchProtonDbLive } from '../api/protondb.js?v=366b4c73';
+import { fetchConfigPlaytimeTotals, fetchNativeReports, fetchSupabase } from '../api/supabase.js?v=9ede0a56';
+import { castVote, fetchUserVotes, fetchVotes } from '../api/votes.js?v=20f46ed5';
+import { enhanceAuthorBlocks } from './author.js?v=91f74572';
+import { renderConfigCard } from './config-cards.js?v=c95d3721';
 import { DECK_STATUS_ICON_SVG, DECK_STATUS_LABELS, _DECK_LCD_RE, _DECK_OLED_RE, renderDeckStatusButton, renderDeckStatusModalContent } from './deck-status.js?v=15100cc6';
-import { renderCard } from './report-card.js?v=79a42479';
-import { loadSearchIndex, searchIndex } from './search.js?v=8b891f8d';
-import { CDN, RATING_COLORS, RATING_TEXT, SB_KEY, SB_URL, STEAM_IMG, dataFilesHref } from '../config.js?v=c7c1e9ec';
+import { renderCard } from './report-card.js?v=6779320f';
+import { loadSearchIndex, searchIndex } from './search.js?v=d43c4eea';
+import { CDN, RATING_COLORS, RATING_TEXT, SB_KEY, SB_URL, STEAM_IMG, dataFilesHref } from '../config.js?v=9970759a';
 import { confColor, confTextColor, configKey, daysAgo, downloadJson, esc, fmtMinutes, reportKey } from '../utils.js?v=d4fea298';
 
 export function trendSummary(reps) {

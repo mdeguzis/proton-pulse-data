@@ -1,6 +1,6 @@
 // protondb (api) for the app page. Relocated from app.js.
 
-import { CDN } from '../config.js?v=f75c43ba';
+import { CDN } from '../config.js?v=9970759a';
 
 export async function fetchCdn(appId) {
   try {

@@ -17,11 +17,11 @@ export const SITE_BASE = (() => {
 export const IS_LOCAL_DEV = ['localhost', '127.0.0.1', '0.0.0.0'].includes(window.location.hostname);
 // Staging (github.io) has no data directory -- read from the production CDN
 // just like local dev does.
-const _usesProdData = IS_LOCAL_DEV || (window.location.hostname || '').endsWith('.github.io');
-export const CDN = _usesProdData
+export const USES_PROD_DATA = IS_LOCAL_DEV || (window.location.hostname || '').endsWith('.github.io');
+export const CDN = USES_PROD_DATA
   ? 'https://www.proton-pulse.com/data'
   : `${window.location.origin}${SITE_BASE}/data`;
-export const dataFilesHref = appId => _usesProdData
+export const dataFilesHref = appId => USES_PROD_DATA
   ? `https://www.proton-pulse.com/data/${appId}/`
   : `${SITE_BASE}/data/${appId}/`;
 // Steam app IDs are sequentially assigned and currently top out ~3 million.
