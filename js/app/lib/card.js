@@ -1,6 +1,6 @@
 // Unified game card renderer. Single source of truth for the
 // thumbnail | title + sub | badge card layout used everywhere.
-import { STEAM_IMG } from '../config.js?v=f75c43ba';
+import { STEAM_IMG } from '../config.js?v=c7c1e9ec';
 import { esc } from '../utils.js?v=d4fea298';
 
 const STEAM_IMG_CDN2 = id => `https://cdn.cloudflare.steamstatic.com/steam/apps/${id}/header.jpg`;
@@ -32,6 +32,7 @@ window.__steamImgLookup = async (el, appId) => {
   const url = map[String(appId)];
   if (url) {
     console.log(`[steam-img] appId=${appId} route=game-images-json`);
+    el.loading = 'eager';
     el.src = url;
   } else {
     console.warn(`[steam-img] appId=${appId} route=missing all CDN paths exhausted`);
