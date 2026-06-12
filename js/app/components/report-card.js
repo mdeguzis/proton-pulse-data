@@ -3,10 +3,10 @@
 import { estimateScore } from '../../shared/scoring.js?v=2787ec1d';
 import { getWebClientId } from '../../shared/submit.js?v=4543b1fc';
 import { detectGpuArch } from '../../lib/gpu-arch-detector.js?v=1f02f4a6';
-import { renderAuthorBlock } from './author.js?v=c4ce1b99';
-import { buildFormRows } from './config-cards.js?v=61795487';
+import { renderAuthorBlock } from './author.js?v=988a8537';
+import { buildFormRows } from './config-cards.js?v=f2ffbcc8';
 import { renderSignalStrip } from './signals.js?v=92178f77';
-import { RATING_COLORS, RATING_TEXT } from '../config.js?v=f75c43ba';
+import { RATING_COLORS, RATING_TEXT } from '../config.js?v=c7c1e9ec';
 import { confColor, confTextColor, configKey, daysAgo, esc, fmtDuration, fmtMinutes, hashReportKey, reportKey } from '../utils.js?v=d4fea298';
 
 export function renderPermalink(r) {
@@ -97,7 +97,7 @@ export function renderCard(r, votes, userVotes = {}, configPlaytimeTotals = []) 
            Show Report Responses (if there are any), All Hardware Details,
            Permalink, JSON. Delete only shows for the report owner. -->
       <div class="card-footer">
-        ${(() => { const fr = buildFormRows(r); return fr ? `<button class="action-btn" onclick="const p=this.closest('.card-summary').querySelector('.fr-panel');p.classList.toggle('open');this.textContent=p.classList.contains('open')?'Hide Report Responses':'Show Report Responses'">Show Report Responses</button>` : `<button class="action-btn action-btn-disabled" disabled title="Responses not available or recorded">No responses recorded</button>`; })()}
+        ${(() => { const fr = buildFormRows(r); return fr ? `<button class="action-btn" onclick="const p=this.closest('.card-summary').querySelector('.fr-panel');p.classList.toggle('open');this.textContent=p.classList.contains('open')?'Hide Report Responses':'Show Report Responses'">Show Report Responses</button>` : ''; })()}
         <button class="action-btn" onclick="this.closest('.card-summary').querySelector('.hw-details-panel').classList.toggle('open');this.textContent=this.closest('.card-summary').querySelector('.hw-details-panel').classList.contains('open')?'Hide Hardware Details':'All Hardware Details'">All Hardware Details</button>
         <button class="action-btn action-btn-icon" data-report-json='${JSON.stringify(r).replace(/'/g,"&#39;")}' title="Download as JSON"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zm-14 9v2h14v-2H5z"/></svg></button>
         ${renderPermalink(r)}

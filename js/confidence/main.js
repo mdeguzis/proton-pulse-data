@@ -14,7 +14,8 @@ import { attachChartHover } from '../shared/chart-interactions.js?v=6b608095';
     return parts[0] === 'proton-pulse-web' ? '/proton-pulse-web' : '';
   })();
   const IS_LOCAL_DEV = ['localhost', '127.0.0.1', '0.0.0.0'].includes(location.hostname);
-  const CDN_BASE = IS_LOCAL_DEV
+  const _usesProdData = IS_LOCAL_DEV || (location.hostname || '').endsWith('.github.io');
+  const CDN_BASE = _usesProdData
     ? 'https://www.proton-pulse.com/data'
     : `${location.origin}${SITE_BASE}/data`;
 
@@ -759,12 +760,22 @@ import { attachChartHover } from '../shared/chart-interactions.js?v=6b608095';
     return { html, wire: history.wire };
   }
 
-  async function loadGame(appId) {
-    try {
-      const r = await fetch(`${CDN_BASE}/${appId}/latest.json`);
-      if (!r.ok) return [];
-      return await r.json();
-    } catch { return []; }
+  async function loadGame(appId, year) {
+    // If a specific year is known (derived from report timestamp), try that
+    // bucket first -- latest.json only mirrors the most recent year file so
+    // older reports won't be found there.
+    const files = (year && String(year) !== String(new Date().getFullYear()))
+      ? [`${year}.json`, 'latest.json']
+      : ['latest.json'];
+    for (const file of files) {
+      try {
+        const r = await fetch(`${CDN_BASE}/${appId}/${file}`);
+        if (!r.ok) continue;
+        const data = await r.json();
+        if (Array.isArray(data) && data.length) return data;
+      } catch { continue; }
+    }
+    return [];
   }
 
   async function loadSearchIndexLocal() {
@@ -784,6 +795,7 @@ import { attachChartHover } from '../shared/chart-interactions.js?v=6b608095';
     // CDN reports don't have reportId - use timestamp as fallback identifier.
     // The per-report link on the game page sends &ts=XXXXXXX for CDN reports
     const reportTs = params.get('ts');
+    const reportYear = reportTs ? new Date(parseInt(reportTs, 10) * 1000).getFullYear() : null;
     // Only show the aggregate when there's NO per-report identifier at all
     const wantsPerReport = !!(reportId || reportTs);
 
@@ -799,7 +811,7 @@ import { attachChartHover } from '../shared/chart-interactions.js?v=6b608095';
 
     const myHw = loadMyHardware();
     const [reports, searchIndex, scoringData] = await Promise.all([
-      loadGame(appId),
+      loadGame(appId, reportYear),
       loadSearchIndexLocal(),
       wantsPerReport ? loadScoringInfo() : Promise.resolve(null),
     ]);

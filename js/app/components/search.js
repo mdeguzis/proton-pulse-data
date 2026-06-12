@@ -1,11 +1,11 @@
 // search (components) for the app page. Relocated from app.js/app-search.js.
 
 import { estimateScore } from '../../shared/scoring.js?v=2787ec1d';
-import { fetchMatchingPulseConfigs, fetchMatchingPulseReportAppIds } from '../api/reports.js?v=8d32e6b7';
-import { renderGamePage } from './game-page.js?v=a5fb5d59';
-import { STEAM_IMG } from '../config.js?v=f75c43ba';
+import { fetchMatchingPulseConfigs, fetchMatchingPulseReportAppIds } from '../api/reports.js?v=245cfe65';
+import { renderGamePage } from './game-page.js?v=aa7ecd4d';
+import { STEAM_IMG } from '../config.js?v=c7c1e9ec';
 import { daysAgo, esc, withTimeout } from '../utils.js?v=d4fea298';
-import { renderGameCard } from '../lib/card.js?v=9b7180ee';
+import { renderGameCard } from '../lib/card.js?v=d5f0632f';
 
 // Search index + results UX -- factored out of app.js.
 // Loaded as a classic script BEFORE app.js so its globals
