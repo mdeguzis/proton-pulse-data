@@ -563,8 +563,9 @@
 .source-summary-tier-row > * {
   flex: 1;
 }
-.source-summary-tier-row > :first-child { justify-content: flex-end; }
-.source-summary-tier-row > :last-child  { justify-content: flex-start; }
+.source-summary-tier-row > :first-child {
+  border-right: 1px solid rgba(255,255,255,0.15);
+}
 .source-summary-conf {
   display: inline-flex;
   align-items: center;
