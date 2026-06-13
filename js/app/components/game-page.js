@@ -7,11 +7,11 @@ import { fetchDeckStatusForApp, fetchMinRequirements } from '../api/deck-status.
 import { _protonDbLiveCache, fetchCdn, fetchProtonDbLive } from '../api/protondb.js?v=366b4c73';
 import { fetchConfigPlaytimeTotals, fetchNativeReports, fetchSupabase } from '../api/supabase.js?v=9ede0a56';
 import { castVote, fetchUserVotes, fetchVotes } from '../api/votes.js?v=20f46ed5';
-import { enhanceAuthorBlocks } from './author.js?v=64d77ff0';
+import { enhanceAuthorBlocks } from './author.js?v=22ba4dee';
 import { renderConfigCard } from './config-cards.js?v=c95d3721';
 import { DECK_STATUS_ICON_SVG, DECK_STATUS_LABELS, _DECK_LCD_RE, _DECK_OLED_RE, renderDeckStatusButton, renderDeckStatusModalContent } from './deck-status.js?v=15100cc6';
-import { renderCard } from './report-card.js?v=91e8e797';
-import { loadSearchIndex, searchIndex } from './search.js?v=4fc333b9';
+import { renderCard } from './report-card.js?v=b33a1317';
+import { loadSearchIndex, searchIndex } from './search.js?v=276dd70a';
 import { CDN, RATING_COLORS, RATING_TEXT, SB_KEY, SB_URL, STEAM_IMG, dataFilesHref } from '../config.js?v=9970759a';
 import { loadSteamImg as _loadSteamImg } from '../lib/steam-img.js?v=85cf4195';
 import { confColor, confTextColor, configKey, daysAgo, downloadJson, esc, fmtMinutes, reportKey } from '../utils.js?v=d4fea298';
@@ -319,7 +319,7 @@ export async function renderGamePage(appId) {
         <button class="source-summary-tile source-summary-tile-combined" type="button" data-target="pulse-summary">
           <div class="ss-primary">
             <span class="source-summary-tier-row">
-              ${hasAnyReports && overallConfidencePct ? `<a class="source-summary-conf conf-link" href="confidence.html?app=${appId}" onclick="event.stopPropagation()" style="background:${confColor(overallConfidencePct / 10)};color:${confTextColor(overallConfidencePct / 10)}" title="See the factor-by-factor breakdown of this aggregate confidence">${overallConfidencePct}%</a>` : ''}
+              ${hasAnyReports && overallConfidencePct ? `<a class="source-summary-conf conf-link" href="confidence.html?app=${appId}" onclick="event.stopPropagation()" style="background:${confColor(overallConfidencePct / 10)};color:${confTextColor(overallConfidencePct / 10)}" title="See the factor-by-factor breakdown of this aggregate confidence">Confidence: ${overallConfidencePct}%</a>` : ''}
               <span class="source-summary-value" style="background:${overallTileColor};color:${overallTileText}">${overallTier}</span>
             </span>
             <span class="source-summary-meta">${overallTileSummary}</span>

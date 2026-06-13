@@ -561,9 +561,10 @@
   width: 100%;
 }
 .source-summary-tier-row > * {
-  flex: 1;
   border-radius: 3px;
 }
+.source-summary-tier-row > :first-child { flex: 7; }
+.source-summary-tier-row > :last-child  { flex: 3; }
 .source-summary-conf {
   display: inline-flex;
   align-items: center;
