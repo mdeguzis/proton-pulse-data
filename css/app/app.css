@@ -557,16 +557,12 @@
   display: flex;
   flex-direction: row;
   align-items: stretch;
-  gap: 0;
+  gap: 6px;
   width: 100%;
-  border-radius: 3px;
-  overflow: hidden;
 }
 .source-summary-tier-row > * {
   flex: 1;
-}
-.source-summary-tier-row > :first-child {
-  border-right: 1px solid rgba(255,255,255,0.15);
+  border-radius: 3px;
 }
 .source-summary-conf {
   display: inline-flex;
