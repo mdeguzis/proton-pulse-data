@@ -525,7 +525,14 @@
 
 /* responsive */
 @media (max-width: 600px) {
-  .welcome-title { font-size: 1.3rem; }
+  .welcome-header { padding: 18px 16px 20px; margin-bottom: 18px; }
+  .welcome-header .eyebrow { margin-bottom: 6px; }
+  .welcome-title { font-size: 1.5rem; margin-bottom: 8px; }
+  .welcome-sub { font-size: 0.82rem; line-height: 1.5; }
+  .community-stats { gap: 14px; margin-bottom: 18px; }
+  .cs-num { font-size: 1.3rem; }
+  .welcome-cta { margin-bottom: 8px; }
+  .welcome-learn-more { margin-bottom: 14px; }
   .explore-grid { grid-template-columns: 1fr; }
   .quick-actions { flex-direction: column; }
   .qa-link { justify-content: center; }
